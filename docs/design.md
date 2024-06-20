@@ -25,7 +25,7 @@ kratix init promise PROMISENAME --group myorg.com --kind database [--version v1]
 ```
 ### update api
 ```
-kratix update api --property FIELDNAME:FIELDTYPE [-p FIELDNAME:FIELDTYPE] [--property -FIELDNAME] [--group myorg.com] [--kind database] [--plural postgreses]
+kratix update api --property FIELDNAME:FIELDTYPE [-p FIELDNAME:FIELDTYPE] [--property FIELDNAME-] [--group myorg.com] [--kind database] [--plural postgreses]
 ```
 ### add container workflow
 ```
