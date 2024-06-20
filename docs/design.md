@@ -29,7 +29,7 @@ kratix update api --property FIELDNAME:FIELDTYPE [-p FIELDNAME:FIELDTYPE] [--pro
 ```
 ### add container workflow
 ```
-kratix add container resource/configure/PIPELINENAME --tag syntasso/postgres-resource:v1.0.0 [--name CONTAINERNAME]
+kratix add container resource/configure/PIPELINENAME --image syntasso/postgres-resource:v1.0.0 [--name CONTAINERNAME]
 ```
 ### update dependencies
 ```
