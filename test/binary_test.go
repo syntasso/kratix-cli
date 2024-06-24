@@ -82,34 +82,11 @@ var _ = Describe("kratix", func() {
 					Expect(files).To(HaveLen((3)))
 
 					By("generating a promise.yaml file", func() {
-						promiseYAML, err := os.ReadFile(filepath.Join(workingDir, "promise.yaml"))
-						Expect(err).NotTo(HaveOccurred())
-
-						var promise v1alpha1.Promise
-						Expect(yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
-
-						Expect(promise.Name).To(Equal("postgresql"))
-						promiseCRD, err := promise.GetAPIAsCRD()
-						Expect(err).NotTo(HaveOccurred())
-						Expect(promiseCRD.Spec.Group).To(Equal("syntasso.io"))
-						Expect(promiseCRD.Spec.Names).To(Equal(apiextensionsv1.CustomResourceDefinitionNames{
-							Kind:     "Database",
-							Singular: "database",
-							Plural:   "databases",
-						}))
-						Expect(promiseCRD.Spec.Versions).To(HaveLen(1))
-						Expect(promiseCRD.Spec.Versions[0].Name).To(Equal("v1alpha1"))
+						matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 					})
 
 					By("generating an example-resource.yaml file", func() {
-						exampleRequestYAML, err := os.ReadFile(filepath.Join(workingDir, "example-resource.yaml"))
-						Expect(err).NotTo(HaveOccurred())
-
-						var exampleRequest *unstructured.Unstructured
-						Expect(yaml.Unmarshal(exampleRequestYAML, &exampleRequest)).To(Succeed())
-						Expect(exampleRequest.GetKind()).To(Equal("Database"))
-						Expect(exampleRequest.GetAPIVersion()).To(Equal("syntasso.io/v1alpha1"))
-						Expect(exampleRequest.GetName()).To(Equal("example-postgresql"))
+						matchExampleResource(workingDir, "example-postgresql", "syntasso.io", "v1alpha1", "Database")
 					})
 
 					By("including a README file", func() {
@@ -118,10 +95,62 @@ var _ = Describe("kratix", func() {
 						Expect(readmeContents).To(ContainSubstring("kratix init promise postgresql"))
 					})
 				})
+
+				When("the optional flags are provided", func() {
+					It("respects the provided values", func() {
+						subdir := filepath.Join(workingDir, "subdir")
+						Expect(os.Mkdir(subdir, 0755)).To(Succeed())
+
+						session := r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--plural", "dbs", "--version", "v2", "--output-dir", "subdir")
+						Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in the subdir directory"))
+
+						By("generating a promise.yaml file", func() {
+							matchPromise(subdir, "postgresql", "syntasso.io", "v2", "Database", "database", "dbs")
+						})
+
+						By("generating an example-resource.yaml file", func() {
+							matchExampleResource(subdir, "example-postgresql", "syntasso.io", "v2", "Database")
+						})
+					})
+				})
 			})
 		})
 	})
 })
+
+func matchPromise(dir, name, group, version, kind, singular, plural string) {
+	promiseYAML, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	var promise v1alpha1.Promise
+	ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
+
+	ExpectWithOffset(1, promise.Name).To(Equal(name))
+	promiseCRD, err := promise.GetAPIAsCRD()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	ExpectWithOffset(1, promiseCRD.Spec.Group).To(Equal(group))
+	ExpectWithOffset(1, promiseCRD.Spec.Names).To(Equal(apiextensionsv1.CustomResourceDefinitionNames{
+		Kind:     kind,
+		Singular: singular,
+		Plural:   plural,
+	}))
+	ExpectWithOffset(1, promiseCRD.Spec.Versions).To(HaveLen(1))
+	ExpectWithOffset(1, promiseCRD.Spec.Versions[0].Name).To(Equal(version))
+	ExpectWithOffset(1, promiseCRD.Spec.Versions[0].Served).To(BeTrue())
+	ExpectWithOffset(1, promiseCRD.Spec.Versions[0].Storage).To(BeTrue())
+}
+
+func matchExampleResource(dir, name, group, version, kind string) {
+	exampleResourceYAML, err := os.ReadFile(filepath.Join(dir, "example-resource.yaml"))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	var exampleResource unstructured.Unstructured
+	ExpectWithOffset(1, yaml.Unmarshal(exampleResourceYAML, &exampleResource)).To(Succeed())
+
+	ExpectWithOffset(1, exampleResource.GetKind()).To(Equal(kind))
+	ExpectWithOffset(1, exampleResource.GetAPIVersion()).To(Equal(group + "/" + version))
+	ExpectWithOffset(1, exampleResource.GetName()).To(Equal(name))
+}
 
 type runner struct {
 	exitCode int
