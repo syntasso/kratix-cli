@@ -1,0 +1,31 @@
+apiVersion: platform.kratix.io/v1alpha1
+kind: Promise
+metadata:
+  name: postgresql
+spec:
+  api:
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: databases.hello.org
+    spec:
+      group: hello.org
+      names:
+        kind: Database
+        plural: databases
+        singular: database
+      scope: Namespaced
+      versions:
+        - name: v1alpha1
+          schema:
+            openAPIV3Schema:
+              type: object
+              properties:
+                spec:
+                  type: object
+                  properties: {}
+          served: true
+          storage: true
+  workflows:
+    resource:
+      configure: []

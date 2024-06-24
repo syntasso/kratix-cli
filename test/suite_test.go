@@ -12,7 +12,7 @@ var binaryPath string
 
 func TestIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Integration Suite")
+	RunSpecs(t, "Test Suite")
 }
 
 var _ = BeforeSuite(func() {
