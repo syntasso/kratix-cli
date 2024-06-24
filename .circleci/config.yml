@@ -1,0 +1,28 @@
+version: 2.1
+
+jobs:
+  clone-cli:
+    docker:
+      - image: cimg/go:1.22
+    steps:
+      - checkout
+      - run: go mod download
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  run-tests:
+    docker:
+      - image: cimg/go:1.22
+    steps:
+      - attach_workspace:
+          at: .
+      - run: make test
+
+workflows:
+  test:
+    jobs:
+      - clone-cli
+      - run-tests:
+          requires: [clone-cli]
