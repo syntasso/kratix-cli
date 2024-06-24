@@ -51,7 +51,7 @@ var _ = Describe("kratix", func() {
 		})
 
 		Describe("subcommands", func() {
-			Describe("promise", func() {
+			Context("promise", func() {
 				When("called with --help", func() {
 					It("prints the help", func() {
 						session := r.run("init", "promise", "--help")
@@ -112,6 +112,36 @@ var _ = Describe("kratix", func() {
 							matchExampleResource(subdir, "example-postgresql", "syntasso.io", "v2", "Database")
 						})
 					})
+
+					When("--split flag is provided", func() {
+						It("produces separate promise files", func() {
+							session := r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split")
+							Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in the current directory"))
+
+							By("generating different files for api, dependencies and workflows", func() {
+								files, err := os.ReadDir(workingDir)
+								Expect(err).NotTo(HaveOccurred())
+								Expect(files).To(HaveLen((5)))
+								var fileNames []string
+								for _, f := range files {
+									fileNames = append(fileNames, f.Name())
+								}
+								Expect(fileNames).To(ContainElements(
+									"workflows.yaml",
+									"api.yaml",
+									"dependencies.yaml",
+								))
+							})
+
+							By("generating api.yaml with correct values", func() {
+								apiYAML, err := os.ReadFile(filepath.Join(workingDir, "api.yaml"))
+								Expect(err).NotTo(HaveOccurred())
+								var promiseCRD apiextensionsv1.CustomResourceDefinition
+								Expect(yaml.Unmarshal(apiYAML, &promiseCRD)).To(Succeed())
+								matchCRD(&promiseCRD, "syntasso.io", "v1alpha1", "Database", "database", "databases")
+							})
+						})
+					})
 				})
 			})
 		})
@@ -128,6 +158,10 @@ func matchPromise(dir, name, group, version, kind, singular, plural string) {
 	ExpectWithOffset(1, promise.Name).To(Equal(name))
 	promiseCRD, err := promise.GetAPIAsCRD()
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	matchCRD(promiseCRD, group, version, kind, singular, plural)
+}
+
+func matchCRD(promiseCRD *apiextensionsv1.CustomResourceDefinition, group, version, kind, singular, plural string) {
 	ExpectWithOffset(1, promiseCRD.Spec.Group).To(Equal(group))
 	ExpectWithOffset(1, promiseCRD.Spec.Names).To(Equal(apiextensionsv1.CustomResourceDefinitionNames{
 		Kind:     kind,

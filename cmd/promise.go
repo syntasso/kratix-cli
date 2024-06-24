@@ -31,7 +31,10 @@ var promiseCmd = &cobra.Command{
 	RunE: InitPromise,
 }
 
-var group, kind, version, plural, outputDir string
+var (
+	split                                   bool
+	group, kind, version, plural, outputDir string
+)
 
 func init() {
 	initCmd.AddCommand(promiseCmd)
@@ -41,6 +44,7 @@ func init() {
 	promiseCmd.Flags().StringVarP(&version, "version", "v", "v1alpha1", "The group version for the Promise. Defaults to v1alpha1")
 	promiseCmd.Flags().StringVarP(&plural, "plural", "p", "", "The plural form of the kind. Defaults to the kind name with an additional 's' at the end.")
 	promiseCmd.Flags().StringVarP(&outputDir, "output-dir", "d", ".", "The output directory to write the Promise structure to; defaults to '.'")
+	promiseCmd.Flags().BoolVar(&split, "split", false, "Split promise.yaml file into api.yaml, dependencies.yaml, and workflows.yaml")
 
 	promiseCmd.MarkFlagRequired("group")
 	promiseCmd.MarkFlagRequired("kind")
@@ -63,9 +67,16 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 	}
 
 	templates := map[string]string{
-		"promise.yaml":          "templates/promise/promise.yaml.tpl",
 		"example-resource.yaml": "templates/promise/example-resource.yaml.tpl",
 		"README.md":             "templates/promise/README.md",
+	}
+
+	if split {
+		templates["api.yaml"] = "templates/promise/api.yaml.tpl"
+		templates["workflows.yaml"] = "templates/promise/workflows.yaml"
+		templates["dependencies.yaml"] = "templates/promise/dependencies.yaml"
+	} else {
+		templates["promise.yaml"] = "templates/promise/promise.yaml.tpl"
 	}
 
 	for name, tmpl := range templates {
