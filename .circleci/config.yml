@@ -4,6 +4,7 @@ jobs:
   clone-cli:
     docker:
       - image: cimg/go:1.22
+    resource_class: small
     steps:
       - checkout
       - run: go mod download
@@ -15,6 +16,7 @@ jobs:
   run-tests:
     docker:
       - image: cimg/go:1.22
+    resource_class: small
     steps:
       - attach_workspace:
           at: .
