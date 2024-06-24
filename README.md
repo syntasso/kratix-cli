@@ -20,3 +20,12 @@ To run the tests, run:
 make test
 ```
 
+## Usage
+
+Run:
+
+```
+kratix help
+kratix help init
+kratix help build
+```

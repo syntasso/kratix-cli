@@ -39,6 +39,44 @@ var _ = Describe("kratix", func() {
 		})
 	})
 
+	Describe("build", func() {
+		var dir string
+		AfterEach(func() {
+			os.RemoveAll(dir)
+		})
+
+		It("builds a promise from api, dependencies and workflows files", func() {
+			var err error
+			dir, err = os.MkdirTemp("", "kratix-build-test")
+			Expect(err).NotTo(HaveOccurred())
+
+			r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--output-dir", dir)
+			sess := r.run("build", "promise", "postgresql", "--dir", dir)
+			Expect(sess.Out.Contents()).ToNot(BeEmpty())
+			var promise v1alpha1.Promise
+			Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+			Expect(promise.Name).To(Equal("postgresql"))
+			Expect(promise.Kind).To(Equal("Promise"))
+			Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
+
+			promiseCRD, err := promise.GetAPIAsCRD()
+			Expect(err).NotTo(HaveOccurred())
+			matchCRD(promiseCRD, "syntasso.io", "v1alpha1", "Database", "database", "databases")
+		})
+
+		When("--output flag is provided", func() {
+			It("outputs promise definition to provided filepath", func() {
+				var err error
+				dir, err = os.MkdirTemp("", "kratix-build-test")
+				Expect(err).NotTo(HaveOccurred())
+
+				r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--output-dir", dir)
+				r.run("build", "promise", "postgresql", "--dir", dir, "--output", filepath.Join(dir, "promise.yaml"))
+				matchPromise(dir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+			})
+		})
+	})
+
 	Describe("init", func() {
 		When("called without a subcommand", func() {
 			It("prints the help", func() {

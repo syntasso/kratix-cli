@@ -17,7 +17,7 @@ import (
 //go:embed templates/promise/*
 var promiseTemplates embed.FS
 
-var promiseCmd = &cobra.Command{
+var initPromiseCmd = &cobra.Command{
 	Use:   "promise",
 	Short: "Initialize a new Promise",
 	Long:  `Initialize a new Promise within the current directory, with all the necessary files to get started`,
@@ -37,17 +37,17 @@ var (
 )
 
 func init() {
-	initCmd.AddCommand(promiseCmd)
+	initCmd.AddCommand(initPromiseCmd)
 
-	promiseCmd.Flags().StringVarP(&group, "group", "g", "", "The API group for the Promise")
-	promiseCmd.Flags().StringVarP(&kind, "kind", "k", "", "The kind to be provided by the Promise")
-	promiseCmd.Flags().StringVarP(&version, "version", "v", "v1alpha1", "The group version for the Promise. Defaults to v1alpha1")
-	promiseCmd.Flags().StringVarP(&plural, "plural", "p", "", "The plural form of the kind. Defaults to the kind name with an additional 's' at the end.")
-	promiseCmd.Flags().StringVarP(&outputDir, "output-dir", "d", ".", "The output directory to write the Promise structure to; defaults to '.'")
-	promiseCmd.Flags().BoolVar(&split, "split", false, "Split promise.yaml file into api.yaml, dependencies.yaml, and workflows.yaml")
+	initPromiseCmd.Flags().StringVarP(&group, "group", "g", "", "The API group for the Promise")
+	initPromiseCmd.Flags().StringVarP(&kind, "kind", "k", "", "The kind to be provided by the Promise")
+	initPromiseCmd.Flags().StringVarP(&version, "version", "v", "v1alpha1", "The group version for the Promise. Defaults to v1alpha1")
+	initPromiseCmd.Flags().StringVarP(&plural, "plural", "p", "", "The plural form of the kind. Defaults to the kind name with an additional 's' at the end.")
+	initPromiseCmd.Flags().StringVarP(&outputDir, "output-dir", "d", ".", "The output directory to write the Promise structure to; defaults to '.'")
+	initPromiseCmd.Flags().BoolVar(&split, "split", false, "Split promise.yaml file into api.yaml, dependencies.yaml, and workflows.yaml")
 
-	promiseCmd.MarkFlagRequired("group")
-	promiseCmd.MarkFlagRequired("kind")
+	initPromiseCmd.MarkFlagRequired("group")
+	initPromiseCmd.MarkFlagRequired("kind")
 }
 
 type promiseTemplateValues struct {
