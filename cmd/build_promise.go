@@ -59,7 +59,7 @@ func BuildPromise(cmd *cobra.Command, args []string) error {
 	}
 
 	if outputPath != "" {
-		return os.WriteFile(outputPath, promiseBytes, 0644)
+		return os.WriteFile(outputPath, promiseBytes, filePerm)
 	}
 
 	fmt.Println(string(promiseBytes))

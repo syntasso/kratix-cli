@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -42,7 +39,7 @@ func init() {
 	initPromiseCmd.Flags().StringVarP(&group, "group", "g", "", "The API group for the Promise")
 	initPromiseCmd.Flags().StringVarP(&kind, "kind", "k", "", "The kind to be provided by the Promise")
 	initPromiseCmd.Flags().StringVarP(&version, "version", "v", "v1alpha1", "The group version for the Promise. Defaults to v1alpha1")
-	initPromiseCmd.Flags().StringVarP(&plural, "plural", "p", "", "The plural form of the kind. Defaults to the kind name with an additional 's' at the end.")
+	initPromiseCmd.Flags().StringVar(&plural, "plural", "", "The plural form of the kind. Defaults to the kind name with an additional 's' at the end.")
 	initPromiseCmd.Flags().StringVarP(&outputDir, "output-dir", "d", ".", "The output directory to write the Promise structure to; defaults to '.'")
 	initPromiseCmd.Flags().BoolVar(&split, "split", false, "Split promise.yaml file into api.yaml, dependencies.yaml, and workflows.yaml")
 
@@ -97,7 +94,7 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		err = os.WriteFile(fmt.Sprintf("%s/%s", outputDir, name), data.Bytes(), 0644)
+		err = os.WriteFile(fmt.Sprintf("%s/%s", outputDir, name), data.Bytes(), filePerm)
 		if err != nil {
 			return err
 		}

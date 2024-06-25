@@ -184,6 +184,81 @@ var _ = Describe("kratix", func() {
 			})
 		})
 	})
+
+	Describe("update", func() {
+		When("called without a subcommand", func() {
+			It("prints the help", func() {
+				session := r.run("update")
+				Expect(session.Out).To(SatisfyAll(
+					gbytes.Say("Command to update kratix resources"),
+					gbytes.Say(`Use "kratix update \[command\] --help" for more information about a command.`),
+				))
+			})
+		})
+
+		Context("api", func() {
+			When("called with --help", func() {
+				It("prints the help", func() {
+					session := r.run("update", "api", "--help")
+					Expect(session.Out).To(gbytes.Say("Command to update promise API"))
+				})
+			})
+
+			When("updating promise api", func() {
+				var dir string
+				AfterEach(func() {
+					os.RemoveAll(dir)
+				})
+
+				BeforeEach(func() {
+					var err error
+					dir, err = os.MkdirTemp("", "kratix-update-api-test")
+					Expect(err).NotTo(HaveOccurred())
+
+					sess := r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--output-dir", dir)
+					Expect(sess.Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+				})
+
+				Context("api GVK", func() {
+					It("updates", func() {
+						sess := r.run("update", "api", "--kind", "NewKind", "--group", "newGroup", "--version", "v1beta4", "--plural", "newPlural", "--dir", dir)
+						Expect(sess.Out).To(gbytes.Say("Promise updated"))
+						matchPromise(dir, "postgresql", "newGroup", "v1beta4", "NewKind", "newkind", "newPlural")
+					})
+				})
+
+				Context("api properties", func() {
+					It("can add new properties to the promise api", func() {
+						sess := r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "--dir", dir)
+						Expect(sess.Out).To(gbytes.Say("Promise updated"))
+						matchPromise(dir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+						props := getCRDProperties(dir)
+						Expect(props).To(SatisfyAll(HaveKey("numberField"), HaveKey("stringField")))
+						Expect(props["numberField"].Type).To(Equal("number"))
+						Expect(props["stringField"].Type).To(Equal("string"))
+					})
+
+					It("can update existing properties types", func() {
+						r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "-p", "wontchange:string", "--dir", dir)
+						r.run("update", "api", "-p", "numberField:string", "--property", "stringField:number", "--dir", dir)
+						matchPromise(dir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+						props := getCRDProperties(dir)
+						Expect(props).To(SatisfyAll(HaveKey("numberField"), HaveKey("stringField"), HaveKey("wontchange")))
+						Expect(props["numberField"].Type).To(Equal("string"))
+						Expect(props["wontchange"].Type).To(Equal("string"))
+						Expect(props["stringField"].Type).To(Equal("number"))
+					})
+
+					It("errors when unsupported property type is set", func() {
+						r.exitCode = 1
+						sess := r.run("update", "api", "--property", "unsupported:object", "--dir", dir)
+						Expect(sess.Err).To(gbytes.Say("unsupported"))
+					})
+				})
+			})
+
+		})
+	})
 })
 
 func matchPromise(dir, name, group, version, kind, singular, plural string) {
@@ -197,6 +272,17 @@ func matchPromise(dir, name, group, version, kind, singular, plural string) {
 	promiseCRD, err := promise.GetAPIAsCRD()
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	matchCRD(promiseCRD, group, version, kind, singular, plural)
+}
+
+func getCRDProperties(dir string) map[string]apiextensionsv1.JSONSchemaProps {
+	promiseYAML, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	var promise v1alpha1.Promise
+	ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
+	crd, err := promise.GetAPIAsCRD()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties
 }
 
 func matchCRD(promiseCRD *apiextensionsv1.CustomResourceDefinition, group, version, kind, singular, plural string) {
