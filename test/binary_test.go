@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
@@ -278,6 +280,90 @@ var _ = Describe("kratix", func() {
 
 		})
 	})
+
+	Describe("add", func() {
+		When("it is called without a subcommand", func() {
+			It("prints the help", func() {
+				session := r.run("add", "--help")
+				Expect(session.Out).To(gbytes.Say("Command to add to Kratix resources"))
+			})
+		})
+
+		Context("container", func() {
+			When("called with --help", func() {
+				It("prints the help", func() {
+					session := r.run("add", "container", "--help")
+					Expect(session.Out).To(gbytes.Say("kratix add container LIFECYCLE/TRIGGER/PIPELINE-NAME"))
+				})
+			})
+			When("adding a container", func() {
+				var dir string
+				AfterEach(func() {
+					os.RemoveAll(dir)
+				})
+
+				BeforeEach(func() {
+					var err error
+					dir, err = os.MkdirTemp("", "kratix-update-api-test")
+					Expect(err).NotTo(HaveOccurred())
+
+					sess := r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--output-dir", dir)
+					Expect(sess.Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+				})
+
+				It("adds containers to promise workflows", func() {
+					sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "project/image:latest", "--dir", dir)
+					Expect(sess.Out).To(gbytes.Say("generated the promise/configure/pipeline0/image"))
+					r.run("add", "container", "promise/configure/pipeline1", "--image", "project/image1:latest", "-n", "a-good-container", "--dir", dir)
+					r.run("add", "container", "promise/delete/pipeline0", "--image", "project/cleanup:latest", "--dir", dir)
+
+					pipelines := getWorkflows(dir)
+					Expect(pipelines.ConfigureResource).To(HaveLen(0))
+					Expect(pipelines.DeleteResource).To(HaveLen(0))
+					Expect(pipelines.ConfigurePromise).To(HaveLen(2))
+					Expect(pipelines.DeletePromise).To(HaveLen(1))
+
+					Expect(pipelines.ConfigurePromise[0].Name).To(Equal("pipeline0"))
+					Expect(pipelines.ConfigurePromise[0].Spec.Containers).To(HaveLen(1))
+					Expect(pipelines.ConfigurePromise[0].Spec.Containers[0].Image).To(Equal("project/image:latest"))
+					Expect(pipelines.ConfigurePromise[0].Spec.Containers[0].Name).To(Equal("image"))
+					Expect(pipelines.ConfigurePromise[1].Name).To(Equal("pipeline1"))
+					Expect(pipelines.ConfigurePromise[1].Spec.Containers).To(HaveLen(1))
+					Expect(pipelines.ConfigurePromise[1].Spec.Containers[0].Image).To(Equal("project/image1:latest"))
+					Expect(pipelines.ConfigurePromise[1].Spec.Containers[0].Name).To(Equal("a-good-container"))
+
+					Expect(pipelines.DeletePromise[0].Name).To(Equal("pipeline0"))
+					Expect(pipelines.DeletePromise[0].Spec.Containers).To(HaveLen(1))
+					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
+					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Name).To(Equal("cleanup"))
+				})
+
+				It("adds containers to resource workflows", func() {
+					r.run("add", "container", "resource/configure/pipeline0", "--image", "project/image1:latest", "-n", "a-great-container", "--dir", dir)
+					r.run("add", "container", "resource/configure/pipeline0", "--image", "project/image2:latest", "--dir", dir)
+					r.run("add", "container", "resource/delete/pipeline0", "--image", "project/cleanup:latest", "--dir", dir)
+
+					pipelines := getWorkflows(dir)
+					Expect(pipelines.ConfigurePromise).To(HaveLen(0))
+					Expect(pipelines.DeletePromise).To(HaveLen(0))
+
+					Expect(pipelines.ConfigureResource).To(HaveLen(1))
+					Expect(pipelines.ConfigureResource[0].Name).To(Equal("pipeline0"))
+					Expect(pipelines.ConfigureResource[0].Spec.Containers).To(HaveLen(2))
+					Expect(pipelines.ConfigureResource[0].Spec.Containers[0].Image).To(Equal("project/image1:latest"))
+					Expect(pipelines.ConfigureResource[0].Spec.Containers[0].Name).To(Equal("a-great-container"))
+					Expect(pipelines.ConfigureResource[0].Spec.Containers[1].Image).To(Equal("project/image2:latest"))
+					Expect(pipelines.ConfigureResource[0].Spec.Containers[1].Name).To(Equal("image2"))
+
+					Expect(pipelines.DeleteResource).To(HaveLen(1))
+					Expect(pipelines.DeleteResource[0].Name).To(Equal("pipeline0"))
+					Expect(pipelines.DeleteResource[0].Spec.Containers).To(HaveLen(1))
+					Expect(pipelines.DeleteResource[0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
+					Expect(pipelines.DeleteResource[0].Spec.Containers[0].Name).To(Equal("cleanup"))
+				})
+			})
+		})
+	})
 })
 
 func matchPromise(dir, name, group, version, kind, singular, plural string) {
@@ -317,6 +403,18 @@ func matchCRD(promiseCRD *apiextensionsv1.CustomResourceDefinition, group, versi
 	ExpectWithOffset(1, promiseCRD.Spec.Versions[0].Storage).To(BeTrue())
 }
 
+func getWorkflows(dir string) v1alpha1.PromisePipelines {
+	promiseYAML, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	var promise v1alpha1.Promise
+	ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
+
+	pipelines, err := promise.GeneratePipelines(ctrl.LoggerFrom(context.Background()))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return pipelines
+}
+
 func matchExampleResource(dir, name, group, version, kind string) {
 	exampleResourceYAML, err := os.ReadFile(filepath.Join(dir, "example-resource.yaml"))
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
@@ -342,7 +440,7 @@ func (r *runner) run(args ...string) *gexec.Session {
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = r.dir
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(r.exitCode))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	EventuallyWithOffset(1, session).Should(gexec.Exit(r.exitCode))
 	return session
 }
