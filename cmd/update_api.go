@@ -68,8 +68,14 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 		for _, prop := range properties {
 			parsedProps := strings.Split(prop, ":")
 			if len(parsedProps) != 2 {
-				return fmt.Errorf("invalid property format: %s", prop)
+				if prop[len(prop)-1:] != "-" {
+					return fmt.Errorf("invalid property format: %s", prop)
+				}
+				p := strings.TrimRight(prop, "-")
+				delete(crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties, p)
+				continue
 			}
+
 			propName := parsedProps[0]
 			propType := parsedProps[1]
 

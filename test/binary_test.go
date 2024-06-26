@@ -254,6 +254,25 @@ var _ = Describe("kratix", func() {
 						sess := r.run("update", "api", "--property", "unsupported:object", "--dir", dir)
 						Expect(sess.Err).To(gbytes.Say("unsupported"))
 					})
+
+					It("can remove existing properties", func() {
+						r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "-p", "wontdelete:string", "--dir", dir)
+						r.run("update", "api", "-p", "numberField-", "--property", "stringField-", "--dir", dir)
+						matchPromise(dir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+						props := getCRDProperties(dir)
+						Expect(props).To(SatisfyAll(HaveKey("wontdelete"), HaveLen(1)))
+						Expect(props["wontdelete"].Type).To(Equal("string"))
+					})
+
+					It("errors when property format is invalid", func() {
+						r.exitCode = 1
+						sess := r.run("update", "api", "--property", "invalid%", "--dir", dir)
+						Expect(sess.Err).To(gbytes.Say("invalid"))
+
+						r.exitCode = 1
+						sess = r.run("update", "api", "--property", "invalid+string", "--dir", dir)
+						Expect(sess.Err).To(gbytes.Say("invalid"))
+					})
 				})
 			})
 
