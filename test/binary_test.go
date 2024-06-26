@@ -336,6 +336,10 @@ var _ = Describe("kratix", func() {
 					Expect(pipelines.DeletePromise[0].Spec.Containers).To(HaveLen(1))
 					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
 					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Name).To(Equal("cleanup"))
+
+					Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/scripts/pipeline.sh"))
+					// script := getPromiseScript(dir)
+					// Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
 				})
 
 				It("adds containers to resource workflows", func() {
@@ -413,6 +417,13 @@ func getWorkflows(dir string) v1alpha1.PromisePipelines {
 	pipelines, err := promise.GeneratePipelines(ctrl.LoggerFrom(context.Background()))
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return pipelines
+}
+
+func getPromiseScript(dir string) string {
+	promiseYAML, err := os.ReadFile(filepath.Join(dir, "promise.sh"))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	return string(promiseYAML)
 }
 
 func matchExampleResource(dir, name, group, version, kind string) {

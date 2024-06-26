@@ -115,6 +115,8 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	fmt.Printf("generated the %s/%s/%s/%s \n", workflow, action, pipelineName, containerName)
+	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/scripts/pipeline.sh \n", workflow, action, pipelineName)
+
 	return nil
 }
 
