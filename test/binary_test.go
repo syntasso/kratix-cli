@@ -312,7 +312,7 @@ var _ = Describe("kratix", func() {
 				})
 
 				It("adds containers to promise workflows", func() {
-					sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "project/image:latest", "--dir", dir)
+					sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir)
 					Expect(sess.Out).To(gbytes.Say("generated the promise/configure/pipeline0/image"))
 					r.run("add", "container", "promise/configure/pipeline1", "--image", "project/image1:latest", "-n", "a-good-container", "--dir", dir)
 					r.run("add", "container", "promise/delete/pipeline0", "--image", "project/cleanup:latest", "--dir", dir)
@@ -325,7 +325,7 @@ var _ = Describe("kratix", func() {
 
 					Expect(pipelines.ConfigurePromise[0].Name).To(Equal("pipeline0"))
 					Expect(pipelines.ConfigurePromise[0].Spec.Containers).To(HaveLen(1))
-					Expect(pipelines.ConfigurePromise[0].Spec.Containers[0].Image).To(Equal("project/image:latest"))
+					Expect(pipelines.ConfigurePromise[0].Spec.Containers[0].Image).To(Equal("image:latest"))
 					Expect(pipelines.ConfigurePromise[0].Spec.Containers[0].Name).To(Equal("image"))
 					Expect(pipelines.ConfigurePromise[1].Name).To(Equal("pipeline1"))
 					Expect(pipelines.ConfigurePromise[1].Spec.Containers).To(HaveLen(1))
@@ -335,7 +335,7 @@ var _ = Describe("kratix", func() {
 					Expect(pipelines.DeletePromise[0].Name).To(Equal("pipeline0"))
 					Expect(pipelines.DeletePromise[0].Spec.Containers).To(HaveLen(1))
 					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
-					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Name).To(Equal("cleanup"))
+					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Name).To(Equal("project-cleanup"))
 
 					Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/scripts/pipeline.sh"))
 					// script := getPromiseScript(dir)
@@ -357,13 +357,13 @@ var _ = Describe("kratix", func() {
 					Expect(pipelines.ConfigureResource[0].Spec.Containers[0].Image).To(Equal("project/image1:latest"))
 					Expect(pipelines.ConfigureResource[0].Spec.Containers[0].Name).To(Equal("a-great-container"))
 					Expect(pipelines.ConfigureResource[0].Spec.Containers[1].Image).To(Equal("project/image2:latest"))
-					Expect(pipelines.ConfigureResource[0].Spec.Containers[1].Name).To(Equal("image2"))
+					Expect(pipelines.ConfigureResource[0].Spec.Containers[1].Name).To(Equal("project-image2"))
 
 					Expect(pipelines.DeleteResource).To(HaveLen(1))
 					Expect(pipelines.DeleteResource[0].Name).To(Equal("pipeline0"))
 					Expect(pipelines.DeleteResource[0].Spec.Containers).To(HaveLen(1))
 					Expect(pipelines.DeleteResource[0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
-					Expect(pipelines.DeleteResource[0].Spec.Containers[0].Name).To(Equal("cleanup"))
+					Expect(pipelines.DeleteResource[0].Spec.Containers[0].Name).To(Equal("project-cleanup"))
 				})
 			})
 		})

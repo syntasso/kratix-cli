@@ -121,9 +121,8 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 }
 
 func generateContainerName(image string) string {
-	nameAndVersion := strings.Split(image, "/")[1]
-	name := strings.Split(nameAndVersion, ":")[0]
-	return name
+	nameAndVersion := strings.ReplaceAll(image, "/", "-")
+	return strings.Split(nameAndVersion, ":")[0]
 }
 
 func findPipelinesForWorkflowAction(workflow, action, pipelineName string, allPipelines v1alpha1.PromisePipelines) ([]v1alpha1.Pipeline, int, error) {
