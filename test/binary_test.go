@@ -119,7 +119,7 @@ var _ = Describe("kratix", func() {
 
 					files, err := os.ReadDir(workingDir)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(files).To(HaveLen((3)))
+					Expect(files).To(HaveLen(3))
 
 					By("generating a promise.yaml file", func() {
 						matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
@@ -161,7 +161,7 @@ var _ = Describe("kratix", func() {
 							By("generating different files for api, dependencies and workflows", func() {
 								files, err := os.ReadDir(workingDir)
 								Expect(err).NotTo(HaveOccurred())
-								Expect(files).To(HaveLen((5)))
+								Expect(files).To(HaveLen(5))
 								var fileNames []string
 								for _, f := range files {
 									fileNames = append(fileNames, f.Name())
