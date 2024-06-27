@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -116,7 +117,11 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	fmt.Printf("generated the %s/%s/%s/%s \n", workflow, action, pipelineName, containerName)
-	//fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/scripts/pipeline.sh \n", workflow, action, pipelineName)
+
+	pipelineScriptFilename := "pipeline.sh"
+	generatePipelineDirFiles(dir, workflow, action, pipelineName)
+	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/scripts/%s \n", workflow, action, pipelineName, pipelineScriptFilename)
+	fmt.Println("Don't forget to build and push your image!")
 	return nil
 }
 
@@ -190,4 +195,42 @@ func pipelinesToUnstructured(pipelines []v1alpha1.Pipeline) ([]unstructured.Unst
 		pipelinesUnstructured = append(pipelinesUnstructured, pUnstructured)
 	}
 	return pipelinesUnstructured, nil
+}
+
+func generatePipelineDirFiles(dir, workflow, action, pipelineName string) error {
+	pipelineScriptContents := []byte(`#!/usr/bin/env sh
+
+	set -xe
+	
+	name="$(yq eval '.metadata.name' /kratix/input/object.yaml)"
+	namespace=$(yq '.metadata.namespace' /kratix/input/object.yaml)
+	
+	echo "Hello from ${name} ${namespace}"`)
+
+	pipelineScriptFilename := "pipeline.sh"
+	pipelineFileDirectory := fmt.Sprintf("%s/workflows/%s/%s/%s/", dir, workflow, action, pipelineName)
+	pipelineScriptDirectory := fmt.Sprintf("%s/workflows/%s/%s/%s/scripts/", dir, workflow, action, pipelineName)
+	err := os.MkdirAll(pipelineScriptDirectory, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(pipelineScriptDirectory+pipelineScriptFilename, pipelineScriptContents, filePerm)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Create(pipelineFileDirectory + "Dockerfile")
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(pipelineFileDirectory + "resources/"); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(pipelineFileDirectory+"resources/", os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -354,9 +354,17 @@ var _ = Describe("kratix", func() {
 					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
 					Expect(pipelines.DeletePromise[0].Spec.Containers[0].Name).To(Equal("project-cleanup"))
 
-					// Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/scripts/pipeline.sh"))
-					// script := getPromiseScript(dir)
-					// Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/scripts/pipeline.sh"))
+					script := getPipelineScript(dir, "promise", "configure", "pipeline1")
+					Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
+
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "Dockerfile")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "resources/")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline1", "Dockerfile")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "resources/")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "delete", "pipeline0", "Dockerfile")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "delete", "pipeline0", "resources/")).To(BeTrue())
 				})
 
 				It("adds containers to resource workflows", func() {
@@ -436,11 +444,20 @@ func getWorkflows(dir string) v1alpha1.PromisePipelines {
 	return pipelines
 }
 
-func getPromiseScript(dir string) string {
-	promiseYAML, err := os.ReadFile(filepath.Join(dir, "promise.sh"))
+func getPipelineScript(dir, workflow, action, pipelineName string) string {
+	promiseYAML, err := os.ReadFile(filepath.Join(dir, "workflows", workflow, action, pipelineName, "scripts", "pipeline.sh"))
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 	return string(promiseYAML)
+}
+
+func pipelineWorkflowPathExists(dir, workflow, action, pipelineName, filename string) bool {
+	var found = false
+	_, err := os.Stat(filepath.Join(dir, "workflows", workflow, action, pipelineName, filename))
+	if err == nil {
+		found = true
+	}
+	return found
 }
 
 func matchExampleResource(dir, name, group, version, kind string) {
