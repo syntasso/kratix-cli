@@ -26,6 +26,7 @@ var addContainerCmd = &cobra.Command{
   # add a new promise configure container to pipeline 'pipeline0', with the container name 'deploy-deps'
   kratix add container promise/configure/pipeline0 --image syntasso/postgres-resource:v1.0.0 --name deploy-deps`,
 	RunE: AddContainer,
+	Args: cobra.ExactArgs(1),
 }
 
 var image, containerName string
@@ -115,8 +116,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	fmt.Printf("generated the %s/%s/%s/%s \n", workflow, action, pipelineName, containerName)
-	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/scripts/pipeline.sh \n", workflow, action, pipelineName)
-
+	//fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/scripts/pipeline.sh \n", workflow, action, pipelineName)
 	return nil
 }
 

@@ -82,7 +82,12 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 			if propType != "string" && propType != "number" {
 				return fmt.Errorf("unsupported property type: %s", propType)
 			}
-
+			if crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties == nil {
+				crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"] = apiextensionsv1.JSONSchemaProps{
+					Type:       "object",
+					Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+				}
+			}
 			crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties[propName] = apiextensionsv1.JSONSchemaProps{
 				Type: propType,
 			}

@@ -40,7 +40,7 @@ func init() {
 	initPromiseCmd.Flags().StringVarP(&kind, "kind", "k", "", "The kind to be provided by the Promise")
 	initPromiseCmd.Flags().StringVarP(&version, "version", "v", "v1alpha1", "The group version for the Promise. Defaults to v1alpha1")
 	initPromiseCmd.Flags().StringVar(&plural, "plural", "", "The plural form of the kind. Defaults to the kind name with an additional 's' at the end.")
-	initPromiseCmd.Flags().StringVarP(&outputDir, "output-dir", "d", ".", "The output directory to write the Promise structure to; defaults to '.'")
+	initPromiseCmd.Flags().StringVarP(&outputDir, "dir", "d", ".", "The output directory to write the Promise structure to; defaults to '.'")
 	initPromiseCmd.Flags().BoolVar(&split, "split", false, "Split promise.yaml file into api.yaml, dependencies.yaml, and workflows.yaml")
 
 	initPromiseCmd.MarkFlagRequired("group")
