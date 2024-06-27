@@ -1,6 +1,6 @@
 # Kratix CLI
 
-The best tool you ever find to build your Promises!
+The best tool you'll ever find to build your Promises!
 
 ## Installation
 To build the CLI, run:
