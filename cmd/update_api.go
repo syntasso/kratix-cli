@@ -14,7 +14,7 @@ import (
 )
 
 var updateAPICmd = &cobra.Command{
-	Use:   "api",
+	Use:   "api --property PROPERTY-NAME:TYPE",
 	Short: "Command to update promise API",
 	Long:  "Command to update promise API",
 	Example: `  # add a new property of type string to the API

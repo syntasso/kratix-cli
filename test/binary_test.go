@@ -293,7 +293,7 @@ var _ = Describe("kratix", func() {
 			When("called with --help", func() {
 				It("prints the help", func() {
 					session := r.run("add", "container", "--help")
-					Expect(session.Out).To(gbytes.Say("kratix add container LIFECYCLE/TRIGGER/PIPELINE-NAME"))
+					Expect(session.Out).To(gbytes.Say("kratix add container LIFECYCLE/ACTION/PIPELINE-NAME"))
 				})
 			})
 			When("adding a container", func() {

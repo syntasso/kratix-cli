@@ -14,7 +14,7 @@ import (
 )
 
 var buildPromiseCmd = &cobra.Command{
-	Use:   "promise",
+	Use:   "promise PROMISE-NAME",
 	Short: "Command to build a Kratix Promise",
 	Long:  "Command to build a Kratix Promise from given api, dependencies and workflow files in a directory. Use this command if you initialized your Promise with `--split`.",
 	Example: `  # build a promise from path

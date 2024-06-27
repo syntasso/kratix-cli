@@ -15,12 +15,12 @@ import (
 )
 
 var addContainerCmd = &cobra.Command{
-	Use:   "container",
+	Use:   "container LIFECYCLE/ACTION/PIPELINE-NAME --image CONTAINER-IMAGE",
 	Short: "Adds a container to the named workflow",
-	Long: `  # LIFECYCLE is one of: promise, resource
-  # TRIGGER is one of: configure, delete
-  kratix add container LIFECYCLE/TRIGGER/PIPELINE-NAME [flags]`,
-	Example: `  # add a new resource configure container to pipeline 'instance'
+	Example: `  # LIFECYCLE is one of: promise, resource
+  # ACTION is one of: configure, delete
+
+  # add a new resource configure container to pipeline 'instance'
   kratix add container resource/configure/instance --image syntasso/postgres-resource:v1.0.0
 
   # add a new promise configure container to pipeline 'pipeline0', with the container name 'deploy-deps'
