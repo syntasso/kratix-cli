@@ -127,23 +127,26 @@ func generateContainerName(image string) string {
 
 func findPipelinesForWorkflowAction(workflow, action, pipelineName string, allPipelines v1alpha1.PromisePipelines) ([]v1alpha1.Pipeline, int, error) {
 	var pipelines []v1alpha1.Pipeline
-	if workflow == "promise" {
-		if action == "configure" {
+	switch workflow {
+	case "promise":
+		switch action {
+		case "configure":
 			pipelines = allPipelines.ConfigurePromise
-		} else if action == "delete" {
+		case "delete":
 			pipelines = allPipelines.DeletePromise
-		} else {
+		default:
 			return nil, -1, fmt.Errorf("invalid action: %s", action)
 		}
-	} else if workflow == "resource" {
-		if action == "configure" {
+	case "resource":
+		switch action {
+		case "configure":
 			pipelines = allPipelines.ConfigureResource
-		} else if action == "delete" {
+		case "delete":
 			pipelines = allPipelines.DeleteResource
-		} else {
+		default:
 			return nil, -1, fmt.Errorf("invalid action: %s", action)
 		}
-	} else {
+	default:
 		return nil, -1, fmt.Errorf("invalid workflow: %s", workflow)
 	}
 
