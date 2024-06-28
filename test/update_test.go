@@ -77,13 +77,14 @@ var _ = Describe("update", func() {
 
 				Context("api properties", func() {
 					It("can add new properties to the promise api", func() {
-						sess := r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "intvalue:integer", "--dir", dir)
+						sess := r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "--property", "intValue:integer", "--dir", dir)
 						Expect(sess.Out).To(gbytes.Say("Promise api updated"))
 						matchPromise(dir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 						props := getCRDProperties(dir, false)
-						Expect(props).To(SatisfyAll(HaveKey("numberField"), HaveKey("stringField")))
+						Expect(props).To(SatisfyAll(HaveKey("numberField"), HaveKey("stringField"), HaveKey("intValue"), HaveLen(3)))
 						Expect(props["numberField"].Type).To(Equal("number"))
 						Expect(props["stringField"].Type).To(Equal("string"))
+						Expect(props["intValue"].Type).To(Equal("integer"))
 					})
 
 					It("can update existing properties types", func() {
