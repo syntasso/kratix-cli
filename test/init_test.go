@@ -1,10 +1,11 @@
 package integration_test
 
 import (
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -118,13 +119,12 @@ var _ = Describe("init", func() {
 					By("generating different files for api, dependencies and workflows", func() {
 						files, err := os.ReadDir(workingDir)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(files).To(HaveLen(5))
+						Expect(files).To(HaveLen(4))
 						var fileNames []string
 						for _, f := range files {
 							fileNames = append(fileNames, f.Name())
 						}
 						Expect(fileNames).To(ContainElements(
-							"workflows.yaml",
 							"api.yaml",
 							"dependencies.yaml",
 						))
