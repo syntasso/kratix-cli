@@ -156,17 +156,6 @@ func matchPromise(dir, name, group, version, kind, singular, plural string) {
 	matchCRD(promiseCRD, group, version, kind, singular, plural)
 }
 
-func getCRDProperties(dir string) map[string]apiextensionsv1.JSONSchemaProps {
-	promiseYAML, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-
-	var promise v1alpha1.Promise
-	ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
-	crd, err := promise.GetAPIAsCRD()
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties
-}
-
 func matchCRD(promiseCRD *apiextensionsv1.CustomResourceDefinition, group, version, kind, singular, plural string) {
 	ExpectWithOffset(1, promiseCRD.Spec.Group).To(Equal(group))
 	ExpectWithOffset(1, promiseCRD.Spec.Names).To(Equal(apiextensionsv1.CustomResourceDefinitionNames{

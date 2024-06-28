@@ -44,32 +44,62 @@ func init() {
 }
 
 func UpdateAPI(cmd *cobra.Command, args []string) error {
-	promiseFilePath := filepath.Join(dir, "promise.yaml")
-	promiseBytes, err := os.ReadFile(promiseFilePath)
-	if err != nil {
-		return err
-	}
-
-	var promise v1alpha1.Promise
-	err = yaml.Unmarshal(promiseBytes, &promise)
-	if err != nil {
-		return err
-	}
-
 	var crd apiextensionsv1.CustomResourceDefinition
-	err = yaml.Unmarshal(promise.Spec.API.Raw, &crd)
+	var promise v1alpha1.Promise
+
+	var splitFile bool
+	filePath := filepath.Join(dir, "api.yaml")
+	if _, foundErr := os.Stat(filePath); foundErr == nil {
+		splitFile = true
+		apiBytes, err := os.ReadFile(filePath)
+		if err = yaml.Unmarshal(apiBytes, &crd); err != nil {
+			return err
+		}
+	} else {
+		filePath = filepath.Join(dir, "promise.yaml")
+		promiseBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to find api.yaml or promise.yaml in directory. Please run 'kratix init promise' first: %s", err)
+		}
+		if err = yaml.Unmarshal(promiseBytes, &promise); err != nil {
+			return err
+		}
+		if err = yaml.Unmarshal(promise.Spec.API.Raw, &crd); err != nil {
+			return err
+		}
+	}
+
+	bytes, err := updatedCrdBytes(&crd)
 	if err != nil {
 		return err
 	}
 
-	updateGVK(&crd)
+	if !splitFile {
+		apiContents := &runtime.RawExtension{Raw: bytes}
+		promise.Spec.API = apiContents
+		bytes, err = yaml.Marshal(promise)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = os.WriteFile(filePath, bytes, filePerm); err != nil {
+		return err
+	}
+
+	fmt.Println("Promise api updated")
+	return nil
+}
+
+func updatedCrdBytes(crd *apiextensionsv1.CustomResourceDefinition) ([]byte, error) {
+	updateGVK(crd)
 
 	if len(properties) != 0 {
 		for _, prop := range properties {
 			parsedProps := strings.Split(prop, ":")
 			if len(parsedProps) != 2 {
 				if prop[len(prop)-1:] != "-" {
-					return fmt.Errorf("invalid property format: %s", prop)
+					return nil, fmt.Errorf("invalid property format: %s", prop)
 				}
 				p := strings.TrimRight(prop, "-")
 				delete(crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties, p)
@@ -79,8 +109,8 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 			propName := parsedProps[0]
 			propType := parsedProps[1]
 
-			if propType != "string" && propType != "number" {
-				return fmt.Errorf("unsupported property type: %s", propType)
+			if propType != "string" && propType != "number" && propType != "integer" {
+				return nil, fmt.Errorf("unsupported property type: %s", propType)
 			}
 			if crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties == nil {
 				crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"] = apiextensionsv1.JSONSchemaProps{
@@ -93,26 +123,7 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
-
-	crdBytes, err := json.Marshal(crd)
-	if err != nil {
-		return err
-	}
-
-	apiContents := &runtime.RawExtension{Raw: crdBytes}
-	promise.Spec.API = apiContents
-
-	promiseBytes, err = yaml.Marshal(promise)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(promiseFilePath, promiseBytes, filePerm)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Promise updated")
-	return nil
+	return json.Marshal(crd)
 }
 
 func updateGVK(crd *apiextensionsv1.CustomResourceDefinition) {
@@ -132,6 +143,5 @@ func updateGVK(crd *apiextensionsv1.CustomResourceDefinition) {
 	if plural != "" {
 		crd.Spec.Names.Plural = plural
 	}
-
 	crd.Name = fmt.Sprintf("%s.%s", crd.Spec.Names.Plural, crd.Spec.Group)
 }
