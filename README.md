@@ -16,7 +16,7 @@ The binary will be available at `./bin/kratix`.
 
 To bootstrap the Promise, you can use `kratix init promise` command:
 ```
-kratix init promise PROMISE-NAME --group API-GROUP --kind API-KIND [--version] [--plural]
+kratix init promise PROMISE-NAME --group API-GROUP --kind API-KIND [--version] [--plural] [--split]
 ```
 
 ### Updating API properties

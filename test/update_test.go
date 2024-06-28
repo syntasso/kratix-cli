@@ -72,6 +72,7 @@ var _ = Describe("update", func() {
 						sess := r.run("update", "api", "--kind", "NewKind", "--group", "newGroup", "--version", "v1beta4", "--plural", "newPlural", "--dir", dir)
 						Expect(sess.Out).To(gbytes.Say("Promise api updated"))
 						matchPromise(dir, "postgresql", "newGroup", "v1beta4", "NewKind", "newkind", "newPlural")
+						matchExampleResource(dir, "example-postgresql", "newGroup", "v1beta4", "NewKind")
 					})
 				})
 
@@ -136,15 +137,16 @@ var _ = Describe("update", func() {
 				})
 
 				It("can update gvk of the api", func() {
-					sess := r.run("update", "api", "--kind", "NewKind", "--group", "newGroup", "--version", "v1beta4", "--plural", "newPlural")
+					sess := r.run("update", "api", "--kind", "NewKind", "--group", "newGroup", "--version", "v2beta4", "--plural", "newPlural")
 					Expect(sess.Out).To(gbytes.Say("Promise api updated"))
-					matchApiGvk(workingDir, "newGroup", "v1beta4", "NewKind", "newkind", "newPlural")
+					matchGvkInAPIFile(workingDir, "newGroup", "v2beta4", "NewKind", "newkind", "newPlural")
+					matchExampleResource(workingDir, "example-postgresql", "newGroup", "v2beta4", "NewKind")
 				})
 
 				It("can add new properties and update existing properties to the promise api", func() {
 					sess := r.run("update", "api", "-p", "f1:number", "--property", "p2:string")
 					Expect(sess.Out).To(gbytes.Say("Promise api updated"))
-					matchApiGvk(workingDir, "syntasso.io", "v1alpha1", "Database", "database", "databases")
+					matchGvkInAPIFile(workingDir, "syntasso.io", "v1alpha1", "Database", "database", "databases")
 
 					props := getCRDProperties(workingDir, true)
 					Expect(props).To(SatisfyAll(HaveKey("f1"), HaveKey("p2"), HaveLen(2)))
@@ -155,7 +157,7 @@ var _ = Describe("update", func() {
 				It("can remove existing properties", func() {
 					r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "-p", "keep:string")
 					r.run("update", "api", "-p", "numberField-", "--property", "stringField-")
-					matchApiGvk(workingDir, "syntasso.io", "v1alpha1", "Database", "database", "databases")
+					matchGvkInAPIFile(workingDir, "syntasso.io", "v1alpha1", "Database", "database", "databases")
 
 					props := getCRDProperties(workingDir, true)
 					Expect(props).To(SatisfyAll(HaveKey("keep"), HaveLen(1)))
@@ -167,7 +169,7 @@ var _ = Describe("update", func() {
 	})
 })
 
-func matchApiGvk(dir, group, version, kind, singular, plural string) {
+func matchGvkInAPIFile(dir, group, version, kind, singular, plural string) {
 	apiYAML, err := os.ReadFile(filepath.Join(dir, "api.yaml"))
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	var crd apiextensionsv1.CustomResourceDefinition

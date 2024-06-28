@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"path/filepath"
@@ -29,8 +30,8 @@ var updateAPICmd = &cobra.Command{
 }
 
 var (
-	dir        string
-	properties []string
+	dir, apiVersion string
+	properties      []string
 )
 
 func init() {
@@ -38,7 +39,7 @@ func init() {
 	updateAPICmd.Flags().StringVarP(&dir, "dir", "d", ".", "Directory to read Promise from")
 	updateAPICmd.Flags().StringVarP(&group, "group", "g", "", "The API group for the Promise")
 	updateAPICmd.Flags().StringVarP(&kind, "kind", "k", "", "The kind to be provided by the Promise")
-	updateAPICmd.Flags().StringVarP(&version, "version", "v", "v1alpha1", "The group version for the Promise")
+	updateAPICmd.Flags().StringVarP(&apiVersion, "version", "v", "", "The group version for the Promise")
 	updateAPICmd.Flags().StringVar(&plural, "plural", "", "The plural form of the kind")
 	updateAPICmd.Flags().StringArrayVarP(&properties, "property", "p", []string{}, "Property of the Promise API to update")
 }
@@ -69,7 +70,7 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	bytes, err := updatedCrdBytes(&crd)
+	bytes, err := updateCRDBytes(&crd)
 	if err != nil {
 		return err
 	}
@@ -91,8 +92,13 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func updatedCrdBytes(crd *apiextensionsv1.CustomResourceDefinition) ([]byte, error) {
-	updateGVK(crd)
+func updateCRDBytes(crd *apiextensionsv1.CustomResourceDefinition) ([]byte, error) {
+	if gvkNeedsUpdate() {
+		updateGVK(crd)
+		if err := updateExampleResource(crd); err != nil {
+			return nil, err
+		}
+	}
 
 	if len(properties) != 0 {
 		for _, prop := range properties {
@@ -126,14 +132,21 @@ func updatedCrdBytes(crd *apiextensionsv1.CustomResourceDefinition) ([]byte, err
 	return json.Marshal(crd)
 }
 
+func gvkNeedsUpdate() bool {
+	if apiVersion != "" || kind != "" || group != "" || plural != "" {
+		return true
+	}
+	return false
+}
+
 func updateGVK(crd *apiextensionsv1.CustomResourceDefinition) {
 	if kind != "" {
 		crd.Spec.Names.Kind = kind
 		crd.Spec.Names.Singular = strings.ToLower(kind)
 	}
 
-	if version != "" {
-		crd.Spec.Versions[0].Name = version
+	if apiVersion != "" {
+		crd.Spec.Versions[0].Name = apiVersion
 	}
 
 	if group != "" {
@@ -144,4 +157,24 @@ func updateGVK(crd *apiextensionsv1.CustomResourceDefinition) {
 		crd.Spec.Names.Plural = plural
 	}
 	crd.Name = fmt.Sprintf("%s.%s", crd.Spec.Names.Plural, crd.Spec.Group)
+}
+
+func updateExampleResource(crd *apiextensionsv1.CustomResourceDefinition) error {
+	rrFilePath := filepath.Join(dir, "example-resource.yaml")
+	rrBytes, err := os.ReadFile(rrFilePath)
+	var rr unstructured.Unstructured
+	if err = yaml.Unmarshal(rrBytes, &rr); err != nil {
+		return err
+	}
+	rr.Object["apiVersion"] = fmt.Sprintf("%s/%s", crd.Spec.Group, crd.Spec.Versions[0].Name)
+	rr.Object["kind"] = crd.Spec.Names.Kind
+	updatedRR, err := yaml.Marshal(rr.Object)
+	if err != nil {
+		return err
+	}
+	if err = os.WriteFile(rrFilePath, updatedRR, filePerm); err != nil {
+		return err
+	}
+	fmt.Println("Example resource updated")
+	return nil
 }
