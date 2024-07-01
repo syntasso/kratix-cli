@@ -1,17 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -96,7 +97,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		allPipelines, err := promise.GeneratePipelines(logr.Logger{})
+		allPipelines, err := v1alpha1.NewPipelinesMap(&promise, ctrl.LoggerFrom(context.Background()))
 		if err != nil {
 			return err
 		}
@@ -172,24 +173,24 @@ func generateContainerName(image string) string {
 	return strings.Split(nameAndVersion, ":")[0]
 }
 
-func findPipelinesForWorkflowAction(workflow, action, pipelineName string, allPipelines v1alpha1.PromisePipelines) ([]v1alpha1.Pipeline, int, error) {
+func findPipelinesForWorkflowAction(workflow, action, pipelineName string, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
 	var pipelines []v1alpha1.Pipeline
 	switch workflow {
 	case "promise":
 		switch action {
 		case "configure":
-			pipelines = allPipelines.ConfigurePromise
+			pipelines = allPipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]
 		case "delete":
-			pipelines = allPipelines.DeletePromise
+			pipelines = allPipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete]
 		default:
 			return nil, -1, fmt.Errorf("invalid action: %s", action)
 		}
 	case "resource":
 		switch action {
 		case "configure":
-			pipelines = allPipelines.ConfigureResource
+			pipelines = allPipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure]
 		case "delete":
-			pipelines = allPipelines.DeleteResource
+			pipelines = allPipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete]
 		default:
 			return nil, -1, fmt.Errorf("invalid action: %s", action)
 		}
@@ -278,14 +279,12 @@ func generatePipelineDirFiles(workflowDirectory, pipelineName string) error {
 }
 
 func filesGeneratedWithSplit(dir string) bool {
-	var foundAllSplitFiles = false
-
 	if _, err := os.Stat(dir + "/api.yaml"); errors.Is(err, os.ErrNotExist) {
-		return foundAllSplitFiles
+		return false
 	}
 
 	if _, err := os.Stat(dir + "/dependencies.yaml"); errors.Is(err, os.ErrNotExist) {
-		return foundAllSplitFiles
+		return false
 	}
 
 	return true
@@ -319,7 +318,7 @@ func getPipelinesFromWorkflowYaml(workflow v1alpha1.Workflows, lifecyle string, 
 
 	for index, p := range unstructuredWorkflowPipelines {
 		if p.GetName() == pipelineName {
-			workflowPipelines, err := unstructuredToPipelines(unstructuredWorkflowPipelines)
+			workflowPipelines, err := v1alpha1.PipelinesFromUnstructured(unstructuredWorkflowPipelines, ctrl.LoggerFrom(context.Background()))
 			if err != nil {
 				return []v1alpha1.Pipeline{}, index, err
 			}
@@ -327,24 +326,11 @@ func getPipelinesFromWorkflowYaml(workflow v1alpha1.Workflows, lifecyle string, 
 		}
 	}
 
-	workflowPipelines, err := unstructuredToPipelines(unstructuredWorkflowPipelines)
+	workflowPipelines, err := v1alpha1.PipelinesFromUnstructured(unstructuredWorkflowPipelines, ctrl.LoggerFrom(context.Background()))
 	if err != nil {
 		return []v1alpha1.Pipeline{}, index, err
 	}
 	return workflowPipelines, -1, nil
-}
-
-func unstructuredToPipelines(objects []unstructured.Unstructured) ([]v1alpha1.Pipeline, error) {
-	var pipelines = []v1alpha1.Pipeline{}
-	for _, u := range objects {
-		var pipeline v1alpha1.Pipeline
-		err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &pipeline)
-		if err != nil {
-			return []v1alpha1.Pipeline{}, err
-		}
-		pipelines = append(pipelines, pipeline)
-	}
-	return pipelines, nil
 }
 
 func updateWorkflow(workflow, action string, pipelines []unstructured.Unstructured, workflowTrigger *v1alpha1.Workflows) {

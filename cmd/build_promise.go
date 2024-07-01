@@ -86,7 +86,7 @@ func newPromise(promiseName string) v1alpha1.Promise {
 }
 
 func fileExists(filePath string) bool {
-	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filePath); err != nil {
 		return false
 	}
 	return true
