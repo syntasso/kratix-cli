@@ -140,10 +140,6 @@ var _ = Describe("add", func() {
 			})
 			When("the files were generated with the --split flag", func() {
 				var dir string
-				AfterEach(func() {
-					os.RemoveAll(dir)
-				})
-
 				BeforeEach(func() {
 					var err error
 					dir, err = os.MkdirTemp("", "kratix-update-api-test")
@@ -151,6 +147,10 @@ var _ = Describe("add", func() {
 
 					sess := r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--dir", dir, "--split")
 					Expect(sess.Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+				})
+
+				AfterEach(func() {
+					os.RemoveAll(dir)
 				})
 				It("adds containers to promise workflows", func() {
 					sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir)
