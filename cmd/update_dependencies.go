@@ -17,7 +17,7 @@ var updateDependenciesCmd = &cobra.Command{
 	Short: "Commands to update promise dependencies",
 	Long:  "Commands to update promise dependencies",
 	Example: ` # update promise dependencies with files in 'local-dir'
-kratix update dependencies local-dir/ `,
+Kratix update dependencies local-dir/ `,
 	Args: cobra.ExactArgs(1),
 	RunE: updateDependencies,
 }
@@ -36,7 +36,7 @@ func updateDependencies(cmd *cobra.Command, args []string) error {
 
 	var depBytes []byte
 	if depBytes, err = yamlsig.Marshal(dependencies); err != nil {
-		return fmt.Errorf("failed to marshal dependencies: %s", err)
+		return err
 	}
 
 	var bytes []byte
@@ -51,6 +51,9 @@ func updateDependencies(cmd *cobra.Command, args []string) error {
 		}
 		promise.Spec.Dependencies = dependencies
 		bytes, err = yamlsig.Marshal(promise)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err = os.WriteFile(filepath.Join(dir, file), bytes, filePerm); err != nil {
