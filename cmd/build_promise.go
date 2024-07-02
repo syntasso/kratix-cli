@@ -36,24 +36,44 @@ func BuildPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
 	promise := newPromise(promiseName)
 
-	apiBytes, err := os.ReadFile(filepath.Join(inputDir, apiFileName))
-	if err != nil {
-		return err
+	if _, err := os.Stat(filepath.Join(inputDir, apiFileName)); err == nil {
+		var apiBytes []byte
+		apiBytes, err = os.ReadFile(filepath.Join(inputDir, apiFileName))
+		if err != nil {
+			return err
+		}
+
+		if len(apiBytes) > 0 {
+			var crd apiextensionsv1.CustomResourceDefinition
+			err = yaml.Unmarshal(apiBytes, &crd)
+			if err != nil {
+				return err
+			}
+
+			var crdBytes []byte
+			crdBytes, err = json.Marshal(crd)
+			if err != nil {
+				return err
+			}
+
+			promise.Spec.API = &runtime.RawExtension{Raw: crdBytes}
+		}
 	}
 
-	var crd apiextensionsv1.CustomResourceDefinition
-	err = yaml.Unmarshal(apiBytes, &crd)
-	if err != nil {
-		return err
-	}
+	if _, err := os.Stat(filepath.Join(inputDir, dependenciesFileName)); err == nil {
+		var dependencyBytes []byte
+		dependencyBytes, err = os.ReadFile(filepath.Join(inputDir, dependenciesFileName))
+		if err != nil {
+			return err
+		}
 
-	crdBytes, err := json.Marshal(crd)
-	if err != nil {
-		return err
+		var dependencies v1alpha1.Dependencies
+		err = yaml.Unmarshal(dependencyBytes, &dependencies)
+		if err != nil {
+			return err
+		}
+		promise.Spec.Dependencies = dependencies
 	}
-
-	apiContents := &runtime.RawExtension{Raw: crdBytes}
-	promise.Spec.API = apiContents
 
 	var workflows v1alpha1.Workflows
 	buildWorkflows(&workflows)
