@@ -66,7 +66,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 
 	splitFiles := filesGeneratedWithSplit(dir)
 
-	var pipelines = []v1alpha1.Pipeline{}
+	var pipelines []v1alpha1.Pipeline
 	if splitFiles {
 		filePath = filepath.Join(workflowDirectory, "workflow.yaml")
 	} else {
@@ -301,9 +301,9 @@ func workflowFileFound(workflowDir string) bool {
 	return true
 }
 
-func getPipelinesFromWorkflowYaml(workflow v1alpha1.Workflows, lifecyle string, action string, pipelineName string) (pipelines []v1alpha1.Pipeline, index int, err error) {
-	var unstructuredWorkflowPipelines = []unstructured.Unstructured{}
-	switch lifecyle {
+func getPipelinesFromWorkflowYaml(workflow v1alpha1.Workflows, lifecycle string, action string, pipelineName string) (pipelines []v1alpha1.Pipeline, index int, err error) {
+	var unstructuredWorkflowPipelines []unstructured.Unstructured
+	switch lifecycle {
 	case "promise":
 		switch action {
 		case "configure":
