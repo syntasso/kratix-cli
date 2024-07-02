@@ -77,7 +77,6 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 
 	if split {
 		templates[apiFileName] = "templates/promise/api.yaml.tpl"
-		templates["workflows.yaml"] = "templates/promise/workflows.yaml"
 		templates[dependenciesFileName] = "templates/promise/dependencies.yaml"
 	} else {
 		templates[promiseFileName] = "templates/promise/promise.yaml.tpl"

@@ -3,13 +3,14 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/yaml"
 )
 
@@ -74,6 +75,10 @@ func BuildPromise(cmd *cobra.Command, args []string) error {
 		promise.Spec.Dependencies = dependencies
 	}
 
+	var workflows v1alpha1.Workflows
+	buildWorkflows(&workflows)
+	promise.Spec.Workflows = workflows
+
 	promiseBytes, err := yaml.Marshal(promise)
 	if err != nil {
 		return err
@@ -97,4 +102,56 @@ func newPromise(promiseName string) v1alpha1.Promise {
 			Name: promiseName,
 		},
 	}
+}
+
+func fileExists(filePath string) bool {
+	if _, err := os.Stat(filePath); err != nil {
+		return false
+	}
+	return true
+}
+
+func buildWorkflows(workflows *v1alpha1.Workflows) error {
+	promiseConfigure, err := getWorkflow("promise", "configure")
+	if err != nil {
+		return err
+	}
+
+	promiseDelete, err := getWorkflow("promise", "delete")
+	if err != nil {
+		return err
+	}
+
+	resourceConfigure, err := getWorkflow("resource", "configure")
+	if err != nil {
+		return err
+	}
+
+	resourceDelete, err := getWorkflow("resource", "delete")
+	if err != nil {
+		return err
+	}
+
+	workflows.Promise.Configure = promiseConfigure.Promise.Configure
+	workflows.Promise.Delete = promiseDelete.Promise.Delete
+	workflows.Resource.Configure = resourceConfigure.Resource.Configure
+	workflows.Resource.Delete = resourceDelete.Resource.Delete
+	return nil
+}
+
+func getWorkflow(lifecyle, action string) (workflow v1alpha1.Workflows, err error) {
+	if fileExists(filepath.Join(inputDir, "workflows", lifecyle, action, "workflow.yaml")) {
+		workflowBytes, err := os.ReadFile(filepath.Join(inputDir, "workflows", lifecyle, action, "workflow.yaml"))
+		if err != nil {
+			return v1alpha1.Workflows{}, err
+		}
+
+		var configurePromiseWorkflow v1alpha1.Workflows
+		err = yaml.Unmarshal(workflowBytes, &configurePromiseWorkflow)
+		if err != nil {
+			return v1alpha1.Workflows{}, err
+		}
+		return configurePromiseWorkflow, nil
+	}
+	return v1alpha1.Workflows{}, err
 }
