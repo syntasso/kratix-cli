@@ -155,7 +155,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = generatePipelineDirFiles(workflowDirectory, pipelineName)
+	err = generatePipelineDirFiles(workflowDirectory, pipelineName, containerName)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	fmt.Printf("generated the %s/%s/%s/%s in %s \n", workflow, action, pipelineName, containerName, filePath)
 
 	pipelineScriptFilename := "pipeline.sh"
-	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/containers/scripts/%s \n", workflow, action, pipelineName, pipelineScriptFilename)
+	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/containers/%s/scripts/%s \n", workflow, action, pipelineName, containerName, pipelineScriptFilename)
 	fmt.Println("Don't forget to build and push your image!")
 	return nil
 }
@@ -244,7 +244,7 @@ func pipelinesToUnstructured(pipelines []v1alpha1.Pipeline) ([]unstructured.Unst
 	return pipelinesUnstructured, nil
 }
 
-func generatePipelineDirFiles(workflowDirectory, pipelineName string) error {
+func generatePipelineDirFiles(workflowDirectory, pipelineName, containerName string) error {
 	pipelineScriptContents := []byte(`#!/usr/bin/env sh
 
 set -xe
@@ -255,25 +255,25 @@ namespace=$(yq '.metadata.namespace' /kratix/input/object.yaml)
 echo "Hello from ${name} ${namespace}"`)
 
 	pipelineScriptFilename := "pipeline.sh"
-	pipelineFileDirectory := fmt.Sprintf("%s/%s/containers/", workflowDirectory, pipelineName)
-	pipelineScriptDirectory := fmt.Sprintf("%s/scripts/", pipelineFileDirectory)
-	err := os.MkdirAll(pipelineScriptDirectory, os.ModePerm)
+	containerFileDirectory := fmt.Sprintf("%s/%s/containers/%s/", workflowDirectory, pipelineName, containerName)
+	containerScriptsDirectory := fmt.Sprintf("%s/scripts/", containerFileDirectory)
+	err := os.MkdirAll(containerScriptsDirectory, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(pipelineScriptDirectory+pipelineScriptFilename, pipelineScriptContents, filePerm)
+	err = os.WriteFile(containerScriptsDirectory+pipelineScriptFilename, pipelineScriptContents, filePerm)
 	if err != nil {
 		return err
 	}
 
-	_, err = os.Create(pipelineFileDirectory + "Dockerfile")
+	_, err = os.Create(containerFileDirectory + "Dockerfile")
 	if err != nil {
 		return err
 	}
 
-	if _, err := os.Stat(pipelineFileDirectory + "resources/"); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(pipelineFileDirectory+"resources/", os.ModePerm)
+	if _, err := os.Stat(containerFileDirectory + "resources/"); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(containerFileDirectory+"resources/", os.ModePerm)
 		if err != nil {
 			return err
 		}
