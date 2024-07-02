@@ -1,14 +1,21 @@
 package integration_test
 
 import (
+	"fmt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/syntasso/kratix/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/utils/ptr"
 	"os"
 	"path/filepath"
+	yamlsig "sigs.k8s.io/yaml"
+	"slices"
 )
 
 var _ = Describe("update", func() {
@@ -22,7 +29,7 @@ var _ = Describe("update", func() {
 		r = &runner{exitCode: 0, dir: workingDir}
 	})
 	AfterEach(func() {
-		os.RemoveAll(workingDir)
+		Expect(os.RemoveAll(workingDir)).To(Succeed())
 	})
 
 	When("called without a subcommand", func() {
@@ -167,7 +174,162 @@ var _ = Describe("update", func() {
 		})
 
 	})
+
+	Context("dependencies", func() {
+		var (
+			depDir      string
+			ns1, ns2    *v1.Namespace
+			deployment1 *appsv1.Deployment
+		)
+
+		BeforeEach(func() {
+			var err error
+			depDir, err = os.MkdirTemp("", "dep")
+			Expect(err).NotTo(HaveOccurred())
+
+			ns1 = namespace("test1")
+			ns2 = namespace("test2")
+			deployment1 = deployment("test1")
+
+			Expect(r.run("init", "promise", "postgresql",
+				"--group", "syntasso.io",
+				"--kind", "Database").Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(depDir)).To(Succeed())
+		})
+
+		When("called without an argument", func() {
+			It("errors and print a message", func() {
+				r.exitCode = 1
+				Expect(r.run("update", "dependencies").Err).To(gbytes.Say(`Error: accepts 1 arg\(s\), received 0`))
+			})
+		})
+
+		Context("dependency directory", func() {
+			When("does not exist", func() {
+				It("errors and does not update promise.yaml", func() {
+					r.exitCode = 1
+					sess := r.run("update", "dependencies", "doesnotexistyet")
+					Expect(sess.Err).To(gbytes.Say("failed to read dependency directory: doesnotexistyet"))
+					matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+				})
+			})
+
+			When("exists but is empty", func() {
+				It("errors and does not update promise.yaml", func() {
+					r.exitCode = 1
+					Expect(r.run("update", "dependencies", depDir).Err).To(gbytes.Say(fmt.Sprintf("no files found in directory: %s", depDir)))
+					matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+				})
+			})
+
+			When("contains only empty files", func() {
+				It("errors and does not update promise.yaml", func() {
+					Expect(os.WriteFile(filepath.Join(depDir, "empty-dependencies.yaml"), []byte(""), 0644)).To(Succeed())
+					r.exitCode = 1
+					Expect(r.run("update", "dependencies", depDir).Err).To(gbytes.Say(fmt.Sprintf("no valid dependencies found in directory: %s", depDir)))
+					matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+				})
+			})
+		})
+
+		Context("dependencies.yaml exists", func() {
+			var promiseDir string
+			BeforeEach(func() {
+				var err error
+				promiseDir, err = os.MkdirTemp("", "split-promise")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(r.run("init", "promise", "postgresql",
+					"--group", "syntasso.io",
+					"--kind", "Database",
+					"--dir", promiseDir,
+					"--split").Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+			})
+
+			It("updates dependencies.yaml file", func() {
+				Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), slices.Concat(
+					namespaceBytes(ns1),
+					namespaceBytes(ns2),
+					deploymentBytes(deployment1)), 0644)).To(Succeed())
+
+				Expect(r.run("update", "dependencies", depDir, "--dir", promiseDir).Out).To(gbytes.Say("Updated dependencies.yaml"))
+				generatedDeps := getDependencies(promiseDir, true)
+				Expect(generatedDeps).To(HaveLen(3))
+				Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
+				Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
+				Expect(generatedDeps[1].Object["apiVersion"]).To(Equal("v1"))
+				Expect(generatedDeps[1].Object["kind"]).To(Equal("Namespace"))
+				Expect(generatedDeps[2].Object["apiVersion"]).To(Equal("apps/v1"))
+				Expect(generatedDeps[2].Object["kind"]).To(Equal("Deployment"))
+			})
+		})
+
+		Context("dependencies.yaml does not exist", func() {
+			It("updates promise.yaml file", func() {
+				Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"),
+					slices.Concat(namespaceBytes(ns1), deploymentBytes(deployment1)), 0644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(depDir, "namespace.yaml"), namespaceBytes(ns2), 0644)).To(Succeed())
+
+				Expect(r.run("update", "dependencies", depDir).Out).To(gbytes.Say("Updated promise.yaml"))
+				generatedDeps := getDependencies(workingDir, false)
+				Expect(generatedDeps).To(HaveLen(3))
+
+				var kinds []string
+				for _, d := range generatedDeps {
+					kinds = append(kinds, d.Object["kind"].(string))
+				}
+				Expect(kinds).To(ConsistOf("Namespace", "Namespace", "Deployment"))
+			})
+
+			When("promise.yaml does not exist", func() {
+				It("succeeds and writes dependencies to dependencies.yaml", func() {
+					promiseDir, err := os.MkdirTemp("", "promise")
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(os.WriteFile(filepath.Join(depDir, "namespace.yaml"), namespaceBytes(ns1), 0644)).To(Succeed())
+					sess := r.run("update", "dependencies", depDir, "--dir", promiseDir)
+					Expect(sess.Out).To(gbytes.Say("Updated dependencies.yaml"))
+				})
+			})
+
+			When("dependency directory contains file that cannot be decoded", func() {
+				It("updates promise.yaml file with the valid dependencies", func() {
+					Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"),
+						slices.Concat(namespaceBytes(ns1), deploymentBytes(deployment1)), 0644)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(depDir, "not-yaml"), []byte("not valid yaml"), 0644)).To(Succeed())
+					sess := r.run("update", "dependencies", depDir)
+					Expect(sess.Out).To(gbytes.Say("Skipped invalid yaml documents during dependency writing"))
+					Expect(sess.Out).To(gbytes.Say("Updated promise.yaml"))
+					generatedDeps := getDependencies(workingDir, false)
+					Expect(generatedDeps).To(HaveLen(2))
+					Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
+					Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
+					Expect(generatedDeps[1].Object["apiVersion"]).To(Equal("apps/v1"))
+					Expect(generatedDeps[1].Object["kind"]).To(Equal("Deployment"))
+				})
+			})
+		})
+	})
 })
+
+func getDependencies(dir string, split bool) v1alpha1.Dependencies {
+	var deps v1alpha1.Dependencies
+	if split {
+		bytes, err := os.ReadFile(filepath.Join(dir, "dependencies.yaml"))
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+		ExpectWithOffset(1, yaml.Unmarshal(bytes, &deps)).To(Succeed())
+	} else {
+		promiseBytes, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+		var promise v1alpha1.Promise
+		ExpectWithOffset(1, yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
+		deps = promise.Spec.Dependencies
+	}
+	return deps
+}
 
 func matchGvkInAPIFile(dir, group, version, kind, singular, plural string) {
 	apiYAML, err := os.ReadFile(filepath.Join(dir, "api.yaml"))
@@ -193,4 +355,54 @@ func getCRDProperties(dir string, split bool) map[string]apiextensionsv1.JSONSch
 		ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	}
 	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties
+}
+
+func namespaceBytes(ns *v1.Namespace) []byte {
+	separator := []byte("---\n")
+	bytes, err := yamlsig.Marshal(ns)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return append(separator, bytes...)
+}
+
+func deploymentBytes(dep *appsv1.Deployment) []byte {
+	separator := []byte("---\n")
+	bytes, err := yamlsig.Marshal(dep)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return append(separator, bytes...)
+}
+
+func namespace(name string) *v1.Namespace {
+	return &v1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+}
+
+func deployment(name string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: ptr.To(int32(1)),
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name: "test",
+						},
+					},
+				},
+			},
+		},
+	}
 }

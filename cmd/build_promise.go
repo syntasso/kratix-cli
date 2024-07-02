@@ -36,7 +36,7 @@ func BuildPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
 	promise := newPromise(promiseName)
 
-	apiBytes, err := os.ReadFile(filepath.Join(inputDir, "api.yaml"))
+	apiBytes, err := os.ReadFile(filepath.Join(inputDir, apiFileName))
 	if err != nil {
 		return err
 	}
