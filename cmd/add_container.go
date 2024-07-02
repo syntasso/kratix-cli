@@ -40,7 +40,7 @@ var workflowTrigger v1alpha1.Workflows
 func init() {
 	addCmd.AddCommand(addContainerCmd)
 	addContainerCmd.Flags().StringVarP(&image, "image", "i", "", "The image used by this container.")
-	addContainerCmd.Flags().StringVarP(&containerName, "containerName", "n", "", "The container name used for this container.")
+	addContainerCmd.Flags().StringVarP(&containerName, "name", "n", "", "The container name used for this container.")
 	addContainerCmd.Flags().StringVarP(&dir, "dir", "d", ".", "Directory to read promise.yaml from. Default to current working directory.")
 	addContainerCmd.MarkFlagRequired("image")
 }
@@ -110,6 +110,10 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 
 	var pipelinesUnstructured []unstructured.Unstructured
 	if pipelineIndex != -1 {
+		if containerNameInPipeline(pipelines[pipelineIndex], container.Name) {
+			err = fmt.Errorf("image '%s' already exists in Pipeline", container.Name)
+			return err
+		}
 		pipelines[pipelineIndex].Spec.Containers = append(pipelines[pipelineIndex].Spec.Containers, container)
 		pipelinesUnstructured, err = pipelinesToUnstructured(pipelines)
 		if err != nil {
@@ -160,7 +164,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("generated the %s/%s/%s/%s \n", workflow, action, pipelineName, containerName)
+	fmt.Printf("generated the %s/%s/%s/%s in %s \n", workflow, action, pipelineName, containerName, filePath)
 
 	pipelineScriptFilename := "pipeline.sh"
 	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/containers/scripts/%s \n", workflow, action, pipelineName, pipelineScriptFilename)
@@ -350,4 +354,13 @@ func updateWorkflow(workflow, action string, pipelines []unstructured.Unstructur
 			workflowTrigger.Resource.Delete = pipelines
 		}
 	}
+}
+
+func containerNameInPipeline(pipeline v1alpha1.Pipeline, containerName string) bool {
+	for _, container := range pipeline.Spec.Containers {
+		if container.Name == containerName {
+			return true
+		}
+	}
+	return false
 }

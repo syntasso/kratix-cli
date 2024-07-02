@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -78,7 +79,7 @@ var _ = Describe("add", func() {
 
 			It("adds containers to promise workflows", func() {
 				sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir)
-				Expect(sess.Out).To(gbytes.Say("generated the promise/configure/pipeline0/image"))
+				Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
 				r.run("add", "container", "promise/configure/pipeline1", "--image", "project/image1:latest", "-n", "a-good-container", "--dir", dir)
 				r.run("add", "container", "promise/delete/pipeline0", "--image", "project/cleanup:latest", "--dir", dir)
 
@@ -138,6 +139,15 @@ var _ = Describe("add", func() {
 				Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
 				Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Name).To(Equal("project-cleanup"))
 			})
+
+			When("adding a container that matches the name of an existing container in the pipeline", func() {
+				It("raises an error", func() {
+					r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--name", "my-image", "--dir", dir)
+					sess := withExitCode(1).run("add", "container", "promise/configure/pipeline0", "--image", "another-image:latest", "--name", "my-image", "--dir", dir)
+					Expect(sess.Err).To(gbytes.Say("image 'my-image' already exists in Pipeline"))
+				})
+			})
+
 			When("the files were generated with the --split flag", func() {
 				var dir string
 				BeforeEach(func() {
@@ -155,7 +165,7 @@ var _ = Describe("add", func() {
 				It("adds containers to promise workflows", func() {
 					sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir)
 					r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "-n", "superb-image", "--dir", dir)
-					Expect(sess.Out).To(gbytes.Say("generated the promise/configure/pipeline0/image"))
+					Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/workflows/promise/configure/workflow.yaml", dir)))
 
 					_, err := os.Stat(filepath.Join(dir, "workflows", "promise", "configure", "workflow.yaml"))
 					Expect(err).ToNot(HaveOccurred())
