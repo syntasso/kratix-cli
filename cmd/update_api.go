@@ -49,7 +49,7 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 	var promise v1alpha1.Promise
 
 	var splitFile bool
-	filePath := filepath.Join(dir, "api.yaml")
+	filePath := filepath.Join(dir, apiFileName)
 	if _, foundErr := os.Stat(filePath); foundErr == nil {
 		splitFile = true
 		apiBytes, err := os.ReadFile(filePath)
@@ -57,10 +57,10 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	} else {
-		filePath = filepath.Join(dir, "promise.yaml")
+		filePath = filepath.Join(dir, promiseFileName)
 		promiseBytes, err := os.ReadFile(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to find api.yaml or promise.yaml in directory. Please run 'kratix init promise' first: %s", err)
+			return fmt.Errorf("failed to find %s or %s in directory. Please run 'kratix init promise' first: %s", apiFileName, promiseFileName, err)
 		}
 		if err = yaml.Unmarshal(promiseBytes, &promise); err != nil {
 			return err
@@ -162,7 +162,7 @@ func updateGVK(crd *apiextensionsv1.CustomResourceDefinition) {
 }
 
 func updateExampleResource(crd *apiextensionsv1.CustomResourceDefinition) error {
-	rrFilePath := filepath.Join(dir, "example-resource.yaml")
+	rrFilePath := filepath.Join(dir, resourceFileName)
 	rrBytes, err := os.ReadFile(rrFilePath)
 	var rr unstructured.Unstructured
 	if err = yaml.Unmarshal(rrBytes, &rr); err != nil {

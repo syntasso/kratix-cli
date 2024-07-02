@@ -176,12 +176,24 @@ var _ = Describe("update", func() {
 	})
 
 	Context("dependencies", func() {
-		var depDir string
+		var (
+			depDir      string
+			ns1, ns2    *v1.Namespace
+			deployment1 *appsv1.Deployment
+		)
 
 		BeforeEach(func() {
 			var err error
 			depDir, err = os.MkdirTemp("", "dep")
 			Expect(err).NotTo(HaveOccurred())
+
+			ns1 = namespace("test1")
+			ns2 = namespace("test2")
+			deployment1 = deployment("test1")
+
+			Expect(r.run("init", "promise", "postgresql",
+				"--group", "syntasso.io",
+				"--kind", "Database").Out).To(gbytes.Say("postgresql promise bootstrapped in"))
 		})
 
 		AfterEach(func() {
@@ -195,135 +207,113 @@ var _ = Describe("update", func() {
 			})
 		})
 
-		Context("update dependencies", func() {
-			var (
-				ns1, ns2    *v1.Namespace
-				deployment1 *appsv1.Deployment
-			)
-
-			BeforeEach(func() {
-				ns1 = namespace("test1")
-				ns2 = namespace("test2")
-				deployment1 = deployment("test1")
-			})
-
-			When("--split is not set", func() {
-				BeforeEach(func() {
-					Expect(r.run("init", "promise", "postgresql",
-						"--group", "syntasso.io",
-						"--kind", "Database").Out).To(gbytes.Say("postgresql promise bootstrapped in"))
-				})
-
-				When("dependency directory does not exist", func() {
-					It("errors and does not update promise.yaml", func() {
-						r.exitCode = 1
-						sess := r.run("update", "dependencies", "doesnotexistyet")
-						Expect(sess.Err).To(gbytes.Say("failed to read dependency directory: doesnotexistyet"))
-						matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
-					})
-				})
-
-				When("dependency directory exists but is empty", func() {
-					It("errors and does not update promise.yaml", func() {
-						r.exitCode = 1
-						Expect(r.run("update", "dependencies", depDir).Err).To(gbytes.Say(fmt.Sprintf("no files found in directory: %s", depDir)))
-						matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
-					})
-				})
-
-				When("dependency directory contains only empty files", func() {
-					It("errors and does not update promise.yaml", func() {
-						Expect(os.WriteFile(filepath.Join(depDir, "empty-dependencies.yaml"), []byte(""), 0644)).To(Succeed())
-						r.exitCode = 1
-						Expect(r.run("update", "dependencies", depDir).Err).To(gbytes.Say(fmt.Sprintf("no valid dependencies found in directory: %s", depDir)))
-						matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
-					})
-				})
-
-				When("promise.yaml does not exist", func() {
-					It("errors and print a message", func() {
-						promiseDir, err := os.MkdirTemp("", "promise")
-						Expect(err).NotTo(HaveOccurred())
-						r.exitCode = 1
-						sess := r.run("update", "dependencies", depDir, "--dir", promiseDir)
-						Expect(sess.Err).To(gbytes.Say(fmt.Sprintf("failed to find promise.yaml in directory: %s", promiseDir)))
-					})
-				})
-
-				It("updates promise.yaml file", func() {
-					ExpectWithOffset(1, os.WriteFile(filepath.Join(depDir, "deps.yaml"),
-						slices.Concat(namespaceBytes(ns1), deploymentBytes(deployment1)), 0644)).To(Succeed())
-					ExpectWithOffset(1, os.WriteFile(filepath.Join(depDir, "namespace.yaml"), namespaceBytes(ns2), 0644)).To(Succeed())
-
-					Expect(r.run("update", "dependencies", depDir).Out).To(gbytes.Say("Updated promise.yaml"))
-					generatedDeps := getDependencies(workingDir, false)
-					Expect(generatedDeps).To(HaveLen(3))
-
-					var kinds []string
-					for _, d := range generatedDeps {
-						kinds = append(kinds, d.Object["kind"].(string))
-					}
-					Expect(kinds).To(ConsistOf("Namespace", "Namespace", "Deployment"))
-				})
-
-				When("dependency directory contains file that cannot be decoded", func() {
-					It("updates promise.yaml file with other dependencies", func() {
-						ExpectWithOffset(1, os.WriteFile(filepath.Join(depDir, "deps.yaml"),
-							slices.Concat(namespaceBytes(ns1), deploymentBytes(deployment1)), 0644)).To(Succeed())
-						ExpectWithOffset(1, os.WriteFile(filepath.Join(depDir, "not-yaml"), []byte("not valid yaml"), 0644)).To(Succeed())
-						sess := r.run("update", "dependencies", depDir)
-						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("failed to decode file: %s", filepath.Join(depDir, "not-yaml"))))
-						Expect(sess.Out).To(gbytes.Say("Updated promise.yaml"))
-						generatedDeps := getDependencies(workingDir, false)
-						Expect(generatedDeps).To(HaveLen(2))
-						Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
-						Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
-						Expect(generatedDeps[1].Object["apiVersion"]).To(Equal("apps/v1"))
-						Expect(generatedDeps[1].Object["kind"]).To(Equal("Deployment"))
-					})
+		Context("dependency directory", func() {
+			When("does not exist", func() {
+				It("errors and does not update promise.yaml", func() {
+					r.exitCode = 1
+					sess := r.run("update", "dependencies", "doesnotexistyet")
+					Expect(sess.Err).To(gbytes.Say("failed to read dependency directory: doesnotexistyet"))
+					matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 				})
 			})
 
-			Context("--split flag", func() {
-
-				BeforeEach(func() {
-					Expect(r.run("init", "promise", "postgresql",
-						"--group", "syntasso.io",
-						"--kind", "Database",
-						"--split").Out).To(gbytes.Say("postgresql promise bootstrapped in"))
-
+			When("exists but is empty", func() {
+				It("errors and does not update promise.yaml", func() {
+					r.exitCode = 1
+					Expect(r.run("update", "dependencies", depDir).Err).To(gbytes.Say(fmt.Sprintf("no files found in directory: %s", depDir)))
+					matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 				})
+			})
 
-				It("updates dependencies.yaml file", func() {
-
-					Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), slices.Concat(
-						namespaceBytes(ns1),
-						namespaceBytes(ns2),
-						deploymentBytes(deployment1)), 0644)).To(Succeed())
-
-					Expect(r.run("update", "dependencies", depDir, "--split").Out).To(gbytes.Say("Updated dependencies.yaml"))
-					generatedDeps := getDependencies(workingDir, true)
-					Expect(generatedDeps).To(HaveLen(3))
-					Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
-					Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
-					Expect(generatedDeps[1].Object["apiVersion"]).To(Equal("v1"))
-					Expect(generatedDeps[1].Object["kind"]).To(Equal("Namespace"))
-					Expect(generatedDeps[2].Object["apiVersion"]).To(Equal("apps/v1"))
-					Expect(generatedDeps[2].Object["kind"]).To(Equal("Deployment"))
+			When("contains only empty files", func() {
+				It("errors and does not update promise.yaml", func() {
+					Expect(os.WriteFile(filepath.Join(depDir, "empty-dependencies.yaml"), []byte(""), 0644)).To(Succeed())
+					r.exitCode = 1
+					Expect(r.run("update", "dependencies", depDir).Err).To(gbytes.Say(fmt.Sprintf("no valid dependencies found in directory: %s", depDir)))
+					matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 				})
 			})
 		})
 
+		Context("dependencies.yaml exists", func() {
+			var promiseDir string
+			BeforeEach(func() {
+				var err error
+				promiseDir, err = os.MkdirTemp("", "split-promise")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(r.run("init", "promise", "postgresql",
+					"--group", "syntasso.io",
+					"--kind", "Database",
+					"--dir", promiseDir,
+					"--split").Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+			})
+
+			It("updates dependencies.yaml file", func() {
+				Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), slices.Concat(
+					namespaceBytes(ns1),
+					namespaceBytes(ns2),
+					deploymentBytes(deployment1)), 0644)).To(Succeed())
+
+				Expect(r.run("update", "dependencies", depDir, "--dir", promiseDir).Out).To(gbytes.Say("Updated dependencies.yaml"))
+				generatedDeps := getDependencies(promiseDir, true)
+				Expect(generatedDeps).To(HaveLen(3))
+				Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
+				Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
+				Expect(generatedDeps[1].Object["apiVersion"]).To(Equal("v1"))
+				Expect(generatedDeps[1].Object["kind"]).To(Equal("Namespace"))
+				Expect(generatedDeps[2].Object["apiVersion"]).To(Equal("apps/v1"))
+				Expect(generatedDeps[2].Object["kind"]).To(Equal("Deployment"))
+			})
+		})
+
+		Context("dependencies.yaml does not exist", func() {
+			It("updates promise.yaml file", func() {
+				Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"),
+					slices.Concat(namespaceBytes(ns1), deploymentBytes(deployment1)), 0644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(depDir, "namespace.yaml"), namespaceBytes(ns2), 0644)).To(Succeed())
+
+				Expect(r.run("update", "dependencies", depDir).Out).To(gbytes.Say("Updated promise.yaml"))
+				generatedDeps := getDependencies(workingDir, false)
+				Expect(generatedDeps).To(HaveLen(3))
+
+				var kinds []string
+				for _, d := range generatedDeps {
+					kinds = append(kinds, d.Object["kind"].(string))
+				}
+				Expect(kinds).To(ConsistOf("Namespace", "Namespace", "Deployment"))
+			})
+
+			When("promise.yaml does not exist", func() {
+				It("succeeds and writes dependencies to dependencies.yaml", func() {
+					promiseDir, err := os.MkdirTemp("", "promise")
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(os.WriteFile(filepath.Join(depDir, "namespace.yaml"), namespaceBytes(ns1), 0644)).To(Succeed())
+					sess := r.run("update", "dependencies", depDir, "--dir", promiseDir)
+					Expect(sess.Out).To(gbytes.Say("Updated dependencies.yaml"))
+				})
+			})
+
+			When("dependency directory contains file that cannot be decoded", func() {
+				It("updates promise.yaml file with the valid dependencies", func() {
+					Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"),
+						slices.Concat(namespaceBytes(ns1), deploymentBytes(deployment1)), 0644)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(depDir, "not-yaml"), []byte("not valid yaml"), 0644)).To(Succeed())
+					sess := r.run("update", "dependencies", depDir)
+					Expect(sess.Out).To(gbytes.Say("Skipped invalid yaml documents during dependency writing"))
+					Expect(sess.Out).To(gbytes.Say("Updated promise.yaml"))
+					generatedDeps := getDependencies(workingDir, false)
+					Expect(generatedDeps).To(HaveLen(2))
+					Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
+					Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
+					Expect(generatedDeps[1].Object["apiVersion"]).To(Equal("apps/v1"))
+					Expect(generatedDeps[1].Object["kind"]).To(Equal("Deployment"))
+				})
+			})
+		})
 	})
 })
-
-func getKinds(deps v1alpha1.Dependencies) []string {
-	var kinds []string
-	for _, d := range deps {
-		kinds = append(kinds, d.Object["kind"].(string))
-	}
-	return kinds
-}
 
 func getDependencies(dir string, split bool) v1alpha1.Dependencies {
 	var deps v1alpha1.Dependencies

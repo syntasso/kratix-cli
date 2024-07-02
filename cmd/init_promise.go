@@ -33,6 +33,13 @@ var (
 	group, kind, version, plural, outputDir string
 )
 
+const (
+	promiseFileName      = "promise.yaml"
+	dependenciesFileName = "dependencies.yaml"
+	apiFileName          = "api.yaml"
+	resourceFileName     = "example-resource.yaml"
+)
+
 func init() {
 	initCmd.AddCommand(initPromiseCmd)
 
@@ -64,16 +71,16 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 	}
 
 	templates := map[string]string{
-		"example-resource.yaml": "templates/promise/example-resource.yaml.tpl",
-		"README.md":             "templates/promise/README.md",
+		resourceFileName: "templates/promise/example-resource.yaml.tpl",
+		"README.md":      "templates/promise/README.md",
 	}
 
 	if split {
-		templates["api.yaml"] = "templates/promise/api.yaml.tpl"
+		templates[apiFileName] = "templates/promise/api.yaml.tpl"
 		templates["workflows.yaml"] = "templates/promise/workflows.yaml"
-		templates["dependencies.yaml"] = "templates/promise/dependencies.yaml"
+		templates[dependenciesFileName] = "templates/promise/dependencies.yaml"
 	} else {
-		templates["promise.yaml"] = "templates/promise/promise.yaml.tpl"
+		templates[promiseFileName] = "templates/promise/promise.yaml.tpl"
 	}
 
 	for name, tmpl := range templates {

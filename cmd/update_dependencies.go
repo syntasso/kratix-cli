@@ -25,17 +25,9 @@ kratix update dependencies local-dir/ `,
 func init() {
 	updateCmd.AddCommand(updateDependenciesCmd)
 	updateDependenciesCmd.Flags().StringVarP(&dir, "dir", "d", ".", "Directory to read Promise from")
-	updateDependenciesCmd.Flags().BoolVar(&split, "split", false, "Provide this flag when promise is initialized with --split")
 }
 
 func updateDependencies(cmd *cobra.Command, args []string) error {
-	if !split {
-		_, err := os.Stat(filepath.Join(dir, "promise.yaml"))
-		if err != nil {
-			return fmt.Errorf("failed to find promise.yaml in directory: %s", dir)
-		}
-	}
-
 	dependenciesDir := args[0]
 	dependencies, err := buildDependencies(dependenciesDir)
 	if err != nil {
@@ -47,27 +39,34 @@ func updateDependencies(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to marshal dependencies: %s", err)
 	}
 
-	var filePath string
 	var bytes []byte
-	if split {
-		filePath = filepath.Join(dir, "dependencies.yaml")
+	file := dependencyFile()
+	switch file {
+	case dependenciesFileName:
 		bytes = depBytes
-	} else {
-		filePath = filepath.Join(dir, "promise.yaml")
+	case promiseFileName:
 		var promise v1alpha1.Promise
-		if promise, err = getPromise(filePath); err != nil {
+		if promise, err = getPromise(filepath.Join(dir, "promise.yaml")); err != nil {
 			return err
 		}
 		promise.Spec.Dependencies = dependencies
 		bytes, err = yamlsig.Marshal(promise)
 	}
 
-	if err = os.WriteFile(filePath, bytes, filePerm); err != nil {
+	if err = os.WriteFile(filepath.Join(dir, file), bytes, filePerm); err != nil {
 		return err
 	}
 
-	fmt.Printf("Updated %s\n", filePath)
+	fmt.Printf("Updated %s\n", file)
 	return nil
+}
+
+func dependencyFile() string {
+	_, err := os.Stat(filepath.Join(dir, dependenciesFileName))
+	if _, promiseErr := os.Stat(filepath.Join(dir, promiseFileName)); os.IsNotExist(err) && promiseErr == nil {
+		return promiseFileName
+	}
+	return dependenciesFileName
 }
 
 func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
@@ -81,6 +80,7 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 	}
 
 	var dependencies []v1alpha1.Dependency
+	var dependencyIgnored bool
 	for _, fileInfo := range files {
 		fileName := filepath.Join(dependenciesDir, fileInfo.Name())
 		var file *os.File
@@ -94,7 +94,7 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 			if err = decoder.Decode(&obj); err == io.EOF {
 				break
 			} else if err != nil {
-				fmt.Printf("failed to decode file: %s\n; Content will not be included in dependencies", fileName)
+				dependencyIgnored = true
 				continue
 			}
 			dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: *obj})
@@ -103,6 +103,10 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 
 	if len(dependencies) == 0 {
 		return nil, fmt.Errorf("no valid dependencies found in directory: %s", dependenciesDir)
+	}
+
+	if dependencyIgnored {
+		fmt.Println("Skipped invalid yaml documents during dependency writing")
 	}
 
 	return dependencies, nil
