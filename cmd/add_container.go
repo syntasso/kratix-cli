@@ -167,7 +167,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	fmt.Printf("generated the %s/%s/%s/%s in %s \n", workflow, action, pipelineName, containerName, filePath)
 
 	pipelineScriptFilename := "pipeline.sh"
-	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/containers/%s/scripts/%s \n", workflow, action, pipelineName, containerName, pipelineScriptFilename)
+	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/%s/scripts/%s \n", workflow, action, pipelineName, containerName, pipelineScriptFilename)
 	fmt.Println("Don't forget to build and push your image!")
 	return nil
 }
@@ -255,7 +255,7 @@ namespace=$(yq '.metadata.namespace' /kratix/input/object.yaml)
 echo "Hello from ${name} ${namespace}"`)
 
 	pipelineScriptFilename := "pipeline.sh"
-	containerFileDirectory := fmt.Sprintf("%s/%s/containers/%s/", workflowDirectory, pipelineName, containerName)
+	containerFileDirectory := fmt.Sprintf("%s/%s/%s/", workflowDirectory, pipelineName, containerName)
 	containerScriptsDirectory := fmt.Sprintf("%s/scripts/", containerFileDirectory)
 	err := os.MkdirAll(containerScriptsDirectory, os.ModePerm)
 	if err != nil {
