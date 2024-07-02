@@ -247,12 +247,12 @@ func pipelinesToUnstructured(pipelines []v1alpha1.Pipeline) ([]unstructured.Unst
 func generatePipelineDirFiles(workflowDirectory, pipelineName string) error {
 	pipelineScriptContents := []byte(`#!/usr/bin/env sh
 
-	set -xe
-	
-	name="$(yq eval '.metadata.name' /kratix/input/object.yaml)"
-	namespace=$(yq '.metadata.namespace' /kratix/input/object.yaml)
-	
-	echo "Hello from ${name} ${namespace}"`)
+set -xe
+
+name="$(yq eval '.metadata.name' /kratix/input/object.yaml)"
+namespace=$(yq '.metadata.namespace' /kratix/input/object.yaml)
+
+echo "Hello from ${name} ${namespace}"`)
 
 	pipelineScriptFilename := "pipeline.sh"
 	pipelineFileDirectory := fmt.Sprintf("%s/%s/containers/", workflowDirectory, pipelineName)
