@@ -11,7 +11,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/utils/ptr"
 	"os"
 	"path/filepath"
 	yamlsig "sigs.k8s.io/yaml"
@@ -391,18 +390,6 @@ func deployment(name string) *appsv1.Deployment {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: ptr.To(int32(1)),
-			Template: v1.PodTemplateSpec{
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							Name: "test",
-						},
-					},
-				},
-			},
 		},
 	}
 }

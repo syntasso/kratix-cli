@@ -53,6 +53,21 @@ func BuildPromise(cmd *cobra.Command, args []string) error {
 
 	apiContents := &runtime.RawExtension{Raw: crdBytes}
 	promise.Spec.API = apiContents
+
+	if _, err = os.Stat(filepath.Join(inputDir, dependenciesFileName)); err == nil {
+		dependencyBytes, err := os.ReadFile(filepath.Join(inputDir, dependenciesFileName))
+		if err != nil {
+			return err
+		}
+
+		var dependencies v1alpha1.Dependencies
+		err = yaml.Unmarshal(dependencyBytes, &dependencies)
+		if err != nil {
+			return err
+		}
+		promise.Spec.Dependencies = dependencies
+	}
+
 	promiseBytes, err := yaml.Marshal(promise)
 	if err != nil {
 		return err
