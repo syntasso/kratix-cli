@@ -35,6 +35,21 @@ To add workflow containers, you can use the `kratix add container` command:
 kratix add container WORKFLOW/ACTION/PIPELINENAME --image CONTAINER-IMAGE [--name]
 ```
 
+### Updating Dependencies
+
+To add Promise dependencies, you can run the `kratix update dependencies dependencies` command:
+```
+kratix update dependencies DEPENDENCIES-DIRECTORY/
+```
+
+### Building Promise
+
+If you initialized the Promise by providing `--split` flag in `kratix init promise` command, run
+the `kratix build promise` command to combine the Promise api, workflow, and dependencies:
+```
+kratix build promise PROMISE-NAME
+```
+
 To see helpful messages about using the cli, you can run:
 ```
 kratix help
