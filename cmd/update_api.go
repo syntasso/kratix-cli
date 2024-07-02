@@ -70,20 +70,22 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	bytes, err := updateCRDBytes(&crd)
+	jsonBytes, err := updateCRDBytes(&crd)
 	if err != nil {
 		return err
 	}
 
+	apiContents := &runtime.RawExtension{Raw: jsonBytes}
+	var data interface{} = apiContents
 	if !splitFile {
-		apiContents := &runtime.RawExtension{Raw: bytes}
 		promise.Spec.API = apiContents
-		bytes, err = yaml.Marshal(promise)
-		if err != nil {
-			return err
-		}
+		data = promise
 	}
 
+	bytes, err := yaml.Marshal(data)
+	if err != nil {
+		return err
+	}
 	if err = os.WriteFile(filePath, bytes, filePerm); err != nil {
 		return err
 	}
