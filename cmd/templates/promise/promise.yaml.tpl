@@ -26,6 +26,3 @@ spec:
                   properties: {}
           served: true
           storage: true
-  workflows:
-    resource:
-      configure: []
