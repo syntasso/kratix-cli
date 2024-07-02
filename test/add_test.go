@@ -103,17 +103,45 @@ var _ = Describe("add", func() {
 				Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
 				Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Name).To(Equal("project-cleanup"))
 
-				Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/containers/scripts/pipeline.sh"))
-				script := getPipelineScript(dir, "promise", "configure", "pipeline1")
+				Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
+				script := getPipelineScript(dir, "promise", "configure", "pipeline1", "a-good-container")
 				Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
 				Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
 
-				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "Dockerfile")).To(BeTrue())
-				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "resources/")).To(BeTrue())
-				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline1", "Dockerfile")).To(BeTrue())
-				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "resources/")).To(BeTrue())
-				Expect(pipelineWorkflowPathExists(dir, "promise", "delete", "pipeline0", "Dockerfile")).To(BeTrue())
-				Expect(pipelineWorkflowPathExists(dir, "promise", "delete", "pipeline0", "resources/")).To(BeTrue())
+				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "image", "Dockerfile")).To(BeTrue())
+				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "image", "resources/")).To(BeTrue())
+				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline1", "a-good-container", "Dockerfile")).To(BeTrue())
+				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline1", "a-good-container", "resources/")).To(BeTrue())
+				Expect(pipelineWorkflowPathExists(dir, "promise", "delete", "pipeline0", "project-cleanup", "Dockerfile")).To(BeTrue())
+				Expect(pipelineWorkflowPathExists(dir, "promise", "delete", "pipeline0", "project-cleanup", "resources/")).To(BeTrue())
+			})
+
+			When("multiple containers are added to the same pipeline", func() {
+				It("adds containers to promise workflows", func() {
+					r.run("add", "container", "promise/configure/pipeline0", "--image", "project/image1:latest", "-n", "a-great-container", "--dir", dir)
+					r.run("add", "container", "promise/configure/pipeline0", "--image", "project/image2:latest", "-n", "an-even-greater-container", "--dir", dir)
+
+					pipelines := getWorkflows(dir)
+					Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure]).To(HaveLen(0))
+					Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete]).To(HaveLen(0))
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]).To(HaveLen(1))
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete]).To(HaveLen(0))
+
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Name).To(Equal("pipeline0"))
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers).To(HaveLen(2))
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Name).To(Equal("a-great-container"))
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Image).To(Equal("project/image1:latest"))
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[1].Name).To(Equal("an-even-greater-container"))
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[1].Image).To(Equal("project/image2:latest"))
+
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "a-great-container", "Dockerfile")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "a-great-container", "resources/")).To(BeTrue())
+					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "a-great-container")).To(ContainSubstring("Hello from ${name} ${namespace}"))
+
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "an-even-greater-container", "Dockerfile")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "an-even-greater-container", "resources/")).To(BeTrue())
+					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "an-even-greater-container")).To(ContainSubstring("Hello from ${name} ${namespace}"))
+				})
 			})
 
 			It("adds containers to resource workflows", func() {
@@ -150,6 +178,7 @@ var _ = Describe("add", func() {
 
 			When("the files were generated with the --split flag", func() {
 				var dir string
+
 				BeforeEach(func() {
 					var err error
 					dir, err = os.MkdirTemp("", "kratix-update-api-test")
@@ -162,6 +191,7 @@ var _ = Describe("add", func() {
 				AfterEach(func() {
 					os.RemoveAll(dir)
 				})
+
 				It("adds containers to promise workflows", func() {
 					sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir)
 					r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "-n", "superb-image", "--dir", dir)
@@ -186,13 +216,16 @@ var _ = Describe("add", func() {
 					Expect(pipelines[0].Spec.Containers[1].Name).To(Equal("superb-image"))
 					Expect(pipelines[0].Spec.Containers[1].Image).To(Equal("image:latest"))
 
-					Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/containers/scripts/pipeline.sh"))
-					script := getPipelineScript(dir, "promise", "configure", "pipeline0")
-					Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
 					Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
 
-					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "Dockerfile")).To(BeTrue())
-					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "resources/")).To(BeTrue())
+					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "image")).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "image", "Dockerfile")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "image", "resources/")).To(BeTrue())
+
+					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "superb-image")).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "superb-image", "Dockerfile")).To(BeTrue())
+					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "superb-image", "resources/")).To(BeTrue())
 				})
 			})
 
@@ -223,16 +256,16 @@ func getWorkflowsFromSplitFile(dir, workflowName, action string) v1alpha1.Workfl
 	return workflows
 }
 
-func getPipelineScript(dir, workflow, action, pipelineName string) string {
-	promiseYAML, err := os.ReadFile(filepath.Join(dir, "workflows", workflow, action, pipelineName, "containers", "scripts", "pipeline.sh"))
+func getPipelineScript(dir, workflow, action, pipelineName, containerName string) string {
+	promiseYAML, err := os.ReadFile(filepath.Join(dir, "workflows", workflow, action, pipelineName, containerName, "scripts", "pipeline.sh"))
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 	return string(promiseYAML)
 }
 
-func pipelineWorkflowPathExists(dir, workflow, action, pipelineName, filename string) bool {
+func pipelineWorkflowPathExists(dir, workflow, action, pipelineName, containerName, filename string) bool {
 	var found = false
-	_, err := os.Stat(filepath.Join(dir, "workflows", workflow, action, pipelineName, "containers", filename))
+	_, err := os.Stat(filepath.Join(dir, "workflows", workflow, action, pipelineName, containerName, filename))
 	if err == nil {
 		found = true
 	}
