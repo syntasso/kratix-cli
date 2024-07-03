@@ -28,10 +28,7 @@ var initPromiseCmd = &cobra.Command{
 	RunE: InitPromise,
 }
 
-var (
-	split                                   bool
-	group, kind, version, plural, outputDir string
-)
+var split bool
 
 const (
 	promiseFileName      = "promise.yaml"
@@ -43,15 +40,7 @@ const (
 func init() {
 	initCmd.AddCommand(initPromiseCmd)
 
-	initPromiseCmd.Flags().StringVarP(&group, "group", "g", "", "The API group for the Promise")
-	initPromiseCmd.Flags().StringVarP(&kind, "kind", "k", "", "The kind to be provided by the Promise")
-	initPromiseCmd.Flags().StringVarP(&version, "version", "v", "v1alpha1", "The group version for the Promise. Defaults to v1alpha1")
-	initPromiseCmd.Flags().StringVar(&plural, "plural", "", "The plural form of the kind. Defaults to the kind name with an additional 's' at the end.")
-	initPromiseCmd.Flags().StringVarP(&outputDir, "dir", "d", ".", "The output directory to write the Promise structure to; defaults to '.'")
 	initPromiseCmd.Flags().BoolVar(&split, "split", false, "Split promise.yaml file into api.yaml and dependencies.yaml")
-
-	initPromiseCmd.MarkFlagRequired("group")
-	initPromiseCmd.MarkFlagRequired("kind")
 }
 
 type promiseTemplateValues struct {
@@ -65,6 +54,10 @@ type promiseTemplateValues struct {
 
 func InitPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
+
+	if version == "" {
+		version = "v1alpha1"
+	}
 
 	if plural == "" {
 		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
