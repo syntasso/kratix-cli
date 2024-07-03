@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/syntasso/kratix/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -113,6 +114,30 @@ var _ = Describe("InitOperatorPromise", func() {
 				Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["kind"].Enum[0].Raw).To(BeEquivalentTo(`"database"`))
 				Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["apiVersion"].Enum).To(HaveLen(1))
 				Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["apiVersion"].Enum[0].Raw).To(BeEquivalentTo(`"myorg.com/v1Stored"`))
+			})
+
+			It("generates the workflow", func() {
+				expectedWorkflowFilepath := filepath.Join(workingDir, "workflows", "resource", "configure", "workflow.yaml")
+				Expect(expectedWorkflowFilepath).To(BeAnExistingFile())
+
+				workflowContent, err := os.ReadFile(expectedWorkflowFilepath)
+				Expect(err).ToNot(HaveOccurred())
+
+				var pipelines []v1alpha1.Pipeline
+				Expect(yaml.Unmarshal(workflowContent, &pipelines)).To(Succeed())
+
+				Expect(pipelines).To(HaveLen(1))
+				pipeline := pipelines[0]
+				Expect(pipeline.Spec.Containers).To(HaveLen(1))
+				Expect(pipeline.Spec.Containers[0].Name).To(Equal("from-api-to-operator"))
+				Expect(pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0"))
+
+				Expect(pipeline.Spec.Containers[0].Env).To(HaveLen(3))
+				Expect(pipeline.Spec.Containers[0].Env).To(ConsistOf([]corev1.EnvVar{
+					{Name: "OPERATOR_GROUP", Value: "acid.zalan.do"},
+					{Name: "OPERATOR_KIND", Value: "postgresql"},
+					{Name: "OPERATOR_VERSION", Value: "v1Stored"},
+				}))
 			})
 		})
 

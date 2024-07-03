@@ -9,7 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	yamlsig "sigs.k8s.io/yaml"
 )
 
@@ -59,13 +61,31 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 		Singular: strings.ToLower(kind),
 		Kind:     kind,
 	}
-	updateOperatorCrd(crd, group, names, version)
+
+	storedVersionIdx := findStoredVersionIdx(crd)
+
+	operatorGroup := crd.Spec.Group
+	operatorVersion := crd.Spec.Versions[storedVersionIdx].Name
+	operatorKind := crd.Spec.Names.Kind
+
+	updateOperatorCrd(crd, storedVersionIdx, group, names, version)
+
+	workflowDirectory := filepath.Join("workflows", "resource", "configure")
 
 	filesToWrite := map[string]interface{}{
 		"dependencies.yaml": dependencies,
 		"api.yaml":          crd,
+		workflowDirectory: map[string]interface{}{
+			"workflow.yaml": generateResourceConfigurePipelines(operatorGroup, operatorVersion, operatorKind),
+		},
 	}
-	return writeOperatorPromiseFiles(filesToWrite)
+
+	err = writeOperatorPromiseFiles(outputDir, filesToWrite)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func findTargetCRD(crdName string, dependencies []v1alpha1.Dependency) (*apiextensionsv1.CustomResourceDefinition, error) {
@@ -89,11 +109,7 @@ func findTargetCRD(crdName string, dependencies []v1alpha1.Dependency) (*apiexte
 	return crd, nil
 }
 
-func updateOperatorCrd(crd *apiextensionsv1.CustomResourceDefinition, group string, names apiextensionsv1.CustomResourceDefinitionNames, version string) {
-	crd.Spec.Names = names
-	crd.Name = fmt.Sprintf("%s.%s", names.Plural, group)
-	crd.Spec.Group = group
-
+func findStoredVersionIdx(crd *apiextensionsv1.CustomResourceDefinition) int {
 	var storedVersionIdx int
 	for idx, crdVersion := range crd.Spec.Versions {
 		if crdVersion.Storage {
@@ -101,6 +117,14 @@ func updateOperatorCrd(crd *apiextensionsv1.CustomResourceDefinition, group stri
 			break
 		}
 	}
+
+	return storedVersionIdx
+}
+
+func updateOperatorCrd(crd *apiextensionsv1.CustomResourceDefinition, storedVersionIdx int, group string, names apiextensionsv1.CustomResourceDefinitionNames, version string) {
+	crd.Spec.Names = names
+	crd.Name = fmt.Sprintf("%s.%s", names.Plural, group)
+	crd.Spec.Group = group
 
 	storedVersion := crd.Spec.Versions[storedVersionIdx]
 
@@ -124,15 +148,62 @@ func updateOperatorCrd(crd *apiextensionsv1.CustomResourceDefinition, group stri
 	}
 }
 
-func writeOperatorPromiseFiles(filesToWrite map[string]interface{}) error {
-	for fileName, fileContent := range filesToWrite {
-		fileContentBytes, err := yamlsig.Marshal(fileContent)
-		if err != nil {
-			return err
-		}
-		if err = os.WriteFile(filepath.Join(outputDir, fileName), fileContentBytes, filePerm); err != nil {
-			return err
+func writeOperatorPromiseFiles(outputDir string, filesToWrite map[string]interface{}) error {
+	for key, value := range filesToWrite {
+		switch v := value.(type) {
+		case map[string]interface{}:
+			subdir := filepath.Join(outputDir, key)
+			if err := os.MkdirAll(subdir, os.ModePerm); err != nil {
+				return err
+			}
+			if err := writeOperatorPromiseFiles(subdir, v); err != nil {
+				return err
+			}
+		default:
+			fileContentBytes, err := yamlsig.Marshal(v)
+			if err != nil {
+				return err
+			}
+			if err = os.WriteFile(filepath.Join(outputDir, key), fileContentBytes, filePerm); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+func generateResourceConfigurePipelines(group, version, kind string) []unstructured.Unstructured {
+	container := v1alpha1.Container{
+		Name:  "from-api-to-operator",
+		Image: "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0",
+		Env: []corev1.EnvVar{
+			{
+				Name:  "OPERATOR_GROUP",
+				Value: group,
+			},
+			{
+				Name:  "OPERATOR_VERSION",
+				Value: version,
+			},
+			{
+				Name:  "OPERATOR_KIND",
+				Value: kind,
+			},
+		},
+	}
+
+	pipeline := unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "platform.kratix.io/v1alpha1",
+			"kind":       "Pipeline",
+			"metadata": map[string]interface{}{
+				"name": "instance-configure",
+			},
+			"spec": map[string]interface{}{
+				"containers": []interface{}{container},
+			},
+		},
+	}
+
+	return []unstructured.Unstructured{pipeline}
 }
