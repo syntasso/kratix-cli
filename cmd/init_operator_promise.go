@@ -12,11 +12,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	yamlsig "sigs.k8s.io/yaml"
 )
 
 var operatorPromiseCmd = &cobra.Command{
-	Use:   "operator-promise",
+	Use:   "operator-promise PROMISE-NAME --group API-GROUP --version API-VERSION --kind API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-from CRD-NAME",
 	Short: "Generate a Promise from a given Kubernetes Operator.",
 	Long:  `Generate a Promise from a given Kubernetes Operator.`,
 	Args:  cobra.ExactArgs(1),
@@ -38,6 +39,8 @@ func init() {
 }
 
 func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
+	promiseName := args[0]
+
 	if plural == "" {
 		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
 	}
@@ -84,13 +87,11 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 
 	workflowDirectory := filepath.Join("workflows", "resource", "configure")
 
-	filesToWrite := map[string]interface{}{
-		"dependencies.yaml":     dependencies,
-		"api.yaml":              crd,
-		"example-resource.yaml": exampleResource,
-		workflowDirectory: map[string]interface{}{
-			"workflow.yaml": generateResourceConfigurePipelines(operatorGroup, operatorVersion, operatorKind),
-		},
+	pipelines := generateResourceConfigurePipelines(operatorGroup, operatorVersion, operatorKind)
+
+	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, dependencies, crd, pipelines, exampleResource)
+	if err != nil {
+		return err
 	}
 
 	err = writeOperatorPromiseFiles(outputDir, filesToWrite)
@@ -233,4 +234,43 @@ func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[s
 		m[field] = fmt.Sprintf("# type %s", crdSpec.Properties[field].Type)
 	}
 	return m
+}
+
+func getFilesToWrite(promiseName string, split bool, workflowDirectory string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]interface{}, error) {
+	if split {
+		return map[string]interface{}{
+			"dependencies.yaml":     dependencies,
+			"api.yaml":              crd,
+			"example-resource.yaml": exampleResource,
+			workflowDirectory: map[string]interface{}{
+				"workflow.yaml": workflow,
+			},
+		}, nil
+	}
+
+	promise, err := generatePromise(promiseName, dependencies, crd, workflow)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"promise.yaml":          promise,
+		"example-resource.yaml": exampleResource,
+	}, nil
+}
+
+func generatePromise(promiseName string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, pipelines []unstructured.Unstructured) (v1alpha1.Promise, error) {
+	promise := newPromise(promiseName)
+
+	var crdBytes []byte
+	crdBytes, err = json.Marshal(crd)
+	if err != nil {
+		return v1alpha1.Promise{}, err
+	}
+
+	promise.Spec.API = &runtime.RawExtension{Raw: crdBytes}
+	promise.Spec.Dependencies = dependencies
+	promise.Spec.Workflows.Resource.Configure = pipelines
+
+	return promise, nil
 }

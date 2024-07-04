@@ -5,6 +5,7 @@ metadata:
   labels:
     app: operator-deployment
   name: operator-deployment
+  namespace: defined-namespace
 spec:
   replicas: 1
   selector:

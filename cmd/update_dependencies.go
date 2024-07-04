@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"github.com/syntasso/kratix/api/v1alpha1"
 	"io"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"os"
 	"path/filepath"
+
+	"github.com/spf13/cobra"
+	"github.com/syntasso/kratix/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	yamlsig "sigs.k8s.io/yaml"
 )
 
@@ -99,6 +100,9 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 			} else if err != nil {
 				dependencyIgnored = true
 				continue
+			}
+			if obj.GetNamespace() == "" {
+				obj.SetNamespace("default")
 			}
 			dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: *obj})
 		}
