@@ -38,7 +38,11 @@ func withExitCode(exitCode int) *runner {
 
 func (r *runner) run(args ...string) *gexec.Session {
 	for key, value := range r.flags {
-		args = append(args, key, value)
+		if value == "" {
+			args = append(args, key)
+		} else {
+			args = append(args, key, value)
+		}
 	}
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = r.dir

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -30,8 +31,10 @@ var _ = Describe("InitOperatorPromise", func() {
 			"--operator-manifests": "assets/operator",
 			"--dir":                workingDir,
 			"--api-from":           "postgresqls.acid.zalan.do",
+			"--split":              "",
 		}
 		initPromiseCmd = []string{"init", "operator-promise", "postgresql"}
+
 	})
 
 	AfterEach(func() {
@@ -56,7 +59,7 @@ var _ = Describe("InitOperatorPromise", func() {
 	})
 
 	Describe("generating a promise from an operator", func() {
-		When("all arguments are valid", func() {
+		Describe("the generated files", func() {
 			var generatedFiles []string
 			BeforeEach(func() {
 				r.run(initPromiseCmd...)
@@ -68,32 +71,17 @@ var _ = Describe("InitOperatorPromise", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("generates the dependencies.yaml file with the contents of the operator manifests", func() {
+			It("includes a dependencies.yaml file with the contents of the operator manifests", func() {
 				Expect(generatedFiles).To(ContainElement("dependencies.yaml"))
 
 				var dependencies v1alpha1.Dependencies
 				depsContent, err := os.ReadFile(filepath.Join(workingDir, "dependencies.yaml"))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(yaml.Unmarshal(depsContent, &dependencies)).To(Succeed())
-
-				Expect(dependencies).To(HaveLen(6))
-
-				var objects []string
-				for _, obj := range dependencies {
-					objects = append(objects, obj.GetName())
-				}
-
-				Expect(objects).To(ConsistOf(
-					"operator-sa",
-					"pod-reader",
-					"operator-deployment",
-					"postgresteams.acid.zalan.do",
-					"postgresqls.acid.zalan.do",
-					"operatorconfigurations.acid.zalan.do",
-				))
+				expectDependenciesToMatchOperatorManifests(dependencies)
 			})
 
-			It("generates the api.yaml file with the api-from CRD", func() {
+			It("includes an api.yaml file with the api-from CRD", func() {
 				Expect(generatedFiles).To(ContainElement("api.yaml"))
 
 				apiContent, err := os.ReadFile(filepath.Join(workingDir, "api.yaml"))
@@ -101,23 +89,10 @@ var _ = Describe("InitOperatorPromise", func() {
 
 				var apiCRD apiextensionsv1.CustomResourceDefinition
 				Expect(yaml.Unmarshal(apiContent, &apiCRD)).To(Succeed())
-
-				Expect(apiCRD.Name).To(Equal("databases.myorg.com"))
-				Expect(apiCRD.Spec.Group).To(Equal("myorg.com"))
-				Expect(apiCRD.Spec.Names).To(Equal(apiextensionsv1.CustomResourceDefinitionNames{
-					Plural:   "databases",
-					Singular: "database",
-					Kind:     "database",
-				}))
-				Expect(apiCRD.Spec.Versions).To(HaveLen(1))
-				Expect(apiCRD.Spec.Versions[0].Name).To(Equal("v1Stored"))
-				Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["kind"].Enum).To(HaveLen(1))
-				Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["kind"].Enum[0].Raw).To(BeEquivalentTo(`"database"`))
-				Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["apiVersion"].Enum).To(HaveLen(1))
-				Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["apiVersion"].Enum[0].Raw).To(BeEquivalentTo(`"myorg.com/v1Stored"`))
+				expectCRDToMatchOperatorCRD(apiCRD)
 			})
 
-			It("generates the workflow", func() {
+			It("includes a workflow", func() {
 				expectedWorkflowFilepath := filepath.Join(workingDir, "workflows", "resource", "configure", "workflow.yaml")
 				Expect(expectedWorkflowFilepath).To(BeAnExistingFile())
 
@@ -127,42 +102,12 @@ var _ = Describe("InitOperatorPromise", func() {
 				var pipelines []v1alpha1.Pipeline
 				Expect(yaml.Unmarshal(workflowContent, &pipelines)).To(Succeed())
 
-				Expect(pipelines).To(HaveLen(1))
-				pipeline := pipelines[0]
-				Expect(pipeline.Spec.Containers).To(HaveLen(1))
-				Expect(pipeline.Spec.Containers[0].Name).To(Equal("from-api-to-operator"))
-				Expect(pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0"))
-
-				Expect(pipeline.Spec.Containers[0].Env).To(HaveLen(3))
-				Expect(pipeline.Spec.Containers[0].Env).To(ConsistOf([]corev1.EnvVar{
-					{Name: "OPERATOR_GROUP", Value: "acid.zalan.do"},
-					{Name: "OPERATOR_KIND", Value: "postgresql"},
-					{Name: "OPERATOR_VERSION", Value: "v1Stored"},
-				}))
+				expectPipelinesToMatchOperatorPipelines(pipelines)
 			})
 
-			It("generates an example resource request", func() {
+			It("includes an example resource request", func() {
 				Expect(generatedFiles).To(ContainElement("example-resource.yaml"))
-				exampleResourceContents, err := os.ReadFile(filepath.Join(workingDir, "example-resource.yaml"))
-				Expect(err).ToNot(HaveOccurred())
-
-				exampleResource := &unstructured.Unstructured{}
-				Expect(yaml.Unmarshal(exampleResourceContents, exampleResource)).To(Succeed())
-
-				Expect(exampleResource.GetName()).To(Equal("example-database"))
-				Expect(exampleResource.GetNamespace()).To(Equal("default"))
-				Expect(exampleResource.GetKind()).To(Equal("database"))
-				Expect(exampleResource.GetAPIVersion()).To(Equal("myorg.com/v1Stored"))
-
-				spec, found, err := unstructured.NestedMap(exampleResource.Object, "spec")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(found).To(BeTrue())
-				Expect(spec).To(Equal(map[string]interface{}{
-					"numberOfInstances": "# type integer",
-					"teamId":            "# type string",
-					"postgresql":        "# type object",
-					"volume":            "# type object",
-				}))
+				expectExampleResourceToMatchOperatorResource(workingDir)
 			})
 		})
 
@@ -198,4 +143,121 @@ var _ = Describe("InitOperatorPromise", func() {
 			})
 		})
 	})
+
+	Describe("when the --split flag is not provided", func() {
+		BeforeEach(func() {
+			delete(r.flags, "--split")
+			r.run(initPromiseCmd...)
+		})
+
+		It("generates a single promise.yaml", func() {
+			Expect(filepath.Join(workingDir, "promise.yaml")).To(BeAnExistingFile())
+		})
+
+		It("populates the promise.yaml with the right contents", func() {
+			promiseContent, err := os.ReadFile(filepath.Join(workingDir, "promise.yaml"))
+			Expect(err).ToNot(HaveOccurred())
+
+			var promise v1alpha1.Promise
+			Expect(yaml.Unmarshal(promiseContent, &promise)).To(Succeed())
+
+			By("setting the promise gvk", func() {
+				Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.Group + "/" + v1alpha1.GroupVersion.Version))
+				Expect(promise.Kind).To(Equal("Promise"))
+			})
+
+			By("setting the promise api", func() {
+				crd, err := promise.GetAPIAsCRD()
+				Expect(err).ToNot(HaveOccurred())
+				expectCRDToMatchOperatorCRD(*crd)
+			})
+
+			By("setting the promise dependencies", func() {
+				expectDependenciesToMatchOperatorManifests(promise.Spec.Dependencies)
+			})
+
+			By("setting the promise workflows", func() {
+				pipelines, err := v1alpha1.PipelinesFromUnstructured(promise.Spec.Workflows.Resource.Configure, logr.Discard())
+				Expect(err).ToNot(HaveOccurred())
+				expectPipelinesToMatchOperatorPipelines(pipelines)
+			})
+		})
+
+		It("includes an example resource request", func() {
+			Expect(filepath.Join(workingDir, "example-resource.yaml")).To(BeAnExistingFile())
+			expectExampleResourceToMatchOperatorResource(workingDir)
+		})
+	})
 })
+
+func expectCRDToMatchOperatorCRD(apiCRD apiextensionsv1.CustomResourceDefinition) {
+	Expect(apiCRD.Name).To(Equal("databases.myorg.com"))
+	Expect(apiCRD.Spec.Group).To(Equal("myorg.com"))
+	Expect(apiCRD.Spec.Names).To(Equal(apiextensionsv1.CustomResourceDefinitionNames{
+		Plural:   "databases",
+		Singular: "database",
+		Kind:     "database",
+	}))
+	Expect(apiCRD.Spec.Versions).To(HaveLen(1))
+	Expect(apiCRD.Spec.Versions[0].Name).To(Equal("v1Stored"))
+	Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["kind"].Enum).To(HaveLen(1))
+	Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["kind"].Enum[0].Raw).To(BeEquivalentTo(`"database"`))
+	Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["apiVersion"].Enum).To(HaveLen(1))
+	Expect(apiCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["apiVersion"].Enum[0].Raw).To(BeEquivalentTo(`"myorg.com/v1Stored"`))
+}
+
+func expectDependenciesToMatchOperatorManifests(dependencies v1alpha1.Dependencies) {
+	Expect(dependencies).To(HaveLen(6))
+
+	var objects []string
+	for _, obj := range dependencies {
+		objects = append(objects, obj.GetName())
+	}
+
+	Expect(objects).To(ConsistOf(
+		"operator-sa",
+		"pod-reader",
+		"operator-deployment",
+		"postgresteams.acid.zalan.do",
+		"postgresqls.acid.zalan.do",
+		"operatorconfigurations.acid.zalan.do",
+	))
+}
+
+func expectPipelinesToMatchOperatorPipelines(pipelines []v1alpha1.Pipeline) {
+	Expect(pipelines).To(HaveLen(1))
+	pipeline := pipelines[0]
+	Expect(pipeline.Spec.Containers).To(HaveLen(1))
+	Expect(pipeline.Spec.Containers[0].Name).To(Equal("from-api-to-operator"))
+	Expect(pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0"))
+
+	Expect(pipeline.Spec.Containers[0].Env).To(HaveLen(3))
+	Expect(pipeline.Spec.Containers[0].Env).To(ConsistOf([]corev1.EnvVar{
+		{Name: "OPERATOR_GROUP", Value: "acid.zalan.do"},
+		{Name: "OPERATOR_KIND", Value: "postgresql"},
+		{Name: "OPERATOR_VERSION", Value: "v1Stored"},
+	}))
+}
+
+func expectExampleResourceToMatchOperatorResource(workingDir string) {
+	exampleResourceContents, err := os.ReadFile(filepath.Join(workingDir, "example-resource.yaml"))
+	Expect(err).ToNot(HaveOccurred())
+
+	exampleResource := &unstructured.Unstructured{}
+	Expect(yaml.Unmarshal(exampleResourceContents, exampleResource)).To(Succeed())
+
+	Expect(exampleResource.GetName()).To(Equal("example-database"))
+	Expect(exampleResource.GetNamespace()).To(Equal("default"))
+	Expect(exampleResource.GetKind()).To(Equal("database"))
+	Expect(exampleResource.GetAPIVersion()).To(Equal("myorg.com/v1Stored"))
+
+	spec, found, err := unstructured.NestedMap(exampleResource.Object, "spec")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(found).To(BeTrue())
+	Expect(spec).To(Equal(map[string]interface{}{
+		"numberOfInstances": "# type integer",
+		"teamId":            "# type string",
+		"postgresql":        "# type object",
+		"volume":            "# type object",
+	}))
+}
