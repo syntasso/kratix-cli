@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -10,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 	"github.com/syntasso/kratix/api/v1alpha1"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -167,24 +165,6 @@ func matchCRD(promiseCRD *apiextensionsv1.CustomResourceDefinition, group, versi
 	ExpectWithOffset(1, promiseCRD.Spec.Versions[0].Name).To(Equal(version))
 	ExpectWithOffset(1, promiseCRD.Spec.Versions[0].Served).To(BeTrue())
 	ExpectWithOffset(1, promiseCRD.Spec.Versions[0].Storage).To(BeTrue())
-}
-
-type runner struct {
-	exitCode int
-	dir      string
-}
-
-func withExitCode(exitCode int) *runner {
-	return &runner{exitCode: exitCode}
-}
-
-func (r *runner) run(args ...string) *gexec.Session {
-	cmd := exec.Command(binaryPath, args...)
-	cmd.Dir = r.dir
-	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-	EventuallyWithOffset(1, session).Should(gexec.Exit(r.exitCode))
-	return session
 }
 
 func matchExampleResource(dir, name, group, version, kind string) {

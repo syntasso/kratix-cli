@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"os/exec"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -24,3 +25,25 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 })
+
+type runner struct {
+	exitCode int
+	dir      string
+	flags    map[string]string
+}
+
+func withExitCode(exitCode int) *runner {
+	return &runner{exitCode: exitCode}
+}
+
+func (r *runner) run(args ...string) *gexec.Session {
+	for key, value := range r.flags {
+		args = append(args, key, value)
+	}
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Dir = r.dir
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	EventuallyWithOffset(1, session).Should(gexec.Exit(r.exitCode))
+	return session
+}

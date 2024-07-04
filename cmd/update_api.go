@@ -3,15 +3,16 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/yaml"
-	"strings"
 )
 
 var updateAPICmd = &cobra.Command{
@@ -20,7 +21,7 @@ var updateAPICmd = &cobra.Command{
 	Long:  "Command to update promise API",
 	Example: `  # add a new property of type string to the API
   kratix update api --property region:string
-  # removes the property from the API 
+  # removes the property from the API
   kratix update api --property region-
   # updates the API group and the Kind
   kratix update api --group myorg.com --kind Database
@@ -164,6 +165,10 @@ func updateGVK(crd *apiextensionsv1.CustomResourceDefinition) {
 func updateExampleResource(crd *apiextensionsv1.CustomResourceDefinition) error {
 	rrFilePath := filepath.Join(dir, resourceFileName)
 	rrBytes, err := os.ReadFile(rrFilePath)
+	if err != nil {
+		return err
+	}
+
 	var rr unstructured.Unstructured
 	if err = yaml.Unmarshal(rrBytes, &rr); err != nil {
 		return err
