@@ -41,17 +41,20 @@ func init() {
 }
 
 type promiseTemplateValues struct {
-	Name     string
-	Group    string
-	Kind     string
-	Version  string
-	Plural   string
-	Singular string
+	Name       string
+	Group      string
+	Kind       string
+	Version    string
+	Plural     string
+	Singular   string
+	SubCommand string
 }
 
 func InitPromise(cmd *cobra.Command, args []string) error {
-	promiseName := args[0]
+	return templatePromiseFiles(args[0], "promise")
+}
 
+func templatePromiseFiles(promiseName, subcommand string) error {
 	if version == "" {
 		version = "v1alpha1"
 	}
@@ -79,12 +82,13 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 		}
 		data := bytes.NewBuffer([]byte{})
 		err = t.Execute(data, promiseTemplateValues{
-			Name:     promiseName,
-			Group:    group,
-			Kind:     kind,
-			Version:  version,
-			Plural:   plural,
-			Singular: strings.ToLower(kind),
+			Name:       promiseName,
+			Group:      group,
+			Kind:       kind,
+			Version:    version,
+			Plural:     plural,
+			Singular:   strings.ToLower(kind),
+			SubCommand: subcommand,
 		})
 		if err != nil {
 			return err
