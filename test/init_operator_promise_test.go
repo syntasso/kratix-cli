@@ -214,8 +214,10 @@ func expectDependenciesToMatchOperatorManifests(dependencies v1alpha1.Dependenci
 	Expect(dependencies).To(HaveLen(6))
 
 	var objects []string
+	var objectNamespaces []string
 	for _, obj := range dependencies {
 		objects = append(objects, obj.GetName())
+		objectNamespaces = append(objectNamespaces, obj.GetNamespace())
 	}
 
 	Expect(objects).To(ConsistOf(
@@ -226,6 +228,16 @@ func expectDependenciesToMatchOperatorManifests(dependencies v1alpha1.Dependenci
 		"postgresqls.acid.zalan.do",
 		"operatorconfigurations.acid.zalan.do",
 	))
+
+	Expect(objectNamespaces).To(ConsistOf(
+		"default",
+		"default",
+		"defined-namespace",
+		"default",
+		"default",
+		"default",
+	))
+
 }
 
 func expectPipelinesToMatchOperatorPipelines(pipelines []v1alpha1.Pipeline) {
