@@ -28,8 +28,6 @@ var initPromiseCmd = &cobra.Command{
 	RunE: InitPromise,
 }
 
-var split bool
-
 const (
 	promiseFileName      = "promise.yaml"
 	dependenciesFileName = "dependencies.yaml"
@@ -40,7 +38,6 @@ const (
 func init() {
 	initCmd.AddCommand(initPromiseCmd)
 
-	initPromiseCmd.Flags().BoolVar(&split, "split", false, "Split promise.yaml file into api.yaml and dependencies.yaml")
 }
 
 type promiseTemplateValues struct {
