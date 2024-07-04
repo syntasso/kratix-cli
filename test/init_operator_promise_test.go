@@ -10,6 +10,7 @@ import (
 	"github.com/syntasso/kratix/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
 
@@ -137,6 +138,30 @@ var _ = Describe("InitOperatorPromise", func() {
 					{Name: "OPERATOR_GROUP", Value: "acid.zalan.do"},
 					{Name: "OPERATOR_KIND", Value: "postgresql"},
 					{Name: "OPERATOR_VERSION", Value: "v1Stored"},
+				}))
+			})
+
+			It("generates an example resource request", func() {
+				Expect(generatedFiles).To(ContainElement("example-resource.yaml"))
+				exampleResourceContents, err := os.ReadFile(filepath.Join(workingDir, "example-resource.yaml"))
+				Expect(err).ToNot(HaveOccurred())
+
+				exampleResource := &unstructured.Unstructured{}
+				Expect(yaml.Unmarshal(exampleResourceContents, exampleResource)).To(Succeed())
+
+				Expect(exampleResource.GetName()).To(Equal("example-database"))
+				Expect(exampleResource.GetNamespace()).To(Equal("default"))
+				Expect(exampleResource.GetKind()).To(Equal("database"))
+				Expect(exampleResource.GetAPIVersion()).To(Equal("myorg.com/v1Stored"))
+
+				spec, found, err := unstructured.NestedMap(exampleResource.Object, "spec")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
+				Expect(spec).To(Equal(map[string]interface{}{
+					"numberOfInstances": "# type integer",
+					"teamId":            "# type string",
+					"postgresql":        "# type object",
+					"volume":            "# type object",
 				}))
 			})
 		})

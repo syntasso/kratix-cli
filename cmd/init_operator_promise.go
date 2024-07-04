@@ -70,11 +70,24 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 
 	updateOperatorCrd(crd, storedVersionIdx, group, names, version)
 
+	exampleResource := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": fmt.Sprintf("%s/%s", crd.Spec.Group, crd.Spec.Versions[0].Name),
+			"kind":       kind,
+			"metadata": map[string]interface{}{
+				"name":      "example-database",
+				"namespace": "default",
+			},
+			"spec": topLevelRequiredFields(crd),
+		},
+	}
+
 	workflowDirectory := filepath.Join("workflows", "resource", "configure")
 
 	filesToWrite := map[string]interface{}{
-		"dependencies.yaml": dependencies,
-		"api.yaml":          crd,
+		"dependencies.yaml":     dependencies,
+		"api.yaml":              crd,
+		"example-resource.yaml": exampleResource,
 		workflowDirectory: map[string]interface{}{
 			"workflow.yaml": generateResourceConfigurePipelines(operatorGroup, operatorVersion, operatorKind),
 		},
@@ -206,4 +219,18 @@ func generateResourceConfigurePipelines(group, version, kind string) []unstructu
 	}
 
 	return []unstructured.Unstructured{pipeline}
+}
+
+func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[string]interface{} {
+	crdSpec := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"]
+	requiredSpecFields := crdSpec.Required
+	if len(requiredSpecFields) == 0 {
+		return nil
+	}
+
+	m := map[string]interface{}{}
+	for _, field := range requiredSpecFields {
+		m[field] = fmt.Sprintf("# type %s", crdSpec.Properties[field].Type)
+	}
+	return m
 }
