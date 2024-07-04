@@ -161,6 +161,10 @@ var _ = Describe("InitOperatorPromise", func() {
 			var promise v1alpha1.Promise
 			Expect(yaml.Unmarshal(promiseContent, &promise)).To(Succeed())
 
+			By("setting the promise name", func() {
+				Expect(promise.GetName()).To(Equal("postgresql"))
+			})
+
 			By("setting the promise gvk", func() {
 				Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.Group + "/" + v1alpha1.GroupVersion.Version))
 				Expect(promise.Kind).To(Equal("Promise"))

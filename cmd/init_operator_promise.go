@@ -17,7 +17,7 @@ import (
 )
 
 var operatorPromiseCmd = &cobra.Command{
-	Use:   "operator-promise",
+	Use:   "operator-promise PROMISE-NAME --group API-GROUP --version API-VERSION --kind API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-from CRD-NAME",
 	Short: "Generate a Promise from a given Kubernetes Operator.",
 	Long:  `Generate a Promise from a given Kubernetes Operator.`,
 	Args:  cobra.ExactArgs(1),
@@ -39,6 +39,8 @@ func init() {
 }
 
 func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
+	promiseName := args[0]
+
 	if plural == "" {
 		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
 	}
@@ -87,7 +89,7 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 
 	pipelines := generateResourceConfigurePipelines(operatorGroup, operatorVersion, operatorKind)
 
-	filesToWrite, err := getFilesToWrite(split, workflowDirectory, dependencies, crd, pipelines, exampleResource)
+	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, dependencies, crd, pipelines, exampleResource)
 	if err != nil {
 		return err
 	}
@@ -234,7 +236,7 @@ func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[s
 	return m
 }
 
-func getFilesToWrite(split bool, workflowDirectory string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]interface{}, error) {
+func getFilesToWrite(promiseName string, split bool, workflowDirectory string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]interface{}, error) {
 	if split {
 		return map[string]interface{}{
 			"dependencies.yaml":     dependencies,
@@ -246,7 +248,7 @@ func getFilesToWrite(split bool, workflowDirectory string, dependencies []v1alph
 		}, nil
 	}
 
-	promise, err := generatePromise(dependencies, crd, workflow)
+	promise, err := generatePromise(promiseName, dependencies, crd, workflow)
 	if err != nil {
 		return nil, err
 	}
@@ -257,8 +259,8 @@ func getFilesToWrite(split bool, workflowDirectory string, dependencies []v1alph
 	}, nil
 }
 
-func generatePromise(dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, pipelines []unstructured.Unstructured) (v1alpha1.Promise, error) {
-	promise := newPromise(crd.Spec.Names.Kind)
+func generatePromise(promiseName string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, pipelines []unstructured.Unstructured) (v1alpha1.Promise, error) {
+	promise := newPromise(promiseName)
 
 	var crdBytes []byte
 	crdBytes, err = json.Marshal(crd)
