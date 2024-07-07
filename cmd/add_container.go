@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"os"
@@ -14,7 +16,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
+	"text/template"
 )
+
+//go:embed templates/workflows/*
+var workflowTemplates embed.FS
 
 var addContainerCmd = &cobra.Command{
 	Use:   "container LIFECYCLE/ACTION/PIPELINE-NAME --image CONTAINER-IMAGE",
@@ -245,35 +251,33 @@ func pipelinesToUnstructured(pipelines []v1alpha1.Pipeline) ([]unstructured.Unst
 }
 
 func generatePipelineDirFiles(workflowDirectory, pipelineName, containerName string) error {
-	pipelineScriptContents := []byte(`#!/usr/bin/env sh
-
-set -xe
-
-name="$(yq eval '.metadata.name' /kratix/input/object.yaml)"
-namespace=$(yq '.metadata.namespace' /kratix/input/object.yaml)
-
-echo "Hello from ${name} ${namespace}"`)
-
-	pipelineScriptFilename := "pipeline.sh"
 	containerFileDirectory := fmt.Sprintf("%s/%s/%s/", workflowDirectory, pipelineName, containerName)
 	containerScriptsDirectory := fmt.Sprintf("%s/scripts/", containerFileDirectory)
-	err := os.MkdirAll(containerScriptsDirectory, os.ModePerm)
-	if err != nil {
+	if err := os.MkdirAll(containerScriptsDirectory, os.ModePerm); err != nil {
 		return err
 	}
-
-	err = os.WriteFile(containerScriptsDirectory+pipelineScriptFilename, pipelineScriptContents, filePerm)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Create(containerFileDirectory + "Dockerfile")
-	if err != nil {
-		return err
-	}
-
 	if _, err := os.Stat(containerFileDirectory + "resources/"); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(containerFileDirectory+"resources/", os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	templates := map[string]string{
+		filepath.Join(containerScriptsDirectory, "pipeline.sh"): "templates/workflows/pipeline.sh.tpl",
+		filepath.Join(containerFileDirectory, "Dockerfile"):     "templates/workflows/Dockerfile.tpl",
+	}
+
+	for fpath, tmpl := range templates {
+		t, err := template.ParseFS(workflowTemplates, tmpl)
+		if err != nil {
+			return err
+		}
+		data := bytes.NewBuffer([]byte{})
+		if err := t.Execute(data, struct{}{}); err != nil {
+			return err
+		}
+		err = os.WriteFile(fpath, data.Bytes(), filePerm)
 		if err != nil {
 			return err
 		}
