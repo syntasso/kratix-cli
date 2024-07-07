@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"bytes"
+	"embed"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"text/template"
 )
 
 const filePerm = 0644
@@ -41,4 +45,29 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func templateFiles(templates embed.FS, outputDir string, filesToTemplate map[string]string, templateValues interface{}) error {
+	for path, tmpl := range filesToTemplate {
+		t, err := template.ParseFS(templates, tmpl)
+		if err != nil {
+			return err
+		}
+		data := bytes.NewBuffer([]byte{})
+		if err := t.Execute(data, templateValues); err != nil {
+			return err
+		}
+		fullPath := filepath.Join(outputDir, path)
+		parentDir := filepath.Dir(fullPath)
+		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(parentDir, os.ModePerm); err != nil {
+				return err
+			}
+		}
+
+		if err := os.WriteFile(fullPath, data.Bytes(), filePerm); err != nil {
+			return err
+		}
+	}
+	return nil
 }

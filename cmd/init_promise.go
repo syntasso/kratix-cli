@@ -1,14 +1,10 @@
 package cmd
 
 import (
-	"bytes"
 	"embed"
 	"fmt"
-	"os"
-	"strings"
-	"text/template"
-
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 //go:embed templates/promise/*
@@ -75,29 +71,17 @@ func templatePromiseFiles(promiseName, subcommand string) error {
 		templates[promiseFileName] = "templates/promise/promise.yaml.tpl"
 	}
 
-	for name, tmpl := range templates {
-		t, err := template.ParseFS(promiseTemplates, tmpl)
-		if err != nil {
-			return err
-		}
-		data := bytes.NewBuffer([]byte{})
-		err = t.Execute(data, promiseTemplateValues{
-			Name:       promiseName,
-			Group:      group,
-			Kind:       kind,
-			Version:    version,
-			Plural:     plural,
-			Singular:   strings.ToLower(kind),
-			SubCommand: subcommand,
-		})
-		if err != nil {
-			return err
-		}
-
-		err = os.WriteFile(fmt.Sprintf("%s/%s", outputDir, name), data.Bytes(), filePerm)
-		if err != nil {
-			return err
-		}
+	templateValues := promiseTemplateValues{
+		Name:       promiseName,
+		Group:      group,
+		Kind:       kind,
+		Version:    version,
+		Plural:     plural,
+		Singular:   strings.ToLower(kind),
+		SubCommand: subcommand,
+	}
+	if err := templateFiles(promiseTemplates, outputDir, templates, templateValues); err != nil {
+		return err
 	}
 
 	dirName := "current"

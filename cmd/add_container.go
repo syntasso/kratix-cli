@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"embed"
 	"errors"
@@ -16,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
-	"text/template"
 )
 
 //go:embed templates/workflows/*
@@ -65,7 +63,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		Image: image,
 	}
 
-	var workflowDirectory = fmt.Sprintf("%s/workflows/%s/%s/", dir, workflow, action)
+	var workflowPath = filepath.Join("workflows", workflow, action)
 	var filePath string
 	var fileBytes []byte
 	var promise v1alpha1.Promise
@@ -74,12 +72,12 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 
 	var pipelines []v1alpha1.Pipeline
 	if splitFiles {
-		filePath = filepath.Join(workflowDirectory, "workflow.yaml")
+		filePath = filepath.Join(dir, workflowPath, "workflow.yaml")
 	} else {
 		filePath = filepath.Join(dir, "promise.yaml")
 	}
 
-	if splitFiles && workflowFileFound(workflowDirectory) {
+	if splitFiles && workflowFileFound(filePath) {
 		fileBytes, err = os.ReadFile(filePath)
 		if err != nil {
 			return err
@@ -160,14 +158,12 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-
-	err = generatePipelineDirFiles(workflowDirectory, pipelineName, containerName)
-	if err != nil {
+	if err := generatePipelineDirFiles(dir, workflowPath, pipelineName, containerName); err != nil {
+		fmt.Println(dir, workflowPath, pipelineName, containerName)
 		return err
 	}
 
-	err = os.WriteFile(filePath, fileBytes, filePerm)
-	if err != nil {
+	if err := os.WriteFile(filePath, fileBytes, filePerm); err != nil {
 		return err
 	}
 	fmt.Printf("generated the %s/%s/%s/%s in %s \n", workflow, action, pipelineName, containerName, filePath)
@@ -250,39 +246,22 @@ func pipelinesToUnstructured(pipelines []v1alpha1.Pipeline) ([]unstructured.Unst
 	return pipelinesUnstructured, nil
 }
 
-func generatePipelineDirFiles(workflowDirectory, pipelineName, containerName string) error {
-	containerFileDirectory := fmt.Sprintf("%s/%s/%s/", workflowDirectory, pipelineName, containerName)
-	containerScriptsDirectory := fmt.Sprintf("%s/scripts/", containerFileDirectory)
-	if err := os.MkdirAll(containerScriptsDirectory, os.ModePerm); err != nil {
-		return err
-	}
-	if _, err := os.Stat(containerFileDirectory + "resources/"); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(containerFileDirectory+"resources/", os.ModePerm)
-		if err != nil {
-			return err
-		}
-	}
+func generatePipelineDirFiles(promiseDir, workflowDirectory, pipelineName, containerName string) error {
+	containerFileDirectory := filepath.Join(workflowDirectory, pipelineName, containerName)
+	containerScriptsDirectory := filepath.Join(containerFileDirectory, "scripts")
+	resourcesDir := filepath.Join(promiseDir, containerFileDirectory, "resources")
 
 	templates := map[string]string{
 		filepath.Join(containerScriptsDirectory, "pipeline.sh"): "templates/workflows/pipeline.sh.tpl",
 		filepath.Join(containerFileDirectory, "Dockerfile"):     "templates/workflows/Dockerfile.tpl",
 	}
 
-	for fpath, tmpl := range templates {
-		t, err := template.ParseFS(workflowTemplates, tmpl)
-		if err != nil {
-			return err
-		}
-		data := bytes.NewBuffer([]byte{})
-		if err := t.Execute(data, struct{}{}); err != nil {
-			return err
-		}
-		err = os.WriteFile(fpath, data.Bytes(), filePerm)
-		if err != nil {
-			return err
-		}
+	if err := templateFiles(workflowTemplates, promiseDir, templates, nil); err != nil {
+		return err
 	}
-
+	if _, err := os.Stat(resourcesDir); errors.Is(err, os.ErrNotExist) {
+		return os.Mkdir(resourcesDir, os.ModePerm)
+	}
 	return nil
 }
 
@@ -298,8 +277,8 @@ func filesGeneratedWithSplit(dir string) bool {
 	return true
 }
 
-func workflowFileFound(workflowDir string) bool {
-	if _, err := os.Stat(workflowDir + "workflow.yaml"); errors.Is(err, os.ErrNotExist) {
+func workflowFileFound(workflowFilePath string) bool {
+	if _, err := os.Stat(workflowFilePath); errors.Is(err, os.ErrNotExist) {
 		return false
 	}
 	return true
