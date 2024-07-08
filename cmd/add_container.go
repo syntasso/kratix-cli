@@ -159,7 +159,6 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if err := generatePipelineDirFiles(dir, workflowPath, pipelineName, containerName); err != nil {
-		fmt.Println(dir, workflowPath, pipelineName, containerName)
 		return err
 	}
 
