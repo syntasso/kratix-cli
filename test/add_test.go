@@ -228,7 +228,6 @@ var _ = Describe("add", func() {
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "superb-image", "resources/")).To(BeTrue())
 				})
 			})
-
 		})
 	})
 })

@@ -3,8 +3,9 @@ package cmd
 import (
 	"embed"
 	"fmt"
-	"github.com/spf13/cobra"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 //go:embed templates/promise/*
@@ -25,10 +26,11 @@ var initPromiseCmd = &cobra.Command{
 }
 
 const (
-	promiseFileName      = "promise.yaml"
-	dependenciesFileName = "dependencies.yaml"
-	apiFileName          = "api.yaml"
-	resourceFileName     = "example-resource.yaml"
+	promiseFileName                   = "promise.yaml"
+	dependenciesFileName              = "dependencies.yaml"
+	apiFileName                       = "api.yaml"
+	resourceFileName                  = "example-resource.yaml"
+	resourceConfigureWorkflowFileName = "workflows/resource/configure/workflow.yaml"
 )
 
 func init() {
@@ -37,13 +39,14 @@ func init() {
 }
 
 type promiseTemplateValues struct {
-	Name       string
-	Group      string
-	Kind       string
-	Version    string
-	Plural     string
-	Singular   string
-	SubCommand string
+	Name              string
+	Group             string
+	Kind              string
+	Version           string
+	Plural            string
+	Singular          string
+	SubCommand        string
+	ResourceConfigure string
 }
 
 func InitPromise(cmd *cobra.Command, args []string) error {
@@ -61,7 +64,7 @@ func templatePromiseFiles(promiseName, subcommand string) error {
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",
-		"README.md":      "templates/promise/README.md",
+		"README.md":      "templates/promise/README.md.tpl",
 	}
 
 	if split {

@@ -243,7 +243,7 @@ func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[s
 }
 
 func getFilesToWrite(promiseName string, split bool, workflowDirectory string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]interface{}, error) {
-	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md")
+	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md.tpl")
 	if err != nil {
 		return nil, err
 	}

@@ -26,3 +26,7 @@ spec:
                   properties: {}
           served: true
           storage: true
+  workflows:
+    resource:
+      configure:
+{{ .ResourceConfigure | indent 8 }}
