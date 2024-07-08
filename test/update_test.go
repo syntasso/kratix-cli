@@ -264,6 +264,73 @@ var _ = Describe("update", func() {
 				Expect(generatedDeps[2].Object["apiVersion"]).To(Equal("apps/v1"))
 				Expect(generatedDeps[2].Object["kind"]).To(Equal("Deployment"))
 			})
+
+			Context("--as-workflow flag", func() {
+				When("--image is not provided", func() {
+					It("fails", func() {
+						r.exitCode = 1
+						Expect(r.run("update", "dependencies", depDir, "--as-workflow").Err).To(gbytes.Say("--image is required when --as-workflow is set"))
+					})
+				})
+
+				When("--image is also provided", func() {
+					It("generates a promise workflow", func() {
+						Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), slices.Concat(
+							namespaceBytes(ns1),
+							namespaceBytes(ns2),
+							deploymentBytes(deployment1)), 0644)).To(Succeed())
+
+						r.run("update", "dependencies", depDir)
+						session := r.run("update", "dependencies", depDir, "--as-workflow", "--image", "registry/image-name:v1.0.0")
+						Expect(session.Out).To(gbytes.Say("Dependencies added as a Promise workflow."))
+
+						By("generating a script that copies resources to output", func() {
+							scriptFilepath := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/scripts/pipeline.sh")
+							Expect(scriptFilepath).To(BeAnExistingFile())
+							scriptContents, _ := os.ReadFile(scriptFilepath)
+							Expect(string(scriptContents)).To(ContainSubstring("cp /resources/* /kratix/output"))
+						})
+
+						By("copying the dependencies to the resources directory", func() {
+							resourcesDir := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/resources")
+							Expect(resourcesDir).To(BeADirectory())
+							Expect(filepath.Join(resourcesDir, "deps.yaml")).To(BeAnExistingFile())
+							depsContent, _ := os.ReadFile(filepath.Join(resourcesDir, "deps.yaml"))
+							Expect(string(depsContent)).To(SatisfyAll(
+								ContainSubstring(string(namespaceBytes(ns1))),
+								ContainSubstring(string(namespaceBytes(ns2))),
+								ContainSubstring(string(deploymentBytes(deployment1))),
+							))
+						})
+
+						By("generating a Dockerfile", func() {
+							dockerfile := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/Dockerfile")
+							Expect(dockerfile).To(BeAnExistingFile())
+							depsContent, _ := os.ReadFile(dockerfile)
+							Expect(string(depsContent)).To(SatisfyAll(
+								ContainSubstring("ADD resources resources"),
+							))
+						})
+
+						By("removes the dependency.yaml file", func() {
+							Expect(filepath.Join(depDir, "dependency.yaml")).NotTo(BeAnExistingFile())
+						})
+
+						By("adding the promise workflow to the workflows.yaml", func() {
+							Expect(filepath.Join(depDir, "workflows.yaml")).NotTo(BeAnExistingFile())
+							pipelines := getWorkflows(workingDir)
+							configurePromiseWorkflows := pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]
+							Expect(configurePromiseWorkflows).To(HaveLen(1))
+
+							Expect(configurePromiseWorkflows[0].Spec.Containers).To(HaveLen(1))
+							Expect(configurePromiseWorkflows[0].Spec.Containers[0]).To(Equal(v1alpha1.Container{
+								Name:  "configure-deps",
+								Image: "registry/image-name:v1.0.0",
+							}))
+						})
+					})
+				})
+			})
 		})
 
 		Context("dependencies.yaml does not exist", func() {
@@ -308,6 +375,76 @@ var _ = Describe("update", func() {
 					Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
 					Expect(generatedDeps[1].Object["apiVersion"]).To(Equal("apps/v1"))
 					Expect(generatedDeps[1].Object["kind"]).To(Equal("Deployment"))
+				})
+			})
+		})
+
+		Context("--as-workflow flag", func() {
+			When("--image is not provided", func() {
+				It("fails", func() {
+					r.exitCode = 1
+					Expect(r.run("update", "dependencies", depDir, "--as-workflow").Err).To(gbytes.Say("--image is required when --as-workflow is set"))
+				})
+			})
+
+			When("--image is also provided", func() {
+				It("generates a promise workflow", func() {
+					Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), slices.Concat(
+						namespaceBytes(ns1),
+						namespaceBytes(ns2),
+						deploymentBytes(deployment1)), 0644)).To(Succeed())
+
+					r.run("update", "dependencies", depDir)
+					session := r.run("update", "dependencies", depDir, "--as-workflow", "--image", "registry/image-name:v1.0.0")
+					Expect(session.Out).To(gbytes.Say("Dependencies added as a Promise workflow."))
+
+					By("generating a script that copies resources to output", func() {
+						scriptFilepath := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/scripts/pipeline.sh")
+						Expect(scriptFilepath).To(BeAnExistingFile())
+						scriptContents, _ := os.ReadFile(scriptFilepath)
+						Expect(string(scriptContents)).To(ContainSubstring("cp /resources/* /kratix/output"))
+					})
+
+					By("copying the dependencies to the resources directory", func() {
+						resourcesDir := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/resources")
+						Expect(resourcesDir).To(BeADirectory())
+						Expect(filepath.Join(resourcesDir, "deps.yaml")).To(BeAnExistingFile())
+						depsContent, _ := os.ReadFile(filepath.Join(resourcesDir, "deps.yaml"))
+						Expect(string(depsContent)).To(SatisfyAll(
+							ContainSubstring(string(namespaceBytes(ns1))),
+							ContainSubstring(string(namespaceBytes(ns2))),
+							ContainSubstring(string(deploymentBytes(deployment1))),
+						))
+					})
+
+					By("generating a Dockerfile", func() {
+						dockerfile := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/Dockerfile")
+						Expect(dockerfile).To(BeAnExistingFile())
+						depsContent, _ := os.ReadFile(dockerfile)
+						Expect(string(depsContent)).To(SatisfyAll(
+							ContainSubstring("ADD resources resources"),
+						))
+					})
+
+					By("removing any dependencies from the promise dependencies field", func() {
+						promiseYAML, err := os.ReadFile(filepath.Join(workingDir, "promise.yaml"))
+						Expect(err).NotTo(HaveOccurred())
+						var promise v1alpha1.Promise
+						Expect(yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
+						Expect(promise.Spec.Dependencies).To(BeEmpty())
+					})
+
+					By("adding the promise workflow to the promise", func() {
+						pipelines := getWorkflows(workingDir)
+						configurePromiseWorkflows := pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]
+						Expect(configurePromiseWorkflows).To(HaveLen(1))
+
+						Expect(configurePromiseWorkflows[0].Spec.Containers).To(HaveLen(1))
+						Expect(configurePromiseWorkflows[0].Spec.Containers[0]).To(Equal(v1alpha1.Container{
+							Name:  "configure-deps",
+							Image: "registry/image-name:v1.0.0",
+						}))
+					})
 				})
 			})
 		})
