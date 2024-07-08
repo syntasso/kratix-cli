@@ -87,6 +87,14 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 	var dependencyIgnored bool
 	for _, fileInfo := range files {
 		fileName := filepath.Join(dependenciesDir, fileInfo.Name())
+		if fileInfo.IsDir() {
+			subDirDependencies, err := buildDependencies(fileName)
+			if err != nil {
+				return nil, err
+			}
+			dependencies = append(dependencies, subDirDependencies...)
+			continue
+		}
 		var file *os.File
 		if file, err = os.Open(fileName); err != nil {
 			return nil, fmt.Errorf("failed to open dependency file: %s", fileName)

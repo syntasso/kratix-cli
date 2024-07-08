@@ -257,7 +257,7 @@ func expectCRDToMatchOperatorCRD(apiCRD apiextensionsv1.CustomResourceDefinition
 }
 
 func expectDependenciesToMatchOperatorManifests(dependencies v1alpha1.Dependencies) {
-	Expect(dependencies).To(HaveLen(6))
+	Expect(dependencies).To(HaveLen(7))
 
 	var objects []string
 	var objectNamespaces []string
@@ -268,6 +268,7 @@ func expectDependenciesToMatchOperatorManifests(dependencies v1alpha1.Dependenci
 
 	Expect(objects).To(ConsistOf(
 		"operator-sa",
+		"subdir-sa",
 		"pod-reader",
 		"operator-deployment",
 		"postgresteams.acid.zalan.do",
@@ -279,6 +280,7 @@ func expectDependenciesToMatchOperatorManifests(dependencies v1alpha1.Dependenci
 		"default",
 		"default",
 		"defined-namespace",
+		"default",
 		"default",
 		"default",
 		"default",
