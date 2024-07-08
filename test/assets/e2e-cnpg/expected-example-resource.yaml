@@ -1,0 +1,7 @@
+apiVersion: syntasso.io/v1
+kind: Database
+metadata:
+  name: example-database
+  namespace: default
+spec:
+  instances: '# type integer'

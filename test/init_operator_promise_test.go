@@ -206,6 +206,38 @@ var _ = Describe("InitOperatorPromise", func() {
 			Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
 		})
 	})
+
+	Describe("end-to-end Promise generation", func() {
+		BeforeEach(func() {
+			r.flags["--group"] = "syntasso.io"
+			r.flags["--kind"] = "Database"
+			r.flags["--operator-manifests"] = "assets/e2e-cnpg/manifests"
+			r.flags["--api-from"] = "clusters.postgresql.cnpg.io"
+			delete(r.flags, "--split")
+
+			r.run(initPromiseCmd...)
+		})
+
+		It("generates the expected promise.yaml", func() {
+			promiseContent, err := os.ReadFile(filepath.Join(workingDir, "promise.yaml"))
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedPromiseContent, err := os.ReadFile("assets/e2e-cnpg/expected-promise.yaml")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(promiseContent).To(MatchYAML(expectedPromiseContent))
+		})
+
+		It("generates the expected example-resource.yaml", func() {
+			exampleResourceContent, err := os.ReadFile(filepath.Join(workingDir, "example-resource.yaml"))
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedExampleResourceContent, err := os.ReadFile("assets/e2e-cnpg/expected-example-resource.yaml")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(exampleResourceContent).To(MatchYAML(expectedExampleResourceContent))
+		})
+	})
 })
 
 func expectCRDToMatchOperatorCRD(apiCRD apiextensionsv1.CustomResourceDefinition) {
