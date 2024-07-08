@@ -42,6 +42,13 @@ To add Promise dependencies, you can run the `kratix update dependencies depende
 kratix update dependencies DEPENDENCIES-DIRECTORY/
 ```
 
+### Updating Destination selectors
+
+To update Destination selectors of the Promise, you can use the `kratix update destination-selector` command:
+```
+kratix update destination-selector env=dev
+```
+
 ### Building Promise
 
 If you initialized the Promise by providing `--split` flag in `kratix init promise` command, run

@@ -312,6 +312,74 @@ var _ = Describe("update", func() {
 			})
 		})
 	})
+
+	Context("destination-selector", func() {
+		BeforeEach(func() {
+			Expect(r.run("init", "promise", "postgresql",
+				"--group", "syntasso.io",
+				"--kind", "Database").Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+		})
+
+		When("called with --help", func() {
+			It("prints the help", func() {
+				session := r.run("update", "destination-selector", "--help")
+				Expect(session.Out).To(gbytes.Say("Command to update destination selectors"))
+			})
+		})
+
+		When("called without an argument", func() {
+			It("errors and print a message", func() {
+				r.exitCode = 1
+				Expect(r.run("update", "destination-selector").Err).To(gbytes.Say(`Error: accepts 1 arg\(s\), received 0`))
+			})
+		})
+
+		When("there is no promise.yaml", func() {
+			It("errors with a helpful message", func() {
+				promiseDir, err := os.MkdirTemp("", "promise")
+				Expect(err).NotTo(HaveOccurred())
+
+				r.exitCode = 1
+				sess := r.run("update", "destination-selector", "zone=europe-west2", "-d", promiseDir)
+				Expect(sess.Err).To(gbytes.Say("failed to find promise.yaml in directory"))
+			})
+		})
+
+		It("can add new selector to the promise api", func() {
+			sess := r.run("update", "destination-selector", "env=prod")
+			Expect(sess.Out).To(gbytes.Say("Promise destination selector updated"))
+			sess = r.run("update", "destination-selector", "zone=test-zone-b")
+			Expect(sess.Out).To(gbytes.Say("Promise destination selector updated"))
+			matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+			Expect(getDestinationSelectors(workingDir)).To(SatisfyAll(HaveLen(2), HaveKeyWithValue("env", "prod"), HaveKeyWithValue("zone", "test-zone-b")))
+		})
+
+		It("can update existing selectors", func() {
+			sess := r.run("update", "destination-selector", "env=dev")
+			Expect(sess.Out).To(gbytes.Say("Promise destination selector updated"))
+			Expect(getDestinationSelectors(workingDir)).To(SatisfyAll(HaveLen(1), HaveKeyWithValue("env", "dev")))
+
+			sess = r.run("update", "destination-selector", "env=prod")
+			Expect(sess.Out).To(gbytes.Say("Promise destination selector updated"))
+			Expect(getDestinationSelectors(workingDir)).To(SatisfyAll(HaveLen(1), HaveKeyWithValue("env", "prod")))
+		})
+
+		It("can remove existing selectors", func() {
+			r.run("update", "destination-selector", "env=prod")
+			r.run("update", "destination-selector", "akey=noupdate")
+			Expect(getDestinationSelectors(workingDir)).To(SatisfyAll(HaveLen(2), HaveKeyWithValue("env", "prod"), HaveKeyWithValue("akey", "noupdate")))
+
+			r.run("update", "destination-selector", "env=dev")
+			Expect(getDestinationSelectors(workingDir)).To(SatisfyAll(HaveLen(2), HaveKeyWithValue("env", "dev"), HaveKeyWithValue("akey", "noupdate")))
+		})
+
+		It("errors when argument format is invalid", func() {
+			r.exitCode = 1
+			sess := r.run("update", "destination-selector", "akey%avalue")
+			Expect(sess.Err).To(gbytes.Say("invalid"))
+		})
+
+	})
 })
 
 func getDependencies(dir string, split bool) v1alpha1.Dependencies {
@@ -354,6 +422,15 @@ func getCRDProperties(dir string, split bool) map[string]apiextensionsv1.JSONSch
 		ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	}
 	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties
+}
+
+func getDestinationSelectors(dir string) map[string]string {
+	promiseYAML, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	var promise v1alpha1.Promise
+	ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
+	return promise.GetSchedulingSelectors()
 }
 
 func namespaceBytes(ns *v1.Namespace) []byte {
