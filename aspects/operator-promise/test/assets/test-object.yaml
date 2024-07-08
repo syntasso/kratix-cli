@@ -1,0 +1,12 @@
+apiVersion: mypromise.com/v1
+kind: TestObject
+metadata:
+  name: test-object
+  namespace: non-default
+spec:
+  field: value
+  nested:
+    field: value
+  number: 7
+  arr:
+    - field: value
