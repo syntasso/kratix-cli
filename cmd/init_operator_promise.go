@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix/api/v1alpha1"
@@ -237,6 +239,22 @@ func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[s
 }
 
 func getFilesToWrite(promiseName string, split bool, workflowDirectory string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]interface{}, error) {
+	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md")
+	if err != nil {
+		return nil, err
+	}
+
+	templatedReadme := bytes.NewBuffer([]byte{})
+	err = readmeTemplate.Execute(templatedReadme, promiseTemplateValues{
+		SubCommand: "operator-promise",
+		Name:       promiseName,
+		Group:      crd.Spec.Group,
+		Kind:       crd.Spec.Names.Kind,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	if split {
 		return map[string]interface{}{
 			"dependencies.yaml":     dependencies,
@@ -245,6 +263,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 			workflowDirectory: map[string]interface{}{
 				"workflow.yaml": workflow,
 			},
+			"README.md": templatedReadme.String(),
 		}, nil
 	}
 
@@ -256,6 +275,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 	return map[string]interface{}{
 		"promise.yaml":          promise,
 		"example-resource.yaml": exampleResource,
+		"README.md":             templatedReadme.String(),
 	}, nil
 }
 

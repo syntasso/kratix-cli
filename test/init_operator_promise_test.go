@@ -109,6 +109,13 @@ var _ = Describe("InitOperatorPromise", func() {
 				Expect(generatedFiles).To(ContainElement("example-resource.yaml"))
 				expectExampleResourceToMatchOperatorResource(workingDir)
 			})
+
+			It("includes a README.md file", func() {
+				Expect(generatedFiles).To(ContainElement("README.md"))
+				readmeContents, err := os.ReadFile(filepath.Join(workingDir, "README.md"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
+			})
 		})
 
 		When("a version is provided", func() {
@@ -190,6 +197,13 @@ var _ = Describe("InitOperatorPromise", func() {
 		It("includes an example resource request", func() {
 			Expect(filepath.Join(workingDir, "example-resource.yaml")).To(BeAnExistingFile())
 			expectExampleResourceToMatchOperatorResource(workingDir)
+		})
+
+		It("includes a README.md file", func() {
+			Expect(filepath.Join(workingDir, "README.md")).To(BeAnExistingFile())
+			readmeContents, err := os.ReadFile(filepath.Join(workingDir, "README.md"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
 		})
 	})
 })
