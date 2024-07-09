@@ -1,5 +1,5 @@
 OPERATOR_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-operator"
-HELM_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-reosource-configure"
+HELM_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-resource-configure"
 KRATIX_CLI_VERSION ?= "v0.1.0"
 
 all: test build
