@@ -101,6 +101,9 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	fmt.Println("Promise from Operator generated successfully.")
+	fmt.Printf("Run 'kratix update dependencies %s' to include the Operator files as dependencies.\n", operatorManifestsDir)
+
 	return nil
 }
 
@@ -257,7 +260,6 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 
 	if split {
 		return map[string]interface{}{
-			"dependencies.yaml":     dependencies,
 			"api.yaml":              crd,
 			"example-resource.yaml": exampleResource,
 			workflowDirectory: map[string]interface{}{
@@ -267,7 +269,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 		}, nil
 	}
 
-	promise, err := generatePromise(promiseName, dependencies, crd, workflow)
+	promise, err := generatePromise(promiseName, nil, crd, workflow)
 	if err != nil {
 		return nil, err
 	}
