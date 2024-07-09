@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/onsi/gomega/gexec"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -60,15 +58,11 @@ var _ = Describe("InitOperatorPromise", func() {
 		})
 	})
 
-	Describe("with --split", func() {
+	Describe("generating a promise from an operator", func() {
 		Describe("the generated files", func() {
-			var (
-				generatedFiles []string
-				session        *gexec.Session
-			)
-
+			var generatedFiles []string
 			BeforeEach(func() {
-				session = r.run(initPromiseCmd...)
+				r.run(initPromiseCmd...)
 				fileEntries, err := os.ReadDir(workingDir)
 				generatedFiles = []string{}
 				for _, fileEntry := range fileEntries {
@@ -77,8 +71,14 @@ var _ = Describe("InitOperatorPromise", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("does not include a dependencies.yaml", func() {
-				Expect(generatedFiles).ToNot(ContainElement("dependencies.yaml"))
+			It("includes a dependencies.yaml file with the contents of the operator manifests", func() {
+				Expect(generatedFiles).To(ContainElement("dependencies.yaml"))
+
+				var dependencies v1alpha1.Dependencies
+				depsContent, err := os.ReadFile(filepath.Join(workingDir, "dependencies.yaml"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(yaml.Unmarshal(depsContent, &dependencies)).To(Succeed())
+				expectDependenciesToMatchOperatorManifests(dependencies)
 			})
 
 			It("includes an api.yaml file with the api-schema-from CRD", func() {
@@ -116,13 +116,6 @@ var _ = Describe("InitOperatorPromise", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
 			})
-
-			It("outputs a message", func() {
-				Expect(session.Out).To(SatisfyAll(
-					gbytes.Say("Promise from Operator generated successfully."),
-					gbytes.Say("Run 'kratix update dependencies %s' to include the Operator files as dependencies.", r.flags["--operator-manifests"]),
-				))
-			})
 		})
 
 		When("a version is provided", func() {
@@ -158,11 +151,10 @@ var _ = Describe("InitOperatorPromise", func() {
 		})
 	})
 
-	Describe("no --split", func() {
-		var session *gexec.Session
+	Describe("when the --split flag is not provided", func() {
 		BeforeEach(func() {
 			delete(r.flags, "--split")
-			session = r.run(initPromiseCmd...)
+			r.run(initPromiseCmd...)
 		})
 
 		It("generates a single promise.yaml", func() {
@@ -191,8 +183,8 @@ var _ = Describe("InitOperatorPromise", func() {
 				expectCRDToMatchOperatorCRD(*crd)
 			})
 
-			By("not setting the promise dependencies", func() {
-				Expect(promise.Spec.Dependencies).To(BeNil())
+			By("setting the promise dependencies", func() {
+				expectDependenciesToMatchOperatorManifests(promise.Spec.Dependencies)
 			})
 
 			By("setting the promise workflows", func() {
@@ -213,13 +205,6 @@ var _ = Describe("InitOperatorPromise", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
 		})
-
-		It("outputs a message", func() {
-			Expect(session.Out).To(SatisfyAll(
-				gbytes.Say("Promise from Operator generated successfully."),
-				gbytes.Say("Run 'kratix update dependencies %s' to include the Operator files as dependencies.", r.flags["--operator-manifests"]),
-			))
-		})
 	})
 
 	Describe("end-to-end Promise generation", func() {
@@ -231,9 +216,6 @@ var _ = Describe("InitOperatorPromise", func() {
 			delete(r.flags, "--split")
 
 			r.run(initPromiseCmd...)
-
-			r.flags = nil
-			r.run("update", "dependencies", "assets/e2e-cnpg/manifests", "--dir", workingDir)
 		})
 
 		It("generates the expected promise.yaml", func() {
