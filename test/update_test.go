@@ -356,19 +356,13 @@ var _ = Describe("update", func() {
 			})
 
 			When("dependency directory contains file that cannot be decoded", func() {
-				It("updates promise.yaml file with the valid dependencies", func() {
+				It("fails", func() {
 					Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"),
 						slices.Concat(namespaceBytes(ns1), deploymentBytes(deployment1)), 0644)).To(Succeed())
-					Expect(os.WriteFile(filepath.Join(depDir, "not-yaml"), []byte("not valid yaml"), 0644)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(depDir, "not-yaml.yaml"), []byte("not valid yaml"), 0644)).To(Succeed())
+					r.exitCode = 1
 					sess := r.run("update", "dependencies", depDir)
-					Expect(sess.Out).To(gbytes.Say("Skipped invalid yaml documents during dependency writing"))
-					Expect(sess.Out).To(gbytes.Say("Updated promise.yaml"))
-					generatedDeps := getDependencies(workingDir, false)
-					Expect(generatedDeps).To(HaveLen(2))
-					Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
-					Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
-					Expect(generatedDeps[1].Object["apiVersion"]).To(Equal("apps/v1"))
-					Expect(generatedDeps[1].Object["kind"]).To(Equal("Deployment"))
+					Expect(sess.Err).To(gbytes.Say("error unmarshaling JSON"))
 				})
 			})
 

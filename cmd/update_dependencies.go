@@ -80,7 +80,6 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 	}
 
 	var dependencies []v1alpha1.Dependency
-	var dependencyIgnored bool
 	for _, fileInfo := range files {
 		fileName := filepath.Join(dependenciesDir, fileInfo.Name())
 		if fileInfo.IsDir() {
@@ -91,18 +90,25 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 			dependencies = append(dependencies, subDirDependencies...)
 			continue
 		}
+		if !isYAML(fileName) {
+			continue
+		}
 		var file *os.File
 		if file, err = os.Open(fileName); err != nil {
-			return nil, fmt.Errorf("failed to open dependency file: %s", fileName)
+			return nil, fmt.Errorf("failed to open dependency file %s: %s", fileName, err)
 		}
 
 		decoder := yaml.NewYAMLOrJSONDecoder(file, 2048)
 		for {
 			var obj *unstructured.Unstructured
-			if err = decoder.Decode(&obj); err == io.EOF {
+			err = decoder.Decode(&obj)
+			if err == io.EOF {
 				break
-			} else if err != nil {
-				dependencyIgnored = true
+			}
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode dependency file %s: %s", fileName, err)
+			}
+			if obj == nil {
 				continue
 			}
 			if obj.GetNamespace() == "" {
@@ -114,10 +120,6 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 
 	if len(dependencies) == 0 {
 		return nil, fmt.Errorf("no valid dependencies found in directory: %s", dependenciesDir)
-	}
-
-	if dependencyIgnored {
-		fmt.Println("Skipped invalid yaml documents during dependency writing")
 	}
 
 	return dependencies, nil
@@ -214,4 +216,8 @@ func copyFiles(src, dest string) error {
 		}
 	}
 	return nil
+}
+
+func isYAML(fileName string) bool {
+	return filepath.Ext(fileName) == ".yaml" || filepath.Ext(fileName) == ".yml"
 }
