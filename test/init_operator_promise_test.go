@@ -30,7 +30,7 @@ var _ = Describe("InitOperatorPromise", func() {
 			"--kind":               "database",
 			"--operator-manifests": "assets/operator",
 			"--dir":                workingDir,
-			"--api-from":           "postgresqls.acid.zalan.do",
+			"--api-schema-from":    "postgresqls.acid.zalan.do",
 			"--split":              "",
 		}
 		initPromiseCmd = []string{"init", "operator-promise", "postgresql"}
@@ -46,7 +46,7 @@ var _ = Describe("InitOperatorPromise", func() {
 			r.exitCode = 1
 			r.flags = map[string]string{}
 			session := r.run(initPromiseCmd...)
-			Expect(session.Err).To(gbytes.Say(`Error: required flag\(s\) "api-from", "group", "kind", "operator-manifests" not set`))
+			Expect(session.Err).To(gbytes.Say(`Error: required flag\(s\) "api-schema-from", "group", "kind", "operator-manifests" not set`))
 		})
 	})
 
@@ -81,7 +81,7 @@ var _ = Describe("InitOperatorPromise", func() {
 				expectDependenciesToMatchOperatorManifests(dependencies)
 			})
 
-			It("includes an api.yaml file with the api-from CRD", func() {
+			It("includes an api.yaml file with the api-schema-from CRD", func() {
 				Expect(generatedFiles).To(ContainElement("api.yaml"))
 
 				apiContent, err := os.ReadFile(filepath.Join(workingDir, "api.yaml"))
@@ -140,7 +140,7 @@ var _ = Describe("InitOperatorPromise", func() {
 
 		When("there is no matching CRD in the manifests directory", func() {
 			BeforeEach(func() {
-				r.flags["--api-from"] = "does-not-exist"
+				r.flags["--api-schema-from"] = "does-not-exist"
 			})
 
 			It("returns an error", func() {
@@ -212,7 +212,7 @@ var _ = Describe("InitOperatorPromise", func() {
 			r.flags["--group"] = "syntasso.io"
 			r.flags["--kind"] = "Database"
 			r.flags["--operator-manifests"] = "assets/e2e-cnpg/manifests"
-			r.flags["--api-from"] = "clusters.postgresql.cnpg.io"
+			r.flags["--api-schema-from"] = "clusters.postgresql.cnpg.io"
 			delete(r.flags, "--split")
 
 			r.run(initPromiseCmd...)

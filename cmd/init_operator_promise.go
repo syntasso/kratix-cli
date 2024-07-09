@@ -19,7 +19,7 @@ import (
 )
 
 var operatorPromiseCmd = &cobra.Command{
-	Use:   "operator-promise PROMISE-NAME --group API-GROUP --version API-VERSION --kind API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-from CRD-NAME",
+	Use:   "operator-promise PROMISE-NAME --group API-GROUP --version API-VERSION --kind API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-schema-from CRD-NAME",
 	Short: "Generate a Promise from a given Kubernetes Operator.",
 	Long:  `Generate a Promise from a given Kubernetes Operator.`,
 	Args:  cobra.ExactArgs(1),
@@ -34,10 +34,10 @@ func init() {
 	initCmd.AddCommand(operatorPromiseCmd)
 
 	operatorPromiseCmd.Flags().StringVarP(&operatorManifestsDir, "operator-manifests", "m", "", "The path to the directory containing the operator manifests.")
-	operatorPromiseCmd.Flags().StringVarP(&targetCrdName, "api-from", "a", "", "The name of the CRD which the Promise API should be generated from.")
+	operatorPromiseCmd.Flags().StringVarP(&targetCrdName, "api-schema-from", "a", "", "The name of the CRD which the Promise API schema should be generated from.")
 
 	operatorPromiseCmd.MarkFlagRequired("operator-manifests")
-	operatorPromiseCmd.MarkFlagRequired("api-from")
+	operatorPromiseCmd.MarkFlagRequired("api-schema-from")
 }
 
 func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {

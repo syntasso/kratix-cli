@@ -54,5 +54,5 @@ kratix init helm-promise PROMISENAME --group myorg.com --kind database [--versio
 ### init from operator
 
 ```
-kratix init operator-promise PROMISENAME --group myorg.com --kind database [--version v1] [--plural postgreses] --operator-manifests PATH-TO-OPERATOR-RELEASE-MANIFEST --api-from CRD-FULLNAME(needs to exist in operator release manifest)
+kratix init operator-promise PROMISENAME --group myorg.com --kind database [--version v1] [--plural postgreses] --operator-manifests PATH-TO-OPERATOR-RELEASE-MANIFEST --api-schema-from CRD-FULLNAME(needs to exist in operator release manifest)
 ```
