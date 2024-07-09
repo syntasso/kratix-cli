@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-set -euxo pipefail
+set -eux
 
 KRATIX_INPUT=${KRATIX_INPUT:-/kratix/input}
 KRATIX_OUTPUT=${KRATIX_OUTPUT:-/kratix/input}
