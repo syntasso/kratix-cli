@@ -58,18 +58,18 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	pipelineParts := strings.Split(pipelineInput, "/")
 	workflow, action, pipelineName := pipelineParts[0], pipelineParts[1], pipelineParts[2]
 
-	if err := generateWorkflow(workflow, action, pipelineName, false); err != nil {
+	if err := generateWorkflow(workflow, action, pipelineName, containerName, image, false); err != nil {
 		return err
 	}
 
 	pipelineScriptFilename := "pipeline.sh"
-    scriptsPath := filepath.Join("workflows", workflow, action, pipelineName, containerName, "scripts", pipelineScriptFilename)
+	scriptsPath := filepath.Join("workflows", workflow, action, pipelineName, containerName, "scripts", pipelineScriptFilename)
 	fmt.Printf("Customise your container by editing %s \n", scriptsPath)
 	fmt.Println("Don't forget to build and push your image!")
 	return nil
 }
 
-func generateWorkflow(workflow string, action string, pipelineName string, overwrite bool) error {
+func generateWorkflow(workflow, action, pipelineName, containerName, image string, overwrite bool) error {
 	container = v1alpha1.Container{
 		Name:  containerName,
 		Image: image,

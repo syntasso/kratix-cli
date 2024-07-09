@@ -103,7 +103,7 @@ var _ = Describe("add", func() {
 				Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Image).To(Equal("project/cleanup:latest"))
 				Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Name).To(Equal("project-cleanup"))
 
-				Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
+				Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
 				script := getPipelineScript(dir, "promise", "configure", "pipeline1", "a-good-container")
 				Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
 				Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
@@ -216,7 +216,7 @@ var _ = Describe("add", func() {
 					Expect(pipelines[0].Spec.Containers[1].Name).To(Equal("superb-image"))
 					Expect(pipelines[0].Spec.Containers[1].Image).To(Equal("image:latest"))
 
-					Expect(sess.Out).To(gbytes.Say("Customise your container by editing the workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
+					Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
 					Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
 
 					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "image")).To(ContainSubstring("Hello from ${name} ${namespace}"))

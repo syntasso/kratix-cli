@@ -23,18 +23,15 @@ Kratix update dependencies local-dir/ `,
 	RunE: updateDependencies,
 }
 
-var depsAsWorkflow bool
-
 func init() {
 	updateCmd.AddCommand(updateDependenciesCmd)
 	updateDependenciesCmd.Flags().StringVarP(&dir, "dir", "d", ".", "Directory to read Promise from")
-	updateDependenciesCmd.Flags().BoolVar(&depsAsWorkflow, "as-workflow", false, "Whether to include dependencies as a workflow or not; default is false")
-	updateDependenciesCmd.Flags().StringVarP(&image, "image", "i", "", "The image used by this container.")
+	updateDependenciesCmd.Flags().StringVarP(&image, "image", "i", "", "Name of the image in which to provide the dependencies within Promise Configure workflow.")
 }
 
 func updateDependencies(cmd *cobra.Command, args []string) error {
 	dependenciesDir := args[0]
-	if depsAsWorkflow {
+	if image != "" {
 		return addDepsAsWorkflow(dependenciesDir)
 	}
 
@@ -155,10 +152,7 @@ func updatePromiseDependencies(dependencies []v1alpha1.Dependency) error {
 
 func addDepsAsWorkflow(dependenciesDir string) error {
 	containerName = "configure-deps"
-	if image == "" {
-		return fmt.Errorf("--image is required when --as-workflow is set")
-	}
-	err := generateWorkflow("promise", "configure", "dependencies", true)
+	err := generateWorkflow("promise", "configure", "dependencies", containerName, image, true)
 	if err != nil {
 		return err
 	}
@@ -187,7 +181,9 @@ func addDepsAsWorkflow(dependenciesDir string) error {
 	}
 
 	fmt.Println("Dependencies added as a Promise workflow.")
-	fmt.Println("Don't forget to build and push the image.")
+	fmt.Println("Run the following command to build the dependencies image:")
+	fmt.Printf("\n  docker build -t %s %s\n\n", image, workflowDir)
+	fmt.Println("Don't forget to push the image to a registry!")
 	return nil
 }
 
@@ -205,7 +201,10 @@ func copyFiles(src, dest string) error {
 			if err := copyFiles(filepath.Join(src, f.Name()), filepath.Join(dest, f.Name())); err != nil {
 				return err
 			}
+
+			continue
 		}
+
 		fileContents, err := os.ReadFile(filepath.Join(src, f.Name()))
 		if err != nil {
 			return err
