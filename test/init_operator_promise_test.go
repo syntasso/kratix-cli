@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -19,6 +20,7 @@ var _ = Describe("InitOperatorPromise", func() {
 	var r *runner
 	var workingDir string
 	var initPromiseCmd []string
+	var session *gexec.Session
 
 	BeforeEach(func() {
 		var err error
@@ -59,10 +61,11 @@ var _ = Describe("InitOperatorPromise", func() {
 	})
 
 	Describe("generating a promise from an operator", func() {
+
 		Describe("the generated files", func() {
 			var generatedFiles []string
 			BeforeEach(func() {
-				r.run(initPromiseCmd...)
+				session = r.run(initPromiseCmd...)
 				fileEntries, err := os.ReadDir(workingDir)
 				generatedFiles = []string{}
 				for _, fileEntry := range fileEntries {
@@ -121,7 +124,7 @@ var _ = Describe("InitOperatorPromise", func() {
 		When("a version is provided", func() {
 			BeforeEach(func() {
 				r.flags["--version"] = "v2beta1"
-				r.run(initPromiseCmd...)
+				session = r.run(initPromiseCmd...)
 			})
 
 			It("sets the api version to the provided version", func() {
@@ -154,7 +157,7 @@ var _ = Describe("InitOperatorPromise", func() {
 	Describe("when the --split flag is not provided", func() {
 		BeforeEach(func() {
 			delete(r.flags, "--split")
-			r.run(initPromiseCmd...)
+			session = r.run(initPromiseCmd...)
 		})
 
 		It("generates a single promise.yaml", func() {
@@ -205,6 +208,13 @@ var _ = Describe("InitOperatorPromise", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
 		})
+
+		It("outputs a message", func() {
+			Expect(session.Out).To(SatisfyAll(
+				gbytes.Say(`Promise generated successfully.`),
+				gbytes.Say(`kratix update dependencies --image yourorg/your-image:tag`),
+			))
+		})
 	})
 
 	Describe("end-to-end Promise generation", func() {
@@ -215,7 +225,7 @@ var _ = Describe("InitOperatorPromise", func() {
 			r.flags["--api-schema-from"] = "clusters.postgresql.cnpg.io"
 			delete(r.flags, "--split")
 
-			r.run(initPromiseCmd...)
+			session = r.run(initPromiseCmd...)
 		})
 
 		It("generates the expected promise.yaml", func() {
@@ -236,6 +246,13 @@ var _ = Describe("InitOperatorPromise", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(exampleResourceContent).To(MatchYAML(expectedExampleResourceContent))
+		})
+
+		It("outputs a message", func() {
+			Expect(session.Out).To(SatisfyAll(
+				gbytes.Say(`Promise generated successfully.`),
+				gbytes.Say(`kratix update dependencies --image yourorg/your-image:tag`),
+			))
 		})
 	})
 })
