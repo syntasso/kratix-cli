@@ -58,6 +58,18 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	pipelineParts := strings.Split(pipelineInput, "/")
 	workflow, action, pipelineName := pipelineParts[0], pipelineParts[1], pipelineParts[2]
 
+	if err := generateWorkflow(workflow, action, pipelineName, containerName, image, false); err != nil {
+		return err
+	}
+
+	pipelineScriptFilename := "pipeline.sh"
+	scriptsPath := filepath.Join("workflows", workflow, action, pipelineName, containerName, "scripts", pipelineScriptFilename)
+	fmt.Printf("Customise your container by editing %s \n", scriptsPath)
+	fmt.Println("Don't forget to build and push your image!")
+	return nil
+}
+
+func generateWorkflow(workflow, action, pipelineName, containerName, image string, overwrite bool) error {
 	container = v1alpha1.Container{
 		Name:  containerName,
 		Image: image,
@@ -114,11 +126,17 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 
 	var pipelinesUnstructured []unstructured.Unstructured
 	if pipelineIndex != -1 {
-		if containerNameInPipeline(pipelines[pipelineIndex], container.Name) {
-			err = fmt.Errorf("image '%s' already exists in Pipeline", container.Name)
-			return err
+		containerIdx := containerIndex(pipelines[pipelineIndex], container.Name)
+		if containerIdx == -1 {
+			pipelines[pipelineIndex].Spec.Containers = append(pipelines[pipelineIndex].Spec.Containers, container)
+		} else {
+			if !overwrite {
+				err = fmt.Errorf("image '%s' already exists in Pipeline", container.Name)
+				return err
+			}
+			pipelines[pipelineIndex].Spec.Containers[containerIdx] = container
 		}
-		pipelines[pipelineIndex].Spec.Containers = append(pipelines[pipelineIndex].Spec.Containers, container)
+
 		pipelinesUnstructured, err = pipelinesToUnstructured(pipelines)
 		if err != nil {
 			return err
@@ -167,9 +185,6 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("generated the %s/%s/%s/%s in %s \n", workflow, action, pipelineName, containerName, filePath)
 
-	pipelineScriptFilename := "pipeline.sh"
-	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/%s/scripts/%s \n", workflow, action, pipelineName, containerName, pipelineScriptFilename)
-	fmt.Println("Don't forget to build and push your image!")
 	return nil
 }
 
@@ -338,11 +353,11 @@ func updateWorkflow(workflow, action string, pipelines []unstructured.Unstructur
 	}
 }
 
-func containerNameInPipeline(pipeline v1alpha1.Pipeline, containerName string) bool {
-	for _, container := range pipeline.Spec.Containers {
+func containerIndex(pipeline v1alpha1.Pipeline, containerName string) int {
+	for i, container := range pipeline.Spec.Containers {
 		if container.Name == containerName {
-			return true
+			return i
 		}
 	}
-	return false
+	return -1
 }

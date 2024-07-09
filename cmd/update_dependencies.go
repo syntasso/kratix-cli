@@ -26,41 +26,37 @@ Kratix update dependencies local-dir/ `,
 func init() {
 	updateCmd.AddCommand(updateDependenciesCmd)
 	updateDependenciesCmd.Flags().StringVarP(&dir, "dir", "d", ".", "Directory to read Promise from")
+	updateDependenciesCmd.Flags().StringVarP(&image, "image", "i", "", "Name of the image in which to provide the dependencies within Promise Configure workflow.")
 }
 
 func updateDependencies(cmd *cobra.Command, args []string) error {
 	dependenciesDir := args[0]
-	dependencies, err := buildDependencies(dependenciesDir)
+	if image != "" {
+		return addDepsAsWorkflow(dependenciesDir)
+	}
+
+	var depBytes []byte
+	var dependencies []v1alpha1.Dependency
+	file := dependencyFile()
+	dependencies, err = buildDependencies(dependenciesDir)
 	if err != nil {
 		return err
 	}
 
-	var depBytes []byte
 	if depBytes, err = yamlsig.Marshal(dependencies); err != nil {
 		return err
 	}
 
-	var bytes []byte
-	file := dependencyFile()
 	switch file {
 	case dependenciesFileName:
-		bytes = depBytes
+		err = os.WriteFile(filepath.Join(dir, dependenciesFileName), depBytes, filePerm)
 	case promiseFileName:
-		var promise v1alpha1.Promise
-		if promise, err = getPromise(filepath.Join(dir, "promise.yaml")); err != nil {
-			return err
-		}
-		promise.Spec.Dependencies = dependencies
-		bytes, err = yamlsig.Marshal(promise)
-		if err != nil {
-			return err
-		}
+		err = updatePromiseDependencies(dependencies)
 	}
 
-	if err = os.WriteFile(filepath.Join(dir, file), bytes, filePerm); err != nil {
+	if err != nil {
 		return err
 	}
-
 	fmt.Printf("Updated %s\n", file)
 	return nil
 }
@@ -139,4 +135,83 @@ func getPromise(filePath string) (v1alpha1.Promise, error) {
 		return v1alpha1.Promise{}, err
 	}
 	return promise, nil
+}
+
+func updatePromiseDependencies(dependencies []v1alpha1.Dependency) error {
+	var promise v1alpha1.Promise
+	if promise, err = getPromise(filepath.Join(dir, "promise.yaml")); err != nil {
+		return err
+	}
+	promise.Spec.Dependencies = dependencies
+	bytes, err := yamlsig.Marshal(promise)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, promiseFileName), bytes, filePerm)
+}
+
+func addDepsAsWorkflow(dependenciesDir string) error {
+	containerName = "configure-deps"
+	err := generateWorkflow("promise", "configure", "dependencies", containerName, image, true)
+	if err != nil {
+		return err
+	}
+
+	workflowDir := filepath.Join(dir, "workflows/promise/configure/dependencies", containerName)
+	resourcesDir := filepath.Join(workflowDir, "resources")
+	scriptsDir := filepath.Join(workflowDir, "scripts")
+	if err := copyFiles(dependenciesDir, resourcesDir); err != nil {
+		return err
+	}
+
+	pipelineScriptContent := "#!/usr/bin/env sh\n\ncp /resources/* /kratix/output"
+	if err := os.WriteFile(filepath.Join(scriptsDir, "pipeline.sh"), []byte(pipelineScriptContent), filePerm); err != nil {
+		return err
+	}
+
+	file := dependencyFile()
+	switch file {
+	case dependenciesFileName:
+		err = os.Remove(filepath.Join(dir, dependenciesFileName))
+	case promiseFileName:
+		err = updatePromiseDependencies([]v1alpha1.Dependency{})
+	}
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Dependencies added as a Promise workflow.")
+	fmt.Println("Run the following command to build the dependencies image:")
+	fmt.Printf("\n  docker build -t %s %s\n\n", image, workflowDir)
+	fmt.Println("Don't forget to push the image to a registry!")
+	return nil
+}
+
+func copyFiles(src, dest string) error {
+	files, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			if err := os.Mkdir(filepath.Join(dest, f.Name()), 0755); err != nil {
+				return err
+			}
+			if err := copyFiles(filepath.Join(src, f.Name()), filepath.Join(dest, f.Name())); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		fileContents, err := os.ReadFile(filepath.Join(src, f.Name()))
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dest, f.Name()), fileContents, 0644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
