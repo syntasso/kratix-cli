@@ -1,10 +1,12 @@
 OPERATOR_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-operator"
+HELM_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-reosource-configure"
 KRATIX_CLI_VERSION ?= "v0.1.0"
 
 all: test build
 
 .PHONY: test
 test: # Run tests
+	./aspects/helm-promise/pipeline_test.bash
 	go run github.com/onsi/ginkgo/v2/ginkgo -r
 
 build: # Build the binary
@@ -17,6 +19,7 @@ build-and-push-aspects: # build and push all aspects
 		docker buildx create --name kratix-cli-image-builder; \
 	fi;
 	make build-and-push-operator-promise-aspect
+	make build-and-push-helm-promis-aspect
 
 .PHONY: help
 help: # Show help for each of the Makefile recipes.
@@ -38,3 +41,14 @@ build-and-push-operator-promise-aspect:
 		--tag ${OPERATOR_ASPECT_TAG}:latest \
 		--file aspects/operator-promise/Dockerfile \
 		.
+
+build-helm-promise-aspect:
+	docker build \
+		--tag ${HELM_ASPECT_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${HELM_ASPECT_TAG}:latest \
+		--file aspects/helm-promise/Dockerfile \
+		aspects/helm-promise
+
+build-and-push-helm-promise-aspect: build-helm-promise-aspect
+	docker push ${HELM_ASPECT_TAG}:${KRATIX_CLI_VERSION}
+	docker push ${HELM_ASPECT_TAG}:latest
