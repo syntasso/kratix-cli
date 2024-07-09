@@ -4,6 +4,7 @@ set -euxo pipefail
 
 KRATIX_INPUT=${KRATIX_INPUT:-/kratix/input}
 KRATIX_OUTPUT=${KRATIX_OUTPUT:-/kratix/input}
+HELM_BINARY=${HELM_BINARY:-helm}
 name=$(yq '.metadata.name' $KRATIX_INPUT/object.yaml)
 
 
@@ -25,4 +26,4 @@ if [ -n "${CHART_VERSION:-}" ]; then
     arguments="$arguments --version $CHART_VERSION"
 fi
 
-helm template $name $arguments --values values.yaml > $KRATIX_OUTPUT/object.yaml
+$HELM_BINARY template $name $arguments --values values.yaml > $KRATIX_OUTPUT/object.yaml
