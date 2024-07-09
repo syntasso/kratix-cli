@@ -64,8 +64,8 @@ var _ = Describe("init", func() {
 
 		When("called without the required arguments", func() {
 			It("prints an error", func() {
-				session := withExitCode(1).run("init", "promise")
-				Expect(session.Err).To(gbytes.Say(`Error: accepts 1 arg\(s\), received 0`))
+				session := withExitCode(1).run("init", "promise", "--group", "syntasso.io", "--kind", "Database")
+				Expect(session.Err).To(gbytes.Say("required argument promise name not specified"))
 			})
 		})
 
@@ -82,7 +82,7 @@ var _ = Describe("init", func() {
 			})
 
 			By("generating an example-resource.yaml file", func() {
-				matchExampleResource(workingDir, "example-postgresql", "syntasso.io", "v1alpha1", "Database")
+				matchExampleResource(workingDir, "example", "syntasso.io", "v1alpha1", "Database")
 			})
 
 			By("including a README file", func() {
@@ -105,14 +105,14 @@ var _ = Describe("init", func() {
 				})
 
 				By("generating an example-resource.yaml file", func() {
-					matchExampleResource(subdir, "example-postgresql", "syntasso.io", "v2", "Database")
+					matchExampleResource(subdir, "example", "syntasso.io", "v2", "Database")
 				})
 			})
 
 			When("--split flag is provided", func() {
 				It("produces separate promise files", func() {
-					session := r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split")
-					Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in the current directory"))
+					session := r.run("init", "promise", "--group", "syntasso.io", "--kind", "Database", "--split")
+					Expect(session.Out).To(gbytes.Say("promise bootstrapped in the current directory"))
 
 					By("generating different files for api, dependencies and workflows", func() {
 						files, err := os.ReadDir(workingDir)

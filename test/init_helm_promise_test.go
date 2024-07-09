@@ -59,7 +59,7 @@ var _ = Describe("init helm-promise", func() {
 				})
 
 				By("generating an example-resource.yaml file", func() {
-					matchExampleResource(workingDir, "example-postgresql", "syntasso.io", "v1alpha1", "Database")
+					matchExampleResource(workingDir, "example", "syntasso.io", "v1alpha1", "Database")
 				})
 
 				By("including a README file", func() {

@@ -53,8 +53,9 @@ var _ = Describe("InitOperatorPromise", func() {
 	When("called without required arguments", func() {
 		It("prints an error", func() {
 			r.exitCode = 1
-			session := r.run("init", "operator-promise")
-			Expect(session.Err).To(gbytes.Say(`Error: accepts 1 arg\(s\), received 0`))
+			r.flags = map[string]string{}
+			session := r.run("init", "operator-promise", "--group", "myorg.com", "--kind", "database", "--operator-manifests", "assets/operator", "--api-schema-from", "postgresqls.acid.zalan.do")
+			Expect(session.Err).To(gbytes.Say("required argument promise name not specified"))
 		})
 	})
 
@@ -114,7 +115,7 @@ var _ = Describe("InitOperatorPromise", func() {
 				Expect(generatedFiles).To(ContainElement("README.md"))
 				readmeContents, err := os.ReadFile(filepath.Join(workingDir, "README.md"))
 				Expect(err).ToNot(HaveOccurred())
-				Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
+				Expect(readmeContents).To(ContainSubstring("init operator-promise  --group myorg.com --kind database"))
 			})
 		})
 

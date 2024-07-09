@@ -22,7 +22,6 @@ var operatorPromiseCmd = &cobra.Command{
 	Use:   "operator-promise PROMISE-NAME --group API-GROUP --version API-VERSION --kind API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-schema-from CRD-NAME",
 	Short: "Generate a Promise from a given Kubernetes Operator.",
 	Long:  `Generate a Promise from a given Kubernetes Operator.`,
-	Args:  cobra.ExactArgs(1),
 	RunE:  InitPromiseFromOperator,
 }
 
@@ -41,7 +40,10 @@ func init() {
 }
 
 func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
-	promiseName := args[0]
+	var promiseName string
+	if promiseName, err = getPromiseName(args); err != nil {
+		return err
+	}
 
 	if plural == "" {
 		plural = fmt.Sprintf("%ss", strings.ToLower(kind))

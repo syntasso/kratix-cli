@@ -68,7 +68,7 @@ var _ = Describe("build", func() {
 
 		When("workflow files exist in the workflows directory", func() {
 			It("builds a promise from api, dependencies and workflow files", func() {
-				r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--dir", promiseDir)
+				r.run("init", "promise", "--group", "syntasso.io", "--kind", "Database", "--split", "--dir", promiseDir)
 				r.run("add", "container", "promise/configure/pipeline0", "--image", "psql:latest", "-n", "configure-image", "--dir", promiseDir)
 				r.run("add", "container", "resource/delete/pipeline0", "--image", "psql:latest", "-n", "delete-image", "--dir", promiseDir)
 				sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)

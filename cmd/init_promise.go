@@ -19,8 +19,10 @@ var initPromiseCmd = &cobra.Command{
 
   # initialize a new promise with the specified version
   kratix init promise postgresql --group syntasso.io --kind database --version v1
+
+  # initialize a new promise with separate api, dependencies, and workflows files
+  kratix init promise --group syntasso.io --kind database --split
 `,
-	Args: cobra.ExactArgs(1),
 	RunE: InitPromise,
 }
 
@@ -47,7 +49,11 @@ type promiseTemplateValues struct {
 }
 
 func InitPromise(cmd *cobra.Command, args []string) error {
-	return templatePromiseFiles(args[0], "promise")
+	var promiseName string
+	if promiseName, err = getPromiseName(args); err != nil {
+		return err
+	}
+	return templatePromiseFiles(promiseName, "promise")
 }
 
 func templatePromiseFiles(promiseName, subcommand string) error {
@@ -90,4 +96,15 @@ func templatePromiseFiles(promiseName, subcommand string) error {
 	}
 	fmt.Printf("%s promise bootstrapped in the %s directory\n", promiseName, dirName)
 	return nil
+}
+
+func getPromiseName(args []string) (string, error) {
+	var promiseName string
+	if !split {
+		if len(args) == 0 {
+			return "", fmt.Errorf("required argument promise name not specified")
+		}
+		promiseName = args[0]
+	}
+	return promiseName, nil
 }

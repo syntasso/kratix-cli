@@ -78,7 +78,7 @@ var _ = Describe("update", func() {
 						sess := r.run("update", "api", "--kind", "NewKind", "--group", "newGroup", "--version", "v1beta4", "--plural", "newPlural", "--dir", dir)
 						Expect(sess.Out).To(gbytes.Say("Promise api updated"))
 						matchPromise(dir, "postgresql", "newGroup", "v1beta4", "NewKind", "newkind", "newPlural")
-						matchExampleResource(dir, "example-postgresql", "newGroup", "v1beta4", "NewKind")
+						matchExampleResource(dir, "example", "newGroup", "v1beta4", "NewKind")
 					})
 				})
 
@@ -138,15 +138,15 @@ var _ = Describe("update", func() {
 					dir, err = os.MkdirTemp("", "kratix-update-api-test")
 					Expect(err).NotTo(HaveOccurred())
 
-					sess := r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split")
-					Expect(sess.Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+					sess := r.run("init", "promise", "--group", "syntasso.io", "--kind", "Database", "--split")
+					Expect(sess.Out).To(gbytes.Say("promise bootstrapped in"))
 				})
 
 				It("can update gvk of the api", func() {
 					sess := r.run("update", "api", "--kind", "NewKind", "--group", "newGroup", "--version", "v2beta4", "--plural", "newPlural")
 					Expect(sess.Out).To(gbytes.Say("Promise api updated"))
 					matchGvkInAPIFile(workingDir, "newGroup", "v2beta4", "NewKind", "newkind", "newPlural")
-					matchExampleResource(workingDir, "example-postgresql", "newGroup", "v2beta4", "NewKind")
+					matchExampleResource(workingDir, "example", "newGroup", "v2beta4", "NewKind")
 				})
 
 				It("can add new properties and update existing properties to the promise api", func() {
@@ -241,11 +241,11 @@ var _ = Describe("update", func() {
 				promiseDir, err = os.MkdirTemp("", "split-promise")
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(r.run("init", "promise", "postgresql",
+				Expect(r.run("init", "promise",
 					"--group", "syntasso.io",
 					"--kind", "Database",
 					"--dir", promiseDir,
-					"--split").Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+					"--split").Out).To(gbytes.Say("promise bootstrapped in"))
 			})
 
 			It("updates dependencies.yaml file", func() {

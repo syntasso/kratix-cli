@@ -184,8 +184,8 @@ var _ = Describe("add", func() {
 					dir, err = os.MkdirTemp("", "kratix-update-api-test")
 					Expect(err).NotTo(HaveOccurred())
 
-					sess := r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--dir", dir, "--split")
-					Expect(sess.Out).To(gbytes.Say("postgresql promise bootstrapped in"))
+					sess := r.run("init", "promise", "--group", "syntasso.io", "--kind", "Database", "--dir", dir, "--split")
+					Expect(sess.Out).To(gbytes.Say("promise bootstrapped in"))
 				})
 
 				AfterEach(func() {
