@@ -63,7 +63,8 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	}
 
 	pipelineScriptFilename := "pipeline.sh"
-	fmt.Printf("Customise your container by editing the workflows/%s/%s/%s/%s/scripts/%s \n", workflow, action, pipelineName, containerName, pipelineScriptFilename)
+    scriptsPath := filepath.Join("workflows", workflow, action, pipelineName, containerName, "scripts", pipelineScriptFilename)
+	fmt.Printf("Customise your container by editing %s \n", scriptsPath)
 	fmt.Println("Don't forget to build and push your image!")
 	return nil
 }
