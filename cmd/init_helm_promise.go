@@ -2,21 +2,18 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-	"strings"
-
-	"github.com/spf13/cobra"
 )
 
-// helmPromiseCmd represents the helmPromise command
 var intHelmPromiseCmd = &cobra.Command{
 	Use:   "helm-promise PROMISE-NAME --chart-url HELM-CHART-URL [--version]",
 	Short: "Initialize a new Promise from a Helm chart",
-	Long:  "Initialize a new Promise from a Helm Chart within the current directory, with all the necessary files to get started",
-	Example: `  # initialize a new promise from the OCI Helm Chart
+	Long:  "Initialize a new Promise from a Helm Chart",
+	Example: `  # initialize a new promise from an OCI Helm Chart
   kratix init helm-promise postgresql --chart-url oci://registry-1.docker.io/bitnamicharts/postgresql [--chart-version v1.0.0]
 
   # initialize a new promise from a Helm Chart repository
@@ -40,31 +37,13 @@ func init() {
 }
 
 func InitHelmPromise(cmd *cobra.Command, args []string) error {
-	if version == "" {
-		version = "v1alpha1"
-	}
-
-	if plural == "" {
-		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
-	}
-
 	promiseName := args[0]
-
 	resourceConfigure, err := generateResourceConfigurePipeline()
 	if err != nil {
 		return err
 	}
 
-	templateValues := promiseTemplateValues{
-		Name:              promiseName,
-		Group:             group,
-		Kind:              kind,
-		Version:           version,
-		Plural:            plural,
-		Singular:          strings.ToLower(kind),
-		SubCommand:        "helm-promise",
-		ResourceConfigure: resourceConfigure,
-	}
+	templateValues := generateTemplateValues(promiseName, "helm-promise", resourceConfigure)
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",

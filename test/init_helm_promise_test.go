@@ -47,54 +47,70 @@ var _ = Describe("init helm-promise", func() {
 		})
 	})
 
-	Context("--split", func() {
-		When("called with the required arguments", func() {
-			It("generates correct files", func() {
-				session := r.run("init", "helm-promise", "postgresql", "--chart-url", "postgres.io/chart", "--group", "syntasso.io", "--kind", "Database", "--split")
-				Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in the current directory"))
+	When("called with --split", func() {
+		It("bootstraps correctly", func() {
+			session := r.run("init", "helm-promise", "postgresql", "--chart-url", "postgres.io/chart", "--group", "syntasso.io", "--kind", "Database", "--split")
+			Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in the current directory"))
 
-				files, err := os.ReadDir(workingDir)
+			files, err := os.ReadDir(workingDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(HaveLen(5))
+
+			By("generating a api.yaml file", func() {
+				apiYAML, err := os.ReadFile(filepath.Join(workingDir, "api.yaml"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(files).To(HaveLen(5))
+				var promiseCRD apiextensionsv1.CustomResourceDefinition
+				Expect(yaml.Unmarshal(apiYAML, &promiseCRD)).To(Succeed())
+				matchCRD(&promiseCRD, "syntasso.io", "v1alpha1", "Database", "database", "databases")
+			})
 
-				By("generating a api.yaml file", func() {
-					apiYAML, err := os.ReadFile(filepath.Join(workingDir, "api.yaml"))
-					Expect(err).NotTo(HaveOccurred())
-					var promiseCRD apiextensionsv1.CustomResourceDefinition
-					Expect(yaml.Unmarshal(apiYAML, &promiseCRD)).To(Succeed())
-					matchCRD(&promiseCRD, "syntasso.io", "v1alpha1", "Database", "database", "databases")
-				})
+			By("generating an example-resource.yaml file", func() {
+				matchExampleResource(workingDir, "example-postgresql", "syntasso.io", "v1alpha1", "Database")
+			})
 
-				By("generating an example-resource.yaml file", func() {
-					matchExampleResource(workingDir, "example-postgresql", "syntasso.io", "v1alpha1", "Database")
-				})
+			By("generating a README file", func() {
+				readmeContents, err := os.ReadFile(filepath.Join(workingDir, "README.md"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(readmeContents).To(ContainSubstring("kratix init helm-promise postgresql"))
+			})
 
-				By("including a README file", func() {
-					readmeContents, err := os.ReadFile(filepath.Join(workingDir, "README.md"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(readmeContents).To(ContainSubstring("kratix init helm-promise postgresql"))
-				})
+			By("generating an empty dependencies file", func() {
+				depContent, err := os.ReadFile(filepath.Join(workingDir, "dependencies.yaml"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(depContent).To(BeEmpty())
+			})
 
-				By("writing a workflow file", func() {
-					pipelines := getPipelines(workingDir)
-					Expect(pipelines).To(HaveLen(1))
-					matchHelmResourceConfigurePipeline(pipelines[0], []corev1.EnvVar{{Name: "CHART_URL", Value: "postgres.io/chart"}})
-				})
+			By("generating a workflow file with helm resource configure workflow", func() {
+				pipelines := getPipelines(workingDir)
+				Expect(pipelines).To(HaveLen(1))
+				matchHelmResourceConfigurePipeline(pipelines[0], []corev1.EnvVar{{Name: "CHART_URL", Value: "postgres.io/chart"}})
 			})
 		})
 	})
 
-	Context("promise.yaml", func() {
-		When("called with the required arguments", func() {
-			It("generates correct files", func() {
-				session := r.run("init", "helm-promise", "--chart-url", "postgres.io/chart", "--chart-version", "v110.0.1", "--chart-name", "greatchart", "postgresql", "--group", "syntasso.io", "--kind", "Database")
-				Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in the current directory"))
+	When("called without '--split' flag", func() {
+		It("bootstraps promise correctly", func() {
+			session := r.run("init", "helm-promise", "--chart-url", "postgres.io/chart", "--chart-version", "v110.0.1", "--chart-name", "greatchart", "postgresql", "--group", "syntasso.io", "--kind", "Database")
+			Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in the current directory"))
+			files, err := os.ReadDir(workingDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(HaveLen(3))
 
-				files, err := os.ReadDir(workingDir)
+			By("generating an example-resource.yaml file", func() {
+				matchExampleResource(workingDir, "example-postgresql", "syntasso.io", "v1alpha1", "Database")
+			})
+
+			By("generating a README file", func() {
+				readmeContents, err := os.ReadFile(filepath.Join(workingDir, "README.md"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(files).To(HaveLen(3))
+				Expect(readmeContents).To(ContainSubstring("kratix init helm-promise postgresql"))
+			})
 
+			By("including GVK in promise.yaml", func() {
 				matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+			})
+
+			By("including helm resource configure workflow in promise.yaml", func() {
 				pipelines := getWorkflows(workingDir)["resource"]["configure"]
 				Expect(pipelines).To(HaveLen(1))
 				matchHelmResourceConfigurePipeline(pipelines[0], []corev1.EnvVar{
@@ -105,6 +121,7 @@ var _ = Describe("init helm-promise", func() {
 			})
 		})
 	})
+
 })
 
 func getPipelines(dir string) []v1alpha1.Pipeline {

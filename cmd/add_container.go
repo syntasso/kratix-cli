@@ -133,8 +133,7 @@ func generateWorkflow(workflow, action, pipelineName, containerName, image strin
 			pipelines[pipelineIndex].Spec.Containers = append(pipelines[pipelineIndex].Spec.Containers, container)
 		} else {
 			if !overwrite {
-				err = fmt.Errorf("image '%s' already exists in Pipeline", container.Name)
-				return err
+				return fmt.Errorf("image '%s' already exists in Pipeline", container.Name)
 			}
 			pipelines[pipelineIndex].Spec.Containers[containerIdx] = container
 		}

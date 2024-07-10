@@ -50,17 +50,9 @@ type promiseTemplateValues struct {
 }
 
 func InitPromise(cmd *cobra.Command, args []string) error {
-	return templatePromiseFiles(args[0], "promise")
-}
+	promiseName := args[0]
 
-func templatePromiseFiles(promiseName, subcommand string) error {
-	if version == "" {
-		version = "v1alpha1"
-	}
-
-	if plural == "" {
-		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
-	}
+	templateValues := generateTemplateValues(promiseName, "promise", "")
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",
@@ -74,15 +66,6 @@ func templatePromiseFiles(promiseName, subcommand string) error {
 		templates[promiseFileName] = "templates/promise/promise.yaml.tpl"
 	}
 
-	templateValues := promiseTemplateValues{
-		Name:       promiseName,
-		Group:      group,
-		Kind:       kind,
-		Version:    version,
-		Plural:     plural,
-		Singular:   strings.ToLower(kind),
-		SubCommand: subcommand,
-	}
 	if err := templateFiles(promiseTemplates, outputDir, templates, templateValues); err != nil {
 		return err
 	}
@@ -93,4 +76,52 @@ func templatePromiseFiles(promiseName, subcommand string) error {
 	}
 	fmt.Printf("%s promise bootstrapped in the %s directory\n", promiseName, dirName)
 	return nil
+
+}
+
+func templatePromiseFiles(promiseName, subcommand string) error {
+	templates := map[string]string{
+		resourceFileName: "templates/promise/example-resource.yaml.tpl",
+		"README.md":      "templates/promise/README.md.tpl",
+	}
+
+	if split {
+		templates[apiFileName] = "templates/promise/api.yaml.tpl"
+		templates[dependenciesFileName] = "templates/promise/dependencies.yaml"
+	} else {
+		templates[promiseFileName] = "templates/promise/promise.yaml.tpl"
+	}
+
+	templateValues := generateTemplateValues(promiseName, subcommand, "")
+	if err := templateFiles(promiseTemplates, outputDir, templates, templateValues); err != nil {
+		return err
+	}
+
+	dirName := "current"
+	if outputDir != "." {
+		dirName = outputDir
+	}
+	fmt.Printf("%s promise bootstrapped in the %s directory\n", promiseName, dirName)
+	return nil
+}
+
+func generateTemplateValues(promiseName, subCommand, resourceConfigure string) promiseTemplateValues {
+	if version == "" {
+		version = "v1alpha1"
+	}
+
+	if plural == "" {
+		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
+	}
+
+	return promiseTemplateValues{
+		Name:              promiseName,
+		Group:             group,
+		Kind:              kind,
+		Version:           version,
+		Plural:            plural,
+		Singular:          strings.ToLower(kind),
+		SubCommand:        subCommand,
+		ResourceConfigure: resourceConfigure,
+	}
 }
