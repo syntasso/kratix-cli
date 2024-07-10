@@ -286,8 +286,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 func generatePromise(promiseName string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, pipelines []unstructured.Unstructured) (v1alpha1.Promise, error) {
 	promise := newPromise(promiseName)
 
-	var crdBytes []byte
-	crdBytes, err = json.Marshal(crd)
+	crdBytes, err := json.Marshal(crd)
 	if err != nil {
 		return v1alpha1.Promise{}, err
 	}

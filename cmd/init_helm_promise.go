@@ -50,8 +50,7 @@ func InitHelmPromise(cmd *cobra.Command, args []string) error {
 
 	promiseName := args[0]
 
-	var resourceConfigure string
-	resourceConfigure, err = generateResourceConfigurePipeline()
+	resourceConfigure, err := generateResourceConfigurePipeline()
 	if err != nil {
 		return err
 	}
@@ -124,8 +123,8 @@ func generateResourceConfigurePipeline() (string, error) {
 			},
 		},
 	}
-	var pipelineBytes []byte
-	if pipelineBytes, err = yaml.Marshal(pipelines); err != nil {
+	pipelineBytes, err := yaml.Marshal(pipelines)
+	if err != nil {
 		return "", err
 	}
 	return string(pipelineBytes), nil

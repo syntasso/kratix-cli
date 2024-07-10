@@ -29,8 +29,8 @@ func init() {
 }
 
 func UpdateSelector(cmd *cobra.Command, args []string) error {
-	var promise v1alpha1.Promise
-	if promise, err = getPromise(filepath.Join(dir, "promise.yaml")); err != nil {
+	promise, err := getPromise(filepath.Join(dir, "promise.yaml"))
+	if err != nil {
 		return fmt.Errorf("failed to find promise.yaml in directory: %v", err)
 	}
 

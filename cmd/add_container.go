@@ -35,11 +35,12 @@ var addContainerCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 }
 
-var image, containerName string
-var container v1alpha1.Container
-var pipelineIndex = -1
-var err error
-var workflowTrigger v1alpha1.Workflows
+var (
+	image, containerName string
+	container            v1alpha1.Container
+	pipelineIndex        = -1
+	workflowTrigger      v1alpha1.Workflows
+)
 
 func init() {
 	addCmd.AddCommand(addContainerCmd)
@@ -89,6 +90,7 @@ func generateWorkflow(workflow, action, pipelineName, containerName, image strin
 		filePath = filepath.Join(dir, "promise.yaml")
 	}
 
+	var err error
 	if splitFiles && workflowFileFound(filePath) {
 		fileBytes, err = os.ReadFile(filePath)
 		if err != nil {

@@ -36,9 +36,8 @@ func updateDependencies(cmd *cobra.Command, args []string) error {
 	}
 
 	var depBytes []byte
-	var dependencies []v1alpha1.Dependency
 	file := dependencyFile()
-	dependencies, err = buildDependencies(dependenciesDir)
+	dependencies, err := buildDependencies(dependenciesDir)
 	if err != nil {
 		return err
 	}
@@ -140,8 +139,8 @@ func getPromise(filePath string) (v1alpha1.Promise, error) {
 }
 
 func updatePromiseDependencies(dependencies []v1alpha1.Dependency) error {
-	var promise v1alpha1.Promise
-	if promise, err = getPromise(filepath.Join(dir, "promise.yaml")); err != nil {
+	promise, err := getPromise(filepath.Join(dir, "promise.yaml"))
+	if err != nil {
 		return err
 	}
 	promise.Spec.Dependencies = dependencies
