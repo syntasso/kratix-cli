@@ -17,6 +17,6 @@ spec:
           properties:
             spec:
               type: object
-              properties: {}
+{{ .CRDSchema | indent 14 }}
       served: true
       storage: true
