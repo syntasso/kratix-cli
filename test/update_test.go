@@ -212,7 +212,7 @@ var _ = Describe("update", func() {
 				It("errors and does not update promise.yaml", func() {
 					r.exitCode = 1
 					sess := r.run("update", "dependencies", "doesnotexistyet")
-					Expect(sess.Err).To(gbytes.Say("failed to read dependency directory: doesnotexistyet"))
+					Expect(sess.Err).To(gbytes.Say("failed to stat dependency: doesnotexistyet"))
 					matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 				})
 			})
@@ -264,6 +264,18 @@ var _ = Describe("update", func() {
 				Expect(generatedDeps[1].Object["kind"]).To(Equal("Namespace"))
 				Expect(generatedDeps[2].Object["apiVersion"]).To(Equal("apps/v1"))
 				Expect(generatedDeps[2].Object["kind"]).To(Equal("Deployment"))
+			})
+
+			When("argument is path to a file not a directory", func() {
+				It("works", func() {
+					Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), namespaceBytes(ns1), 0644)).To(Succeed())
+
+					Expect(r.run("update", "dependencies", filepath.Join(depDir, "deps.yaml"), "--dir", promiseDir).Out).To(gbytes.Say("Updated dependencies.yaml"))
+					generatedDeps := getDependencies(promiseDir, true)
+					Expect(generatedDeps).To(HaveLen(1))
+					Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
+					Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
+				})
 			})
 
 			Context("--image flag", func() {
@@ -363,6 +375,17 @@ var _ = Describe("update", func() {
 					r.exitCode = 1
 					sess := r.run("update", "dependencies", depDir)
 					Expect(sess.Err).To(gbytes.Say("error unmarshaling JSON"))
+				})
+			})
+
+			When("argument is path to a file not a directory", func() {
+				It("works", func() {
+					Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), namespaceBytes(ns1), 0644)).To(Succeed())
+					Expect(r.run("update", "dependencies", filepath.Join(depDir, "deps.yaml"), "--dir", workingDir).Out).To(gbytes.Say("Updated promise.yaml"))
+					generatedDeps := getDependencies(workingDir, false)
+					Expect(generatedDeps).To(HaveLen(1))
+					Expect(generatedDeps[0].Object["apiVersion"]).To(Equal("v1"))
+					Expect(generatedDeps[0].Object["kind"]).To(Equal("Namespace"))
 				})
 			})
 

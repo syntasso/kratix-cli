@@ -69,6 +69,23 @@ func dependencyFile() string {
 }
 
 func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
+	dependenciesDirInfo, err := os.Stat(dependenciesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat dependency: %s", dependenciesDir)
+	}
+
+	var dependencies []v1alpha1.Dependency
+	if !dependenciesDirInfo.IsDir() {
+		dependencies, err = extractDepFromFile(dependenciesDir)
+		if err != nil {
+			return nil, err
+		}
+		if len(dependencies) == 0 {
+			return nil, fmt.Errorf("no valid dependencies found in directory: %s", dependenciesDir)
+		}
+		return dependencies, nil
+	}
+
 	files, err := os.ReadDir(dependenciesDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read dependency directory: %s", dependenciesDir)
@@ -78,7 +95,6 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 		return nil, fmt.Errorf("no files found in directory: %s; nothing to update", dependenciesDir)
 	}
 
-	var dependencies []v1alpha1.Dependency
 	for _, fileInfo := range files {
 		fileName := filepath.Join(dependenciesDir, fileInfo.Name())
 		if fileInfo.IsDir() {
@@ -92,35 +108,45 @@ func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
 		if !isYAML(fileName) {
 			continue
 		}
-		var file *os.File
-		if file, err = os.Open(fileName); err != nil {
-			return nil, fmt.Errorf("failed to open dependency file %s: %s", fileName, err)
+		dep, err := extractDepFromFile(fileName)
+		if err != nil {
+			return nil, err
 		}
-
-		decoder := yaml.NewYAMLOrJSONDecoder(file, 2048)
-		for {
-			var obj *unstructured.Unstructured
-			err = decoder.Decode(&obj)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return nil, fmt.Errorf("failed to decode dependency file %s: %s", fileName, err)
-			}
-			if obj == nil {
-				continue
-			}
-			if obj.GetNamespace() == "" {
-				obj.SetNamespace("default")
-			}
-			dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: *obj})
-		}
+		dependencies = append(dependencies, dep...)
 	}
 
 	if len(dependencies) == 0 {
 		return nil, fmt.Errorf("no valid dependencies found in directory: %s", dependenciesDir)
 	}
 
+	return dependencies, nil
+}
+
+func extractDepFromFile(fileName string) ([]v1alpha1.Dependency, error) {
+	var dependencies []v1alpha1.Dependency
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open dependency file %s: %s", fileName, err)
+	}
+
+	decoder := yaml.NewYAMLOrJSONDecoder(file, 2048)
+	for {
+		var obj *unstructured.Unstructured
+		err = decoder.Decode(&obj)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode dependency file %s: %s", fileName, err)
+		}
+		if obj == nil {
+			continue
+		}
+		if obj.GetNamespace() == "" {
+			obj.SetNamespace("default")
+		}
+		dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: *obj})
+	}
 	return dependencies, nil
 }
 
