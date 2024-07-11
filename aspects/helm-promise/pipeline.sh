@@ -3,7 +3,7 @@
 set -eux
 
 KRATIX_INPUT=${KRATIX_INPUT:-/kratix/input}
-KRATIX_OUTPUT=${KRATIX_OUTPUT:-/kratix/input}
+KRATIX_OUTPUT=${KRATIX_OUTPUT:-/kratix/output}
 HELM_BINARY=${HELM_BINARY:-helm}
 name=$(yq '.metadata.name' $KRATIX_INPUT/object.yaml)
 

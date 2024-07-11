@@ -12,7 +12,7 @@ test: # Run tests
 build: # Build the binary
 	go build -o bin/kratix main.go
 
-build-aspects: build-operator-promise-aspect  # build all aspects
+build-aspects: build-operator-promise-aspect build-helm-promise-aspect  # build all aspects
 
 build-and-push-aspects: # build and push all aspects
 	if ! docker buildx ls | grep -q "kratix-cli-image-builder"; then \
