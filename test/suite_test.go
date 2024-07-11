@@ -3,6 +3,7 @@ package integration_test
 import (
 	"os/exec"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,6 +31,7 @@ type runner struct {
 	exitCode int
 	dir      string
 	flags    map[string]string
+	timeout  time.Duration
 }
 
 func withExitCode(exitCode int) *runner {
@@ -48,6 +50,10 @@ func (r *runner) run(args ...string) *gexec.Session {
 	cmd.Dir = r.dir
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-	EventuallyWithOffset(1, session).Should(gexec.Exit(r.exitCode))
+	t := 1 * time.Second
+	if r.timeout > 0 {
+		t = r.timeout
+	}
+	EventuallyWithOffset(1, session).WithTimeout(t).Should(gexec.Exit(r.exitCode))
 	return session
 }

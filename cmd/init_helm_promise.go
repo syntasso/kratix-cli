@@ -2,8 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	helmclient "github.com/mittwald/go-helm-client"
 	"github.com/spf13/cobra"
+	"github.com/syntasso/kratix-cli/internal"
 	"github.com/syntasso/kratix/api/v1alpha1"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/registry"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
@@ -43,7 +47,12 @@ func InitHelmPromise(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	templateValues := generateTemplateValues(promiseName, "helm-promise", resourceConfigure)
+	crdSchema, err := schemaFromChart()
+	if err != nil {
+		return err
+	}
+
+	templateValues := generateTemplateValues(promiseName, "helm-promise", resourceConfigure, crdSchema)
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",
@@ -94,7 +103,7 @@ func generateResourceConfigurePipeline() (string, error) {
 					"containers": []interface{}{
 						v1alpha1.Container{
 							Name:  "instance-configure",
-							Image: "ghcr.io/syntasso/kratix-cli/helm-instance-configure:v0.1.0",
+							Image: "ghcr.io/syntasso/kratix-cli/helm-resource-configure:v0.1.0",
 							Env:   envVars,
 						},
 					},
@@ -107,4 +116,53 @@ func generateResourceConfigurePipeline() (string, error) {
 		return "", err
 	}
 	return string(pipelineBytes), nil
+}
+
+func schemaFromChart() (string, error) {
+	values, err := valuesFromChart()
+	if err != nil {
+		return "", err
+	}
+	schema, err := internal.HelmValuesToSchema(values)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert helm values to schema: %w", err)
+	}
+
+	bytes, err := yaml.Marshal(*schema)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
+func valuesFromChart() (map[string]interface{}, error) {
+	client, err := helmclient.New(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create helm client: %w", err)
+	}
+
+	install := action.NewInstall(&action.Configuration{})
+	registryClient, _ := registry.NewClient()
+	install.SetRegistryClient(registryClient)
+
+	if chartName != "" {
+		install.RepoURL = chartURL
+	}
+
+	chart, _, err := client.GetChart(getChartName(), &install.ChartPathOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch helm chart: %w", err)
+	}
+
+	return chart.Values, nil
+}
+
+// when provided --chart-url is a chart repo and --chart-name is provided, getChartName() returns chart-name
+// when provided --chart-url is OCI or a tar chart, getChartName() returns chart url
+func getChartName() string {
+	if chartName != "" {
+		return chartName
+	}
+	return chartURL
 }

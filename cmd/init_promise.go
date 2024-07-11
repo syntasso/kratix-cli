@@ -47,12 +47,13 @@ type promiseTemplateValues struct {
 	Singular          string
 	SubCommand        string
 	ResourceConfigure string
+	CRDSchema         string
 }
 
 func InitPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
 
-	templateValues := generateTemplateValues(promiseName, "promise", "")
+	templateValues := generateTemplateValues(promiseName, "promise", "", "")
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",
@@ -79,33 +80,7 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 
 }
 
-func templatePromiseFiles(promiseName, subcommand string) error {
-	templates := map[string]string{
-		resourceFileName: "templates/promise/example-resource.yaml.tpl",
-		"README.md":      "templates/promise/README.md.tpl",
-	}
-
-	if split {
-		templates[apiFileName] = "templates/promise/api.yaml.tpl"
-		templates[dependenciesFileName] = "templates/promise/dependencies.yaml"
-	} else {
-		templates[promiseFileName] = "templates/promise/promise.yaml.tpl"
-	}
-
-	templateValues := generateTemplateValues(promiseName, subcommand, "")
-	if err := templateFiles(promiseTemplates, outputDir, templates, templateValues); err != nil {
-		return err
-	}
-
-	dirName := "current"
-	if outputDir != "." {
-		dirName = outputDir
-	}
-	fmt.Printf("%s promise bootstrapped in the %s directory\n", promiseName, dirName)
-	return nil
-}
-
-func generateTemplateValues(promiseName, subCommand, resourceConfigure string) promiseTemplateValues {
+func generateTemplateValues(promiseName, subCommand, resourceConfigure, crdSchema string) promiseTemplateValues {
 	if version == "" {
 		version = "v1alpha1"
 	}
@@ -123,5 +98,6 @@ func generateTemplateValues(promiseName, subCommand, resourceConfigure string) p
 		Singular:          strings.ToLower(kind),
 		SubCommand:        subCommand,
 		ResourceConfigure: resourceConfigure,
+		CRDSchema:         crdSchema,
 	}
 }
