@@ -14,14 +14,14 @@ import (
 )
 
 var intHelmPromiseCmd = &cobra.Command{
-	Use:   "helm-promise PROMISE-NAME --chart-url HELM-CHART-URL [--version]",
+	Use:   "helm-promise PROMISE-NAME --chart-url HELM-CHART-URL --group PROMISE-API-GROUP --kind PROMISE-API-KIND [--chart-version]",
 	Short: "Initialize a new Promise from a Helm chart",
 	Long:  "Initialize a new Promise from a Helm Chart",
 	Example: `  # initialize a new promise from an OCI Helm Chart
-  kratix init helm-promise postgresql --chart-url oci://registry-1.docker.io/bitnamicharts/postgresql [--chart-version v1.0.0]
+  kratix init helm-promise postgresql --chart-url oci://registry-1.docker.io/bitnamicharts/postgresql [--chart-version]
 
   # initialize a new promise from a Helm Chart repository
-  kratix init helm-promise postgresql --chart-url https://fluxcd-community.github.io/helm-charts --chart-name flux2 [--chart-version v1.0.0]
+  kratix init helm-promise postgresql --chart-url https://fluxcd-community.github.io/helm-charts --chart-name flux2 [--chart-version]
 
   # initialize a new promise from a Helm Chart tar URL
   kratix init helm-promise postgresql --chart-url https://github.com/stefanprodan/podinfo/raw/gh-pages/podinfo-0.2.1.tgz
