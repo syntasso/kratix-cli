@@ -12,7 +12,7 @@ import (
 var promiseTemplates embed.FS
 
 var initPromiseCmd = &cobra.Command{
-	Use:   "promise PROMISE-NAME --group API-GROUP --kind API-KIND",
+	Use:   "promise PROMISE-NAME --group PROMISE-API-GROUP --kind PROMISE-API-KIND",
 	Short: "Initialize a new Promise",
 	Long:  `Initialize a new Promise within the current directory, with all the necessary files to get started`,
 	Example: `  # initialize a new promise with the api group and provided kind

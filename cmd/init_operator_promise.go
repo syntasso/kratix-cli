@@ -19,7 +19,7 @@ import (
 )
 
 var operatorPromiseCmd = &cobra.Command{
-	Use:   "operator-promise PROMISE-NAME --group API-GROUP --version API-VERSION --kind API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-schema-from CRD-NAME",
+	Use:   "operator-promise PROMISE-NAME --group PROMISE-API-GROUP --version PROMISE-API-VERSION --kind PROMISE-API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-schema-from CRD-NAME",
 	Short: "Generate a Promise from a given Kubernetes Operator.",
 	Long:  `Generate a Promise from a given Kubernetes Operator.`,
 	Args:  cobra.ExactArgs(1),
