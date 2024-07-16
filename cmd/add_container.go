@@ -57,6 +57,11 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 
 	pipelineInput := args[0]
 	pipelineParts := strings.Split(pipelineInput, "/")
+
+	if len(pipelineParts) != 3 {
+		return fmt.Errorf("invalid pipeline format: %s, expected format: LIFECYCLE/ACTION/PIPELINE-NAME", pipelineInput)
+	}
+
 	workflow, action, pipelineName := pipelineParts[0], pipelineParts[1], pipelineParts[2]
 
 	if err := generateWorkflow(workflow, action, pipelineName, containerName, image, false); err != nil {

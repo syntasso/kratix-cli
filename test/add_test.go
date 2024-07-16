@@ -55,6 +55,14 @@ var _ = Describe("add", func() {
 			})
 		})
 
+		When("called without 3 parts to the pipeline input", func() {
+			It("fails with message", func() {
+				r.exitCode = 1
+				session := r.run("add", "container", "promise/delete", "--image", "animage:latest")
+				Expect(session.Err).To(gbytes.Say(`invalid pipeline format: promise/delete, expected format: LIFECYCLE/ACTION/PIPELINE-NAME`))
+			})
+		})
+
 		When("called with --help", func() {
 			It("prints the help", func() {
 				session := r.run("add", "container", "--help")
