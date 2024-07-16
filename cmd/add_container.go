@@ -62,22 +62,22 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid pipeline format: %s, expected format: LIFECYCLE/ACTION/PIPELINE-NAME", pipelineInput)
 	}
 
-	workflow, action, pipelineName := pipelineParts[0], pipelineParts[1], pipelineParts[2]
+	lifecycle, action, pipelineName := pipelineParts[0], pipelineParts[1], pipelineParts[2]
 
-	if err := generateWorkflow(workflow, action, pipelineName, containerName, image, false); err != nil {
+	if err := generateWorkflow(lifecycle, action, pipelineName, containerName, image, false); err != nil {
 		return err
 	}
 
 	pipelineScriptFilename := "pipeline.sh"
-	scriptsPath := filepath.Join("workflows", workflow, action, pipelineName, containerName, "scripts", pipelineScriptFilename)
+	scriptsPath := filepath.Join("workflows", lifecycle, action, pipelineName, containerName, "scripts", pipelineScriptFilename)
 	fmt.Printf("Customise your container by editing %s \n", scriptsPath)
 	fmt.Println("Don't forget to build and push your image!")
 	return nil
 }
 
-func generateWorkflow(workflow, action, pipelineName, containerName, image string, overwrite bool) error {
-	if workflow != "promise" && workflow != "resource" {
-		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", workflow)
+func generateWorkflow(lifecycle, action, pipelineName, containerName, image string, overwrite bool) error {
+	if lifecycle != "promise" && lifecycle != "resource" {
+		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", lifecycle)
 	}
 
 	if action != "configure" && action != "delete" {
@@ -93,7 +93,7 @@ func generateWorkflow(workflow, action, pipelineName, containerName, image strin
 		Image: image,
 	}
 
-	var workflowPath = filepath.Join("workflows", workflow, action)
+	var workflowPath = filepath.Join("workflows", lifecycle, action)
 	var filePath string
 	var fileBytes []byte
 	var promise v1alpha1.Promise
@@ -137,7 +137,7 @@ func generateWorkflow(workflow, action, pipelineName, containerName, image strin
 			return err
 		}
 
-		pipelines, pipelineIndex, err = findPipelinesForWorkflowAction(workflow, action, pipelineName, allPipelines)
+		pipelines, pipelineIndex, err = findPipelinesForWorkflowAction(lifecycle, action, pipelineName, allPipelines)
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ func generateWorkflow(workflow, action, pipelineName, containerName, image strin
 			return err
 		}
 	} else {
-		updatePipeline(workflow, action, pipelinesUnstructured, &promise)
+		updatePipeline(lifecycle, action, pipelinesUnstructured, &promise)
 
 		fileBytes, err = yaml.Marshal(promise)
 		if err != nil {
@@ -201,7 +201,7 @@ func generateWorkflow(workflow, action, pipelineName, containerName, image strin
 	if err := os.WriteFile(filePath, fileBytes, filePerm); err != nil {
 		return err
 	}
-	fmt.Printf("generated the %s/%s/%s/%s in %s \n", workflow, action, pipelineName, containerName, filePath)
+	fmt.Printf("generated the %s/%s/%s/%s in %s \n", lifecycle, action, pipelineName, containerName, filePath)
 
 	return nil
 }
@@ -211,9 +211,9 @@ func generateContainerName(image string) string {
 	return strings.Split(nameAndVersion, ":")[0]
 }
 
-func findPipelinesForWorkflowAction(workflow, action, pipelineName string, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
+func findPipelinesForWorkflowAction(lifecycle, action, pipelineName string, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
 	var pipelines []v1alpha1.Pipeline
-	switch workflow {
+	switch lifecycle {
 	case "promise":
 		switch action {
 		case "configure":
@@ -233,7 +233,7 @@ func findPipelinesForWorkflowAction(workflow, action, pipelineName string, allPi
 			return nil, -1, fmt.Errorf("invalid action: %s", action)
 		}
 	default:
-		return nil, -1, fmt.Errorf("invalid workflow: %s", workflow)
+		return nil, -1, fmt.Errorf("invalid lifecycle: %s", lifecycle)
 	}
 
 	for i, p := range pipelines {
@@ -244,8 +244,8 @@ func findPipelinesForWorkflowAction(workflow, action, pipelineName string, allPi
 	return pipelines, -1, nil
 }
 
-func updatePipeline(workflow, action string, pipelines []unstructured.Unstructured, promise *v1alpha1.Promise) {
-	switch workflow {
+func updatePipeline(lifecycle, action string, pipelines []unstructured.Unstructured, promise *v1alpha1.Promise) {
+	switch lifecycle {
 	case "promise":
 		switch action {
 		case "configure":
