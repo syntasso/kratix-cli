@@ -76,6 +76,18 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 }
 
 func generateWorkflow(workflow, action, pipelineName, containerName, image string, overwrite bool) error {
+	if workflow != "promise" && workflow != "resource" {
+		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", workflow)
+	}
+
+	if action != "configure" && action != "delete" {
+		return fmt.Errorf("invalid action: %s, expected one of: configure, delete", action)
+	}
+
+	if pipelineName == "" {
+		return fmt.Errorf("pipeline name cannot be empty")
+	}
+
 	container = v1alpha1.Container{
 		Name:  containerName,
 		Image: image,

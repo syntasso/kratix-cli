@@ -63,6 +63,30 @@ var _ = Describe("add", func() {
 			})
 		})
 
+		When("called with an invalid LIFECYCLE", func() {
+			It("fails with message", func() {
+				r.exitCode = 1
+				session := r.run("add", "container", "invalid/delete/instance", "--image", "animage:latest")
+				Expect(session.Err).To(gbytes.Say(`invalid lifecycle: invalid, expected one of: promise, resource`))
+			})
+		})
+
+		When("called with an invalid ACTION", func() {
+			It("fails with message", func() {
+				r.exitCode = 1
+				session := r.run("add", "container", "promise/invalid/instance", "--image", "animage:latest")
+				Expect(session.Err).To(gbytes.Say(`invalid action: invalid, expected one of: configure, delete`))
+			})
+		})
+
+		When("called with an empty PIPELINE-NAME", func() {
+			It("fails with message", func() {
+				r.exitCode = 1
+				session := r.run("add", "container", "promise/configure/", "--image", "animage:latest")
+				Expect(session.Err).To(gbytes.Say(`pipeline name cannot be empty`))
+			})
+		})
+
 		When("called with --help", func() {
 			It("prints the help", func() {
 				session := r.run("add", "container", "--help")
