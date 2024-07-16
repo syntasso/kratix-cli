@@ -232,14 +232,7 @@ var _ = Describe("add", func() {
 					_, err := os.Stat(filepath.Join(dir, "workflows", "promise", "configure", "workflow.yaml"))
 					Expect(err).ToNot(HaveOccurred())
 
-					workflow := getWorkflowsFromSplitFile(dir, "promise", "configure")
-					Expect(workflow.Resource.Configure).To(HaveLen(0))
-					Expect(workflow.Resource.Delete).To(HaveLen(0))
-					Expect(workflow.Promise.Delete).To(HaveLen(0))
-					Expect(workflow.Promise.Configure).To(HaveLen(1))
-
-					pipelines, err := v1alpha1.PipelinesFromUnstructured(workflow.Promise.Configure, ctrl.LoggerFrom(context.Background()))
-					Expect(err).ToNot(HaveOccurred())
+					pipelines := getWorkflowsFromSplitFile(dir, "promise", "configure")
 
 					Expect(pipelines[0].Name).To(Equal("pipeline0"))
 					Expect(pipelines[0].Spec.Containers).To(HaveLen(2))
@@ -277,11 +270,11 @@ func getWorkflows(dir string) map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.P
 	return pipelines
 }
 
-func getWorkflowsFromSplitFile(dir, workflowName, action string) v1alpha1.Workflows {
+func getWorkflowsFromSplitFile(dir, workflowName, action string) []v1alpha1.Pipeline {
 	workflowYAML, err := os.ReadFile(filepath.Join(dir, "workflows", workflowName, action, "workflow.yaml"))
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
-	var workflows v1alpha1.Workflows
+	var workflows []v1alpha1.Pipeline
 	ExpectWithOffset(1, yaml.Unmarshal(workflowYAML, &workflows)).To(Succeed())
 
 	return workflows

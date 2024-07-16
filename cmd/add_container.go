@@ -38,8 +38,6 @@ var addContainerCmd = &cobra.Command{
 var (
 	image, containerName string
 	container            v1alpha1.Container
-	pipelineIndex        = -1
-	workflowTrigger      v1alpha1.Workflows
 )
 
 func init() {
@@ -76,6 +74,8 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 }
 
 func generateWorkflow(lifecycle, action, pipelineName, containerName, image string, overwrite bool) error {
+	var err error
+
 	if lifecycle != "promise" && lifecycle != "resource" {
 		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", lifecycle)
 	}
@@ -88,34 +88,34 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 		return fmt.Errorf("pipeline name cannot be empty")
 	}
 
-	container = v1alpha1.Container{
+	container := v1alpha1.Container{
 		Name:  containerName,
 		Image: image,
 	}
 
-	var workflowPath = filepath.Join("workflows", lifecycle, action)
-	var filePath string
-	var fileBytes []byte
+	workflowPath := filepath.Join("workflows", lifecycle, action)
 	var promise v1alpha1.Promise
 
 	splitFiles := filesGeneratedWithSplit(dir)
 
-	var pipelines []v1alpha1.Pipeline
+	var filePath string
 	if splitFiles {
 		filePath = filepath.Join(dir, workflowPath, "workflow.yaml")
 	} else {
 		filePath = filepath.Join(dir, "promise.yaml")
 	}
 
-	var err error
+	var pipelines []v1alpha1.Pipeline
+	var pipelineIdx = -1
+	var fileBytes []byte
 	if splitFiles && workflowFileFound(filePath) {
 		fileBytes, err = os.ReadFile(filePath)
 		if err != nil {
 			return err
 		}
-		yaml.Unmarshal(fileBytes, &workflowTrigger)
+		yaml.Unmarshal(fileBytes, &pipelines)
 
-		pipelines, pipelineIndex, err = getPipelinesFromWorkflowYaml(workflowTrigger, workflow, action, pipelineName)
+		pipelineIdx, err = getPipelineIdx(pipelines, pipelineName)
 		if err != nil {
 			return err
 		}
@@ -137,22 +137,22 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 			return err
 		}
 
-		pipelines, pipelineIndex, err = findPipelinesForWorkflowAction(lifecycle, action, pipelineName, allPipelines)
+		pipelines, pipelineIdx, err = findPipelinesForWorkflowAction(lifecycle, action, pipelineName, allPipelines)
 		if err != nil {
 			return err
 		}
 	}
 
 	var pipelinesUnstructured []unstructured.Unstructured
-	if pipelineIndex != -1 {
-		containerIdx := containerIndex(pipelines[pipelineIndex], container.Name)
+	if pipelineIdx != -1 {
+		containerIdx := getContainerIdx(pipelines[pipelineIdx], container.Name)
 		if containerIdx == -1 {
-			pipelines[pipelineIndex].Spec.Containers = append(pipelines[pipelineIndex].Spec.Containers, container)
+			pipelines[pipelineIdx].Spec.Containers = append(pipelines[pipelineIdx].Spec.Containers, container)
 		} else {
 			if !overwrite {
-				return fmt.Errorf("image '%s' already exists in Pipeline", container.Name)
+				return fmt.Errorf("image '%s' already exists in Pipeline '%s'", container.Name, pipelineName)
 			}
-			pipelines[pipelineIndex].Spec.Containers[containerIdx] = container
+			pipelines[pipelineIdx].Spec.Containers[containerIdx] = container
 		}
 
 		pipelinesUnstructured, err = pipelinesToUnstructured(pipelines)
@@ -181,8 +181,7 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 	}
 
 	if splitFiles {
-		updateWorkflow(workflow, action, pipelinesUnstructured, &workflowTrigger)
-		fileBytes, err = yaml.Marshal(workflowTrigger)
+		fileBytes, err = yaml.Marshal(pipelinesUnstructured)
 		if err != nil {
 			return err
 		}
@@ -220,8 +219,6 @@ func findPipelinesForWorkflowAction(lifecycle, action, pipelineName string, allP
 			pipelines = allPipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]
 		case "delete":
 			pipelines = allPipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete]
-		default:
-			return nil, -1, fmt.Errorf("invalid action: %s", action)
 		}
 	case "resource":
 		switch action {
@@ -229,19 +226,15 @@ func findPipelinesForWorkflowAction(lifecycle, action, pipelineName string, allP
 			pipelines = allPipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure]
 		case "delete":
 			pipelines = allPipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete]
-		default:
-			return nil, -1, fmt.Errorf("invalid action: %s", action)
 		}
-	default:
-		return nil, -1, fmt.Errorf("invalid lifecycle: %s", lifecycle)
 	}
 
-	for i, p := range pipelines {
-		if p.Name == pipelineName {
-			return pipelines, i, nil
-		}
+	idx, err := getPipelineIdx(pipelines, pipelineName)
+	if err != nil {
+		return nil, -1, err
 	}
-	return pipelines, -1, nil
+
+	return pipelines, idx, nil
 }
 
 func updatePipeline(lifecycle, action string, pipelines []unstructured.Unstructured, promise *v1alpha1.Promise) {
@@ -316,62 +309,17 @@ func workflowFileFound(workflowFilePath string) bool {
 	return true
 }
 
-func getPipelinesFromWorkflowYaml(workflow v1alpha1.Workflows, lifecycle string, action string, pipelineName string) (pipelines []v1alpha1.Pipeline, index int, err error) {
-	var unstructuredWorkflowPipelines []unstructured.Unstructured
-	switch lifecycle {
-	case "promise":
-		switch action {
-		case "configure":
-			unstructuredWorkflowPipelines = workflow.Promise.Configure
-		case "delete":
-			unstructuredWorkflowPipelines = workflow.Promise.Delete
-		}
-	case "resource":
-		switch action {
-		case "configure":
-			unstructuredWorkflowPipelines = workflow.Resource.Configure
-		case "delete":
-			unstructuredWorkflowPipelines = workflow.Resource.Delete
-		}
-	}
-
-	for index, p := range unstructuredWorkflowPipelines {
+func getPipelineIdx(pipelines []v1alpha1.Pipeline, pipelineName string) (int, error) {
+	for idx, p := range pipelines {
 		if p.GetName() == pipelineName {
-			workflowPipelines, err := v1alpha1.PipelinesFromUnstructured(unstructuredWorkflowPipelines, ctrl.LoggerFrom(context.Background()))
-			if err != nil {
-				return []v1alpha1.Pipeline{}, index, err
-			}
-			return workflowPipelines, index, nil
+			return idx, nil
 		}
 	}
 
-	workflowPipelines, err := v1alpha1.PipelinesFromUnstructured(unstructuredWorkflowPipelines, ctrl.LoggerFrom(context.Background()))
-	if err != nil {
-		return []v1alpha1.Pipeline{}, index, err
-	}
-	return workflowPipelines, -1, nil
+	return -1, nil
 }
 
-func updateWorkflow(workflow, action string, pipelines []unstructured.Unstructured, workflowTrigger *v1alpha1.Workflows) {
-	switch workflow {
-	case "promise":
-		switch action {
-		case "configure":
-			workflowTrigger.Promise.Configure = pipelines
-		case "delete":
-			workflowTrigger.Promise.Delete = pipelines
-		}
-	case "resource":
-		switch action {
-		case "configure":
-			workflowTrigger.Resource.Configure = pipelines
-		case "delete":
-			workflowTrigger.Resource.Delete = pipelines
-		}
-	}
-}
-
-func containerIndex(pipeline v1alpha1.Pipeline, containerName string) int {
+func getContainerIdx(pipeline v1alpha1.Pipeline, containerName string) int {
 	for i, container := range pipeline.Spec.Containers {
 		if container.Name == containerName {
 			return i

@@ -14,6 +14,7 @@ import (
 	"github.com/syntasso/kratix/api/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -28,14 +29,6 @@ var _ = Describe("build", func() {
 
 		depDir, err = os.MkdirTemp("", "dep")
 		Expect(err).NotTo(HaveOccurred())
-
-		r = &runner{exitCode: 0}
-		r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--dir", promiseDir)
-
-		Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), slices.Concat(
-			namespaceBytes(namespace("test1")),
-			deploymentBytes(deployment("test1"))), 0644)).To(Succeed())
-		r.run("update", "dependencies", depDir, "--dir", promiseDir)
 	})
 
 	AfterEach(func() {
@@ -43,7 +36,17 @@ var _ = Describe("build", func() {
 		Expect(os.RemoveAll(depDir)).To(Succeed())
 	})
 
-	Context("promise", func() {
+	Context("after init promise", func() {
+		BeforeEach(func() {
+			r = &runner{exitCode: 0}
+			r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--dir", promiseDir)
+
+			Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), slices.Concat(
+				namespaceBytes(namespace("test1")),
+				deploymentBytes(deployment("test1"))), 0644)).To(Succeed())
+			r.run("update", "dependencies", depDir, "--dir", promiseDir)
+		})
+
 		It("builds a promise from api, dependencies and workflows files", func() {
 			sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
 			Expect(sess.Out.Contents()).ToNot(BeEmpty())
@@ -165,6 +168,58 @@ var _ = Describe("build", func() {
 				r.run("build", "promise", "postgresql", "--dir", promiseDir, "--output", filepath.Join(promiseDir, "promise.yaml"))
 				matchPromise(promiseDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 			})
+		})
+	})
+
+	Context("after init operator promise with split", func() {
+		BeforeEach(func() {
+			r = &runner{exitCode: 0}
+			r.run("init", "operator-promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--dir", promiseDir, "--operator-manifests", "assets/operator", "--api-schema-from", "postgresqls.acid.zalan.do")
+		})
+
+		It("builds a promise from api, dependencies and workflows files", func() {
+			sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
+			Expect(sess.Out.Contents()).ToNot(BeEmpty())
+
+			var promise v1alpha1.Promise
+			Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+			Expect(promise.Name).To(Equal("postgresql"))
+			Expect(promise.Kind).To(Equal("Promise"))
+			Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
+
+			promiseCRD, err := promise.GetAPIAsCRD()
+			Expect(err).NotTo(HaveOccurred())
+			matchCRD(promiseCRD, "syntasso.io", "v1Stored", "Database", "database", "databases")
+
+			expectDependenciesToMatchOperatorManifests(promise.Spec.Dependencies)
+		})
+	})
+
+	Context("after init helm promise with split", func() {
+		BeforeEach(func() {
+			r = &runner{exitCode: 0}
+			session := r.run("init", "helm-promise", "postgresql", "--chart-url", "https://helm.github.io/examples", "--dir", promiseDir, "--chart-name", "hello-world", "--group", "syntasso.io", "--kind", "Database", "--split")
+			Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in %s", promiseDir))
+		})
+
+		It("builds a promise from api, dependencies and workflows files", func() {
+			sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
+			Expect(sess.Out.Contents()).ToNot(BeEmpty())
+
+			var promise v1alpha1.Promise
+			Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+			Expect(promise.Name).To(Equal("postgresql"))
+			Expect(promise.Kind).To(Equal("Promise"))
+			Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
+
+			props := getCRDProperties(promiseDir, true)
+			matchExampleHelloWorldHelmChartSchema(props)
+
+			pipelines := getPipelines(promiseDir)
+			Expect(pipelines).To(HaveLen(1))
+			matchHelmResourceConfigurePipeline(pipelines[0], []corev1.EnvVar{
+				{Name: "CHART_URL", Value: "https://helm.github.io/examples"},
+				{Name: "CHART_NAME", Value: "hello-world"}})
 		})
 	})
 })

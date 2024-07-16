@@ -10,6 +10,7 @@ import (
 	"github.com/syntasso/kratix/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
@@ -132,26 +133,32 @@ func buildWorkflows(workflows *v1alpha1.Workflows) error {
 		return err
 	}
 
-	workflows.Promise.Configure = promiseConfigure.Promise.Configure
-	workflows.Promise.Delete = promiseDelete.Promise.Delete
-	workflows.Resource.Configure = resourceConfigure.Resource.Configure
-	workflows.Resource.Delete = resourceDelete.Resource.Delete
+	workflows.Promise.Configure = promiseConfigure
+	workflows.Promise.Delete = promiseDelete
+	workflows.Resource.Configure = resourceConfigure
+	workflows.Resource.Delete = resourceDelete
 	return nil
 }
 
-func getWorkflow(lifecyle, action string) (workflow v1alpha1.Workflows, err error) {
+func getWorkflow(lifecyle, action string) ([]unstructured.Unstructured, error) {
 	if fileExists(filepath.Join(inputDir, "workflows", lifecyle, action, "workflow.yaml")) {
 		workflowBytes, err := os.ReadFile(filepath.Join(inputDir, "workflows", lifecyle, action, "workflow.yaml"))
 		if err != nil {
-			return v1alpha1.Workflows{}, err
+			return []unstructured.Unstructured{}, err
 		}
 
-		var configurePromiseWorkflow v1alpha1.Workflows
-		err = yaml.Unmarshal(workflowBytes, &configurePromiseWorkflow)
+		var workflow []v1alpha1.Pipeline
+		err = yaml.Unmarshal(workflowBytes, &workflow)
 		if err != nil {
-			return v1alpha1.Workflows{}, err
+			return []unstructured.Unstructured{}, err
 		}
-		return configurePromiseWorkflow, nil
+
+		uPipelines, err := pipelinesToUnstructured(workflow)
+		if err != nil {
+			return []unstructured.Unstructured{}, err
+		}
+
+		return uPipelines, nil
 	}
-	return v1alpha1.Workflows{}, err
+	return []unstructured.Unstructured{}, nil
 }
