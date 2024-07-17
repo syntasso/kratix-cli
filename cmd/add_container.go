@@ -74,8 +74,6 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 }
 
 func generateWorkflow(lifecycle, action, pipelineName, containerName, image string, overwrite bool) error {
-	var err error
-
 	if lifecycle != "promise" && lifecycle != "resource" {
 		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", lifecycle)
 	}
@@ -108,6 +106,7 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 	var pipelines []v1alpha1.Pipeline
 	var pipelineIdx = -1
 	var fileBytes []byte
+	var err error
 	if splitFiles && workflowFileFound(filePath) {
 		fileBytes, err = os.ReadFile(filePath)
 		if err != nil {
@@ -137,7 +136,7 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 			return err
 		}
 
-		pipelines, pipelineIdx, err = findPipelinesForWorkflowAction(lifecycle, action, pipelineName, allPipelines)
+		pipelines, pipelineIdx, err = findPipelinesForLifecycleAction(lifecycle, action, pipelineName, allPipelines)
 		if err != nil {
 			return err
 		}
@@ -210,7 +209,7 @@ func generateContainerName(image string) string {
 	return strings.Split(nameAndVersion, ":")[0]
 }
 
-func findPipelinesForWorkflowAction(lifecycle, action, pipelineName string, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
+func findPipelinesForLifecycleAction(lifecycle, action, pipelineName string, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
 	var pipelines []v1alpha1.Pipeline
 	switch lifecycle {
 	case "promise":
