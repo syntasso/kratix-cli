@@ -302,7 +302,6 @@ func expectDependenciesToMatchOperatorManifests(dependencies v1alpha1.Dependenci
 		"default",
 		"default",
 	))
-
 }
 
 func expectPipelinesToMatchOperatorPipelines(pipelines []v1alpha1.Pipeline) {

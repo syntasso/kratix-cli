@@ -72,12 +72,12 @@ func InitHelmPromise(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	dirName := "current"
+	dirName := "the current directory"
 	if outputDir != "." {
 		dirName = outputDir
 	}
 
-	fmt.Printf("%s promise bootstrapped in the %s directory\n", promiseName, dirName)
+	fmt.Printf("%s promise bootstrapped in %s\n", promiseName, dirName)
 	return nil
 }
 
