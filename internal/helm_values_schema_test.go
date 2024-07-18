@@ -58,4 +58,20 @@ var _ = Describe("HelmValuesToSchema()", func() {
 		Expect(schema.Properties["emptyArr"].Type).To(Equal("array"))
 		Expect(schema.Properties["emptyArr"].Items.Schema.XIntOrString).To(BeTrue())
 	})
+
+	It("handles null object", func() {
+		values := map[string]interface{}{
+			"map":    map[string]interface{}{"test": "yo"},
+			"object": nil,
+		}
+		schema, err := internal.HelmValuesToSchema(values)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(schema.Properties).NotTo(BeNil())
+		Expect(schema.Properties["object"].Type).To(Equal("object"))
+		Expect(*schema.Properties["object"].XPreserveUnknownFields).To(BeTrue())
+		Expect(schema.Properties["object"].Properties).To(BeEmpty())
+		Expect(schema.Properties["map"].Type).To(Equal("object"))
+		Expect(schema.Properties["map"].Properties["test"].Type).To(Equal("string"))
+		Expect(*schema.Properties["map"].XPreserveUnknownFields).To(BeTrue())
+	})
 })
