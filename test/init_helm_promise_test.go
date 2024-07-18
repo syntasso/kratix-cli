@@ -178,6 +178,11 @@ var _ = Describe("init helm-promise", func() {
 					HaveKey("gitRepository")))
 			})
 		})
+
+		It("errors when it cannot locate the chart", func() {
+			session := withExitCode(1).run("init", "helm-promise", "--chart-url", "oci://registry-1.docker.io/bitnamicharts/vault", "--chart-version", "200", "redis", "--group", "syntasso.io", "--kind", "Database")
+			Expect(session.Err).To(gbytes.Say("failed to fetch helm chart"))
+		})
 	})
 })
 
