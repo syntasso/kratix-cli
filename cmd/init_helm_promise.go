@@ -150,6 +150,10 @@ func valuesFromChart() (map[string]interface{}, error) {
 		install.RepoURL = chartURL
 	}
 
+	if chartVersion != "" {
+		install.ChartPathOptions.Version = chartVersion
+	}
+
 	chart, _, err := client.GetChart(getChartName(), &install.ChartPathOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch helm chart: %w", err)
