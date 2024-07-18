@@ -73,6 +73,12 @@ func getJSONSchema(value interface{}) (*apiextensionsv1.JSONSchemaProps, error) 
 				Schema: schemaV,
 			},
 		}, nil
+	case nil:
+		return &apiextensionsv1.JSONSchemaProps{
+			Type:                   "object",
+			Properties:             map[string]apiextensionsv1.JSONSchemaProps{},
+			XPreserveUnknownFields: pointer.Bool(true),
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported type %T found in helm chart values for %v", value, value)
 	}
