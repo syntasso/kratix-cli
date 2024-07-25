@@ -1,4 +1,12 @@
 project_name: kratix-cli
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
 builds:
   - env:
       - CGO_ENABLED=0
@@ -6,17 +14,24 @@ builds:
       - linux
       - darwin
     ldflags:
-      - -s -w
       - -X main.version={{.Version}}
 
-nfpms:
-  - maintainer: "kratix@syntasso.io"
-    homepage: https://github.com/syntasso/kratix
-    description: >-
-      A CLI for building Kratix promises
-    license: "Apache-2.0"
-    formats:
-      - deb
-      - rpm
-      - apk
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
 
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^.github"
+      - "^.circleci"
+      - "^test"
