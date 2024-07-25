@@ -3,11 +3,12 @@ package cmd
 import (
 	"bytes"
 	"embed"
-	"github.com/Masterminds/sprig/v3"
-	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
+	"github.com/spf13/cobra"
 )
 
 const filePerm = 0644
@@ -17,13 +18,14 @@ var rootCmd = &cobra.Command{
 	Use:     "kratix",
 	Short:   "A CLI tool for Kratix",
 	Long:    `A CLI tool for Kratix`,
-	Version: "v0.0.1",
+	Version: "",
 	Example: `  # To initialize a new promise
   kratix init promise promise-name --group myorg.com --kind Database
 `,
 }
 
-func Execute() {
+func Execute(version string) {
+	rootCmd.Version = version
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)

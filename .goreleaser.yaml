@@ -1,0 +1,22 @@
+project_name: kratix-cli
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+
+nfpms:
+  - maintainer: "kratix@syntasso.io"
+    homepage: https://github.com/syntasso/kratix
+    description: >-
+      A CLI for building Kratix promises
+    license: "Apache-2.0"
+    formats:
+      - deb
+      - rpm
+      - apk
+
