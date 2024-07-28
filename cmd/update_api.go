@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -103,6 +104,15 @@ func updateCRDBytes(crd *apiextensionsv1.CustomResourceDefinition) ([]byte, erro
 		}
 	}
 
+	if crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties == nil {
+		crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"] = apiextensionsv1.JSONSchemaProps{
+			Type:       "object",
+			Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+		}
+	}
+
+	specProperties := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties
+
 	if len(properties) != 0 {
 		for _, prop := range properties {
 			parsedProps := strings.Split(prop, ":")
@@ -111,23 +121,45 @@ func updateCRDBytes(crd *apiextensionsv1.CustomResourceDefinition) ([]byte, erro
 					return nil, fmt.Errorf("invalid property format: %s", prop)
 				}
 				p := strings.TrimRight(prop, "-")
-				delete(crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties, p)
+
+				nestedFields := strings.Split(p, ".")
+				curr := specProperties
+				for i := 0; i < len(nestedFields)-1; i++ {
+					if curr[nestedFields[i]].Properties == nil {
+						curr = nil
+						break
+					}
+					curr = curr[nestedFields[i]].Properties
+				}
+				if curr != nil {
+					delete(curr, nestedFields[len(nestedFields)-1])
+				}
 				continue
 			}
 
-			propName := parsedProps[0]
+			propNames := strings.Split(parsedProps[0], ".")
 			propType := parsedProps[1]
 
-			if propType != "string" && propType != "number" && propType != "integer" {
+			if !slices.Contains([]string{"string", "number", "integer", "object"}, propType) {
 				return nil, fmt.Errorf("unsupported property type: %s", propType)
 			}
-			if crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties == nil {
-				crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"] = apiextensionsv1.JSONSchemaProps{
-					Type:       "object",
-					Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+
+			curr := specProperties
+			lastProp := len(propNames) - 1
+			for i := 0; i < lastProp; i++ {
+				if curr[propNames[i]].Properties == nil {
+					curr[propNames[i]] = apiextensionsv1.JSONSchemaProps{
+						Type:       "object",
+						Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+					}
 				}
+				if curr[propNames[i]].Type != "object" {
+					return nil, fmt.Errorf("nested field %s is not an object", propNames[i])
+				}
+
+				curr = curr[propNames[i]].Properties
 			}
-			crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties[propName] = apiextensionsv1.JSONSchemaProps{
+			curr[propNames[lastProp]] = apiextensionsv1.JSONSchemaProps{
 				Type: propType,
 			}
 		}

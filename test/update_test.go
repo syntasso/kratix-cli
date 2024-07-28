@@ -53,7 +53,7 @@ var _ = Describe("update", func() {
 		When("updating promise api", func() {
 			var dir string
 			AfterEach(func() {
-				os.RemoveAll(dir)
+				Expect(os.RemoveAll(dir)).To(Succeed())
 			})
 
 			When("there is no api.yaml or promise.yaml present", func() {
@@ -85,6 +85,29 @@ var _ = Describe("update", func() {
 
 				Context("api properties", func() {
 					It("can add new properties to the promise api", func() {
+						sess := r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "--property", "intValue:integer", "--property", "objectField:object", "--property", "nested.field:string", "--dir", dir)
+						Expect(sess.Out).To(gbytes.Say("Promise api updated"))
+						matchPromise(dir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
+						props := getCRDProperties(dir, false)
+						Expect(props).To(
+							SatisfyAll(
+								HaveKey("numberField"),
+								HaveKey("stringField"),
+								HaveKey("intValue"),
+								HaveKey("objectField"),
+								HaveKey("nested"),
+								HaveLen(5),
+							),
+						)
+						Expect(props["numberField"].Type).To(Equal("number"))
+						Expect(props["stringField"].Type).To(Equal("string"))
+						Expect(props["intValue"].Type).To(Equal("integer"))
+						Expect(props["objectField"].Type).To(Equal("object"))
+						Expect(props["nested"].Type).To(Equal("object"))
+						Expect(props["nested"].Properties["field"].Type).To(Equal("string"))
+					})
+
+					It("can add nested properties to the promise api", func() {
 						sess := r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "--property", "intValue:integer", "--dir", dir)
 						Expect(sess.Out).To(gbytes.Say("Promise api updated"))
 						matchPromise(dir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
@@ -108,17 +131,39 @@ var _ = Describe("update", func() {
 
 					It("errors when unsupported property type is set", func() {
 						r.exitCode = 1
-						sess := r.run("update", "api", "--property", "unsupported:object", "--dir", dir)
+						sess := r.run("update", "api", "--property", "unsupported:array", "--dir", dir)
 						Expect(sess.Err).To(gbytes.Say("unsupported"))
 					})
 
 					It("can remove existing properties", func() {
-						r.run("update", "api", "-p", "numberField:number", "--property", "stringField:string", "-p", "wontdelete:string", "--dir", dir)
-						r.run("update", "api", "-p", "numberField-", "--property", "stringField-", "--dir", dir)
+						r.run("update", "api",
+							"-p", "numberField:number",
+							"-p", "stringField:string",
+							"-p", "wontdelete:string",
+							"-p", "objectField.subField:string",
+							"-p", "nested.field:string",
+							"-p", "nested.secondField:integer",
+							"--dir", dir,
+						)
+						r.run("update", "api",
+							"-p", "numberField-",
+							"-p", "stringField-",
+							"-p", "objectField-",
+							"-p", "nested.field-",
+							"--dir", dir)
 						matchPromise(dir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 						props := getCRDProperties(dir, false)
-						Expect(props).To(SatisfyAll(HaveKey("wontdelete"), HaveLen(1)))
+						Expect(props).To(SatisfyAll(
+							HaveKey("wontdelete"),
+							HaveKey("nested"),
+							HaveLen(2)))
 						Expect(props["wontdelete"].Type).To(Equal("string"))
+						Expect(props["nested"].Type).To(Equal("object"))
+						Expect(props["nested"].Properties).To(SatisfyAll(
+							Not(HaveKey("field")),
+							HaveKey("secondField"),
+						))
+						Expect(props["nested"].Properties["secondField"].Type).To(Equal("integer"))
 					})
 
 					It("errors when property format is invalid", func() {
