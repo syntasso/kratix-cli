@@ -104,7 +104,7 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 	fmt.Println("Promise generated successfully.")
 	fmt.Println("The Operator documents were added as inline dependencies in the Promise Spec.")
 	fmt.Println("You can move them to a workflow by running:")
-	fmt.Printf("\tkratix update dependencies --image yourorg/your-image:tag")
+	fmt.Printf("\tkratix update dependencies --image yourorg/your-image:tag\n")
 	return nil
 }
 
