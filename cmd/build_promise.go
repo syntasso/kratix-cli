@@ -77,7 +77,9 @@ func BuildPromise(cmd *cobra.Command, args []string) error {
 	}
 
 	var workflows v1alpha1.Workflows
-	buildWorkflows(&workflows)
+	if err := buildWorkflows(&workflows); err != nil {
+		return err
+	}
 	promise.Spec.Workflows = workflows
 
 	promiseBytes, err := yaml.Marshal(promise)
@@ -115,22 +117,22 @@ func fileExists(filePath string) bool {
 func buildWorkflows(workflows *v1alpha1.Workflows) error {
 	promiseConfigure, err := getWorkflow("promise", "configure")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get promise configure workflow: %v", err)
 	}
 
 	promiseDelete, err := getWorkflow("promise", "delete")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get promise delete workflow: %v", err)
 	}
 
 	resourceConfigure, err := getWorkflow("resource", "configure")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get resource configure workflow: %v", err)
 	}
 
 	resourceDelete, err := getWorkflow("resource", "delete")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get resource delete workflow: %v", err)
 	}
 
 	workflows.Promise.Configure = promiseConfigure
