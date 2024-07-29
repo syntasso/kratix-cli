@@ -22,10 +22,16 @@ var updateAPICmd = &cobra.Command{
 	Long:  "Command to update promise API",
 	Example: `  # add a new property of type string to the API
   kratix update api --property region:string
+
+  # add an integer 'port' property nested into a 'service' object
+  kratix update api --property service.port:integer
+  
   # removes the property from the API
   kratix update api --property region-
+  
   # updates the API group and the Kind
   kratix update api --group myorg.com --kind Database
+  
   # updates the version and the plural form
   kratix update api --version v1beta3 --plural mydbs`,
 	RunE: UpdateAPI,
