@@ -27,6 +27,8 @@ spec:
           served: true
           storage: true
   workflows:
+    promise:
+      configure:
     resource:
       configure:
 {{ .ResourceConfigure | indent 8 }}

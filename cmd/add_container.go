@@ -35,10 +35,7 @@ var addContainerCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 }
 
-var (
-	image, containerName string
-	container            v1alpha1.Container
-)
+var image, containerName string
 
 func init() {
 	addCmd.AddCommand(addContainerCmd)

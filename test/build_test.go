@@ -98,6 +98,18 @@ var _ = Describe("build", func() {
 				Expect(err).NotTo(HaveOccurred())
 				matchCRD(promiseCRD, "syntasso.io", "v1alpha1", "Database", "database", "databases")
 			})
+
+			When("workflow file is invalid", func() {
+				It("errors", func() {
+					r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--dir", promiseDir)
+					r.run("add", "container", "promise/configure/pipeline0", "--image", "psql:latest", "-n", "configure-image", "--dir", promiseDir)
+					Expect(os.WriteFile(filepath.Join(promiseDir, "workflows/promise/configure/workflow.yaml"), []byte("not valid"), 0644)).To(Succeed())
+
+					r.exitCode = 1
+					sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
+					Expect(sess.Err).To(gbytes.Say("failed to get promise configure workflow:"))
+				})
+			})
 		})
 
 		Context("dependencies.yaml file", func() {
