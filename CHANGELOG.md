@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/syntasso/kratix-cli/compare/v0.1.0...v0.1.1) (2024-07-30)
+
+
+### Bug Fixes
+
+* build helm image multi arch ([410e279](https://github.com/syntasso/kratix-cli/commit/410e279c0e26b7db6d9b8a2ea9d64dad9b99e91d))
+
 ## [0.1.0](https://github.com/syntasso/kratix-cli/compare/v0.1.0...v0.1.0) (2024-07-30)
 
 
