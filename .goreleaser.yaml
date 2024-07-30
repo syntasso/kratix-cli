@@ -19,7 +19,7 @@ builds:
 
 archives:
   - format: tar.gz
-    files: []
+    files: ["LICENSE*"]
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
