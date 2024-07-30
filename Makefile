@@ -19,7 +19,7 @@ build-and-push-aspects: # build and push all aspects
 		docker buildx create --name kratix-cli-image-builder; \
 	fi;
 	make build-and-push-operator-promise-aspect
-	make build-and-push-helm-promis-aspect
+	make build-and-push-helm-promise-aspect
 
 .PHONY: help
 help: # Show help for each of the Makefile recipes.
