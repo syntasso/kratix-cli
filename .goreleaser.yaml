@@ -15,6 +15,7 @@ builds:
       - darwin
     ldflags:
       - -X main.version={{.Version}}
+    binary: kratix
 
 archives:
   - format: tar.gz
