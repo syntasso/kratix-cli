@@ -72,3 +72,17 @@ To run the tests, run:
 ```bash
 make test
 ```
+
+# Releasing
+
+To release merge the auto-created Release PR
+([example](https://github.com/syntasso/kratix-cli/pull/48)). This PR is auto
+created by the [Release Please](https://github.com/googleapis/release-please)
+Github Action we have in our `.github/workflows/release.yml` file. When this PR
+is merged the following happens:
+
+- A tag and Github release is created. The release notes is equal to the
+   contents of the PRs description (**NOT the contents of the file committed**).
+- Goreleaser gets triggered in Github actions, creating and uploading the binaries to the
+   existing release.
+
