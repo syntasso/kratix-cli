@@ -19,6 +19,7 @@ builds:
 
 archives:
   - format: tar.gz
+    files: []
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
