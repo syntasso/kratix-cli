@@ -43,6 +43,13 @@ build-and-push-operator-promise-aspect:
 		.
 
 build-helm-promise-aspect:
+	docker build \
+		--tag ${HELM_ASPECT_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${HELM_ASPECT_TAG}:latest \
+		--file aspects/operator-promise/Dockerfile \
+		.
+
+build-and-push-helm-promise-aspect:
 	docker buildx build \
 		--builder kratix-cli-image-builder \
 		--push \
@@ -51,7 +58,3 @@ build-helm-promise-aspect:
 		--tag ${HELM_ASPECT_TAG}:latest \
 		--file aspects/helm-promise/Dockerfile \
 		aspects/helm-promise
-
-build-and-push-helm-promise-aspect: build-helm-promise-aspect
-	docker push ${HELM_ASPECT_TAG}:${KRATIX_CLI_VERSION}
-	docker push ${HELM_ASPECT_TAG}:latest
