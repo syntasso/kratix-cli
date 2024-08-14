@@ -1,7 +1,9 @@
 package integration_test
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -32,6 +34,7 @@ type runner struct {
 	dir      string
 	flags    map[string]string
 	timeout  time.Duration
+	noPath   bool
 }
 
 func withExitCode(exitCode int) *runner {
@@ -48,6 +51,16 @@ func (r *runner) run(args ...string) *gexec.Session {
 	}
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = r.dir
+	cmd.Env = os.Environ()
+
+	testBin, err := filepath.Abs("assets/binaries")
+	Expect(err).NotTo(HaveOccurred())
+	cmdPath := testBin + ":" + os.Getenv("PATH")
+	if r.noPath {
+		cmdPath = ""
+	}
+	cmd.Env = append(cmd.Env, "PATH="+cmdPath)
+
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	t := 1 * time.Second

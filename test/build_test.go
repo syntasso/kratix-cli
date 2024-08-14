@@ -36,6 +36,18 @@ var _ = Describe("build", func() {
 		Expect(os.RemoveAll(depDir)).To(Succeed())
 	})
 
+	Describe("build --help", func() {
+		It("includes the available build subcommands", func() {
+			r = &runner{}
+			sess := r.run("build", "--help")
+			output := string(sess.Out.Contents())
+			Expect(output).To(SatisfyAll(
+				MatchRegexp("container\\s+Command to build a Container image"),
+				MatchRegexp("promise\\s+Command to build a Kratix Promise"),
+			))
+		})
+	})
+
 	Context("after init promise", func() {
 		BeforeEach(func() {
 			r = &runner{exitCode: 0}
