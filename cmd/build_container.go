@@ -70,19 +70,6 @@ func init() {
 	buildContainerCmd.Flags().BoolVar(&buildContainerOpts.Push, "push", false, "Build and push the container")
 }
 
-func ParseContainerCmdArgs(containerPath string) (*ContainerCmdArgs, error) {
-	parts := strings.Split(containerPath, "/")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("expected 3 parts, got %d", len(parts))
-	}
-
-	return &ContainerCmdArgs{
-		Lifecycle: parts[0],
-		Action:    parts[1],
-		Pipeline:  parts[2],
-	}, nil
-}
-
 func BuildContainer(cmd *cobra.Command, args []string) error {
 	if err := validateEngine(buildContainerOpts.Engine); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -127,7 +114,7 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		pipeline, err := RetrievePipeline(promise, containerArgs.Lifecycle, containerArgs.Action, containerArgs.Pipeline)
+		pipeline, err := RetrievePipeline(promise, containerArgs)
 		if err != nil {
 			return err
 		}
@@ -180,13 +167,13 @@ func LoadPromise(dir string) (*v1alpha1.Promise, error) {
 	return &promise, nil
 }
 
-func RetrievePipeline(promise *v1alpha1.Promise, lifecycle, action, pipelineName string) (*v1alpha1.Pipeline, error) {
+func RetrievePipeline(promise *v1alpha1.Promise, c *ContainerCmdArgs) (*v1alpha1.Pipeline, error) {
 	allPipelines, err := v1alpha1.NewPipelinesMap(promise, ctrl.LoggerFrom(context.Background()))
 	if err != nil {
 		return nil, err
 	}
 
-	pipelines, pipelineIdx, err := findPipelinesForLifecycleAction(lifecycle, action, pipelineName, allPipelines)
+	pipelines, pipelineIdx, err := findPipelinesForLifecycleAction(c, allPipelines)
 	if err != nil {
 		return nil, err
 	}

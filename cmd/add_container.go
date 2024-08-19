@@ -51,35 +51,32 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	}
 
 	pipelineInput := args[0]
-	pipelineParts := strings.Split(pipelineInput, "/")
-
-	if len(pipelineParts) != 3 {
-		return fmt.Errorf("invalid pipeline format: %s, expected format: LIFECYCLE/ACTION/PIPELINE-NAME", pipelineInput)
+	containerArgs, err := ParseContainerCmdArgs(pipelineInput)
+	if err != nil {
+		return err
 	}
 
-	lifecycle, action, pipelineName := pipelineParts[0], pipelineParts[1], pipelineParts[2]
-
-	if err := generateWorkflow(lifecycle, action, pipelineName, containerName, image, false); err != nil {
+	if err := generateWorkflow(containerArgs, containerName, image, false); err != nil {
 		return err
 	}
 
 	pipelineScriptFilename := "pipeline.sh"
-	scriptsPath := filepath.Join("workflows", lifecycle, action, pipelineName, containerName, "scripts", pipelineScriptFilename)
+	scriptsPath := filepath.Join("workflows", containerArgs.Lifecycle, containerArgs.Action, containerArgs.Pipeline, containerName, "scripts", pipelineScriptFilename)
 	fmt.Printf("Customise your container by editing %s \n", scriptsPath)
 	fmt.Println("Don't forget to build and push your image!")
 	return nil
 }
 
-func generateWorkflow(lifecycle, action, pipelineName, containerName, image string, overwrite bool) error {
-	if lifecycle != "promise" && lifecycle != "resource" {
-		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", lifecycle)
+func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrite bool) error {
+	if c.Lifecycle != "promise" && c.Lifecycle != "resource" {
+		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", c.Lifecycle)
 	}
 
-	if action != "configure" && action != "delete" {
-		return fmt.Errorf("invalid action: %s, expected one of: configure, delete", action)
+	if c.Action != "configure" && c.Action != "delete" {
+		return fmt.Errorf("invalid action: %s, expected one of: configure, delete", c.Action)
 	}
 
-	if pipelineName == "" {
+	if c.Pipeline == "" {
 		return fmt.Errorf("pipeline name cannot be empty")
 	}
 
@@ -88,7 +85,7 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 		Image: image,
 	}
 
-	workflowPath := filepath.Join("workflows", lifecycle, action)
+	workflowPath := filepath.Join("workflows", c.Lifecycle, c.Action)
 	var promise v1alpha1.Promise
 
 	splitFiles := filesGeneratedWithSplit(dir)
@@ -111,7 +108,7 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 		}
 		yaml.Unmarshal(fileBytes, &pipelines)
 
-		pipelineIdx, err = getPipelineIdx(pipelines, pipelineName)
+		pipelineIdx, err = getPipelineIdx(pipelines, c.Pipeline)
 		if err != nil {
 			return err
 		}
@@ -133,7 +130,7 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 			return err
 		}
 
-		pipelines, pipelineIdx, err = findPipelinesForLifecycleAction(lifecycle, action, pipelineName, allPipelines)
+		pipelines, pipelineIdx, err = findPipelinesForLifecycleAction(c, allPipelines)
 		if err != nil {
 			return err
 		}
@@ -146,7 +143,7 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 			pipelines[pipelineIdx].Spec.Containers = append(pipelines[pipelineIdx].Spec.Containers, container)
 		} else {
 			if !overwrite {
-				return fmt.Errorf("image '%s' already exists in Pipeline '%s'", container.Name, pipelineName)
+				return fmt.Errorf("image '%s' already exists in Pipeline '%s'", container.Name, c.Pipeline)
 			}
 			pipelines[pipelineIdx].Spec.Containers[containerIdx] = container
 		}
@@ -161,7 +158,7 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 				"apiVersion": "platform.kratix.io/v1alpha1",
 				"kind":       "Pipeline",
 				"metadata": map[string]interface{}{
-					"name": pipelineName,
+					"name": c.Pipeline,
 				},
 				"spec": map[string]interface{}{
 					"containers": []interface{}{container},
@@ -182,21 +179,21 @@ func generateWorkflow(lifecycle, action, pipelineName, containerName, image stri
 			return err
 		}
 	} else {
-		updatePipeline(lifecycle, action, pipelinesUnstructured, &promise)
+		updatePipeline(c.Lifecycle, c.Action, pipelinesUnstructured, &promise)
 
 		fileBytes, err = yaml.Marshal(promise)
 		if err != nil {
 			return err
 		}
 	}
-	if err := generatePipelineDirFiles(dir, workflowPath, pipelineName, containerName); err != nil {
+	if err := generatePipelineDirFiles(dir, workflowPath, c.Pipeline, containerName); err != nil {
 		return err
 	}
 
 	if err := os.WriteFile(filePath, fileBytes, filePerm); err != nil {
 		return err
 	}
-	fmt.Printf("generated the %s/%s/%s/%s in %s \n", lifecycle, action, pipelineName, containerName, filePath)
+	fmt.Printf("generated the %s/%s/%s/%s in %s \n", c.Lifecycle, c.Action, c.Pipeline, containerName, filePath)
 
 	return nil
 }
@@ -206,18 +203,18 @@ func generateContainerName(image string) string {
 	return strings.Split(nameAndVersion, ":")[0]
 }
 
-func findPipelinesForLifecycleAction(lifecycle, action, pipelineName string, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
+func findPipelinesForLifecycleAction(c *ContainerCmdArgs, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
 	var pipelines []v1alpha1.Pipeline
-	switch lifecycle {
+	switch c.Lifecycle {
 	case "promise":
-		switch action {
+		switch c.Action {
 		case "configure":
 			pipelines = allPipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]
 		case "delete":
 			pipelines = allPipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete]
 		}
 	case "resource":
-		switch action {
+		switch c.Action {
 		case "configure":
 			pipelines = allPipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure]
 		case "delete":
@@ -225,7 +222,7 @@ func findPipelinesForLifecycleAction(lifecycle, action, pipelineName string, all
 		}
 	}
 
-	idx, err := getPipelineIdx(pipelines, pipelineName)
+	idx, err := getPipelineIdx(pipelines, c.Pipeline)
 	if err != nil {
 		return nil, -1, err
 	}
