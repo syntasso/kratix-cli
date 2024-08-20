@@ -34,7 +34,7 @@ func init() {
 
 func BuildPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
-	promise, err := LoadPromise(inputDir)
+	promise, err := LoadPromiseWithWorkflows(inputDir)
 	if err != nil {
 		return err
 	}

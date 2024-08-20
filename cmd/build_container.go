@@ -77,7 +77,7 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
-	promise, err := LoadPromise(buildContainerOpts.Dir)
+	promise, err := LoadPromiseWithWorkflows(buildContainerOpts.Dir)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func LoadWorkflows(dir string) (v1alpha1.Workflows, error) {
 	return workflows, nil
 }
 
-func LoadPromise(dir string) (*v1alpha1.Promise, error) {
+func LoadPromiseWithWorkflows(dir string) (*v1alpha1.Promise, error) {
 	var promise v1alpha1.Promise
 
 	if _, err := os.Stat(filepath.Join(dir, "promise.yaml")); err != nil {
