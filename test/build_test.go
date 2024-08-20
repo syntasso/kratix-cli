@@ -42,7 +42,7 @@ var _ = Describe("build", func() {
 			sess := r.run("build", "--help")
 			output := string(sess.Out.Contents())
 			Expect(output).To(SatisfyAll(
-				MatchRegexp("container\\s+Command to build a Container image"),
+				MatchRegexp("container\\s+Command to build a container image generated with 'add container'"),
 				MatchRegexp("promise\\s+Command to build a Kratix Promise"),
 			))
 		})

@@ -36,7 +36,7 @@ type BuildContainerOptions struct {
 // containerCmd represents the container command
 var buildContainerCmd = &cobra.Command{
 	Use:   "container LIFECYCLE/ACTION/PIPELINE-NAME [flags]",
-	Short: "Command to build a Container image",
+	Short: "Command to build a container image generated with 'add container'",
 	Example: `  # Build a container
   kratix build container resource/configure/mypipeline --name mycontainer
 
