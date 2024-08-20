@@ -157,7 +157,7 @@ var _ = Describe("kratix build container", func() {
 					Expect(session).To(SatisfyAll(
 						gbytes.Say("Building container with tag syntasso/postgres-resource:v1.0.0..."),
 						gbytes.Say("fake-docker buildx build --tag syntasso/postgres-resource:v1.0.0 %s/workflows/promise/configure/postgresql/syntasso-postgres-resource --push", dir),
-						Not(gbytes.Say("fake-docker push --tag syntasso/postgres-resource:v1.0.0")),
+						Not(gbytes.Say("fake-docker push syntasso/postgres-resource:v1.0.0")),
 					))
 				})
 			})
@@ -181,7 +181,7 @@ var _ = Describe("kratix build container", func() {
 					gbytes.Say("fake-docker build --tag syntasso/postgres-resource:v1.0.0 %s/workflows/promise/configure/postgresql/syntasso-postgres-resource", dir),
 
 					gbytes.Say("Pushing container with tag syntasso/postgres-resource:v1.0.0..."),
-					gbytes.Say("fake-docker push --tag syntasso/postgres-resource:v1.0.0"),
+					gbytes.Say("fake-docker push syntasso/postgres-resource:v1.0.0"),
 				))
 			})
 		})

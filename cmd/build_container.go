@@ -272,7 +272,7 @@ func forkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir
 }
 
 func forkPushCommand(engine, containerImage string) error {
-	builder := exec.Command(engine, "push", "--tag", containerImage)
+	builder := exec.Command(engine, "push", containerImage)
 	builder.Stdout = os.Stdout
 	builder.Stderr = os.Stderr
 	if err := builder.Run(); err != nil {
