@@ -156,6 +156,8 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 func LoadWorkflows(dir string) (v1alpha1.Workflows, error) {
 	pipelineMap := map[string]map[string][]unstructured.Unstructured{}
 	var workflows v1alpha1.Workflows
+
+	missingWorkflows := 0
 	for _, lifecycle := range []string{"promise", "resource"} {
 		for _, action := range []string{"configure", "delete"} {
 			if fileExists(filepath.Join(dir, "workflows", lifecycle, action, "workflow.yaml")) {
@@ -179,8 +181,14 @@ func LoadWorkflows(dir string) (v1alpha1.Workflows, error) {
 					pipelineMap[lifecycle] = make(map[string][]unstructured.Unstructured)
 				}
 				pipelineMap[lifecycle][action] = uPipelines
+			} else {
+				missingWorkflows++
 			}
 		}
+	}
+
+	if missingWorkflows == 4 {
+		return workflows, fmt.Errorf("no workflow.yaml files found in dir: %s", dir)
 	}
 
 	if _, ok := pipelineMap["promise"]; ok {
@@ -200,7 +208,7 @@ func LoadPromiseWithWorkflows(dir string) (*v1alpha1.Promise, error) {
 
 	if _, err := os.Stat(filepath.Join(dir, "promise.yaml")); err != nil {
 		if os.IsNotExist(err) {
-			// Since there's no promise.yaml, assume --split was used
+			fmt.Println("No promise.yaml found, assuming --split was used to initialise the Promise")
 			workflows, err := LoadWorkflows(dir)
 			if err != nil {
 				return nil, err
