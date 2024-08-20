@@ -50,7 +50,7 @@ var buildContainerCmd = &cobra.Command{
   kratix build container resource/configure/mypipeline --build-args "--platform linux/amd64"
 
   # Build with buildx
-  kratix build container resource/configure/mypipeline --buildx
+  kratix build container resource/configure/mypipeline --buildx --build-args "--builder custom-builder --platform=linux/arm64,linux/amd64"
 
   # Build with podman
   kratix build container resource/configure/mypipeline --engine podman
