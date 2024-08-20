@@ -10,7 +10,6 @@ import (
 	"github.com/syntasso/kratix/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
@@ -35,7 +34,13 @@ func init() {
 
 func BuildPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
-	promise := newPromise(promiseName)
+	promise, err := LoadPromise(inputDir)
+	if err != nil {
+		return err
+	}
+	promise.Kind = "Promise"
+	promise.APIVersion = v1alpha1.GroupVersion.Group + "/" + v1alpha1.GroupVersion.Version
+	promise.Name = promiseName
 
 	if _, err := os.Stat(filepath.Join(inputDir, apiFileName)); err == nil {
 		var apiBytes []byte
@@ -76,12 +81,6 @@ func BuildPromise(cmd *cobra.Command, args []string) error {
 		promise.Spec.Dependencies = dependencies
 	}
 
-	var workflows v1alpha1.Workflows
-	if err := buildWorkflows(&workflows); err != nil {
-		return err
-	}
-	promise.Spec.Workflows = workflows
-
 	promiseBytes, err := yaml.Marshal(promise)
 	if err != nil {
 		return err
@@ -112,55 +111,4 @@ func fileExists(filePath string) bool {
 		return false
 	}
 	return true
-}
-
-func buildWorkflows(workflows *v1alpha1.Workflows) error {
-	promiseConfigure, err := getWorkflow("promise", "configure")
-	if err != nil {
-		return fmt.Errorf("failed to get promise configure workflow: %v", err)
-	}
-
-	promiseDelete, err := getWorkflow("promise", "delete")
-	if err != nil {
-		return fmt.Errorf("failed to get promise delete workflow: %v", err)
-	}
-
-	resourceConfigure, err := getWorkflow("resource", "configure")
-	if err != nil {
-		return fmt.Errorf("failed to get resource configure workflow: %v", err)
-	}
-
-	resourceDelete, err := getWorkflow("resource", "delete")
-	if err != nil {
-		return fmt.Errorf("failed to get resource delete workflow: %v", err)
-	}
-
-	workflows.Promise.Configure = promiseConfigure
-	workflows.Promise.Delete = promiseDelete
-	workflows.Resource.Configure = resourceConfigure
-	workflows.Resource.Delete = resourceDelete
-	return nil
-}
-
-func getWorkflow(lifecyle, action string) ([]unstructured.Unstructured, error) {
-	if fileExists(filepath.Join(inputDir, "workflows", lifecyle, action, "workflow.yaml")) {
-		workflowBytes, err := os.ReadFile(filepath.Join(inputDir, "workflows", lifecyle, action, "workflow.yaml"))
-		if err != nil {
-			return []unstructured.Unstructured{}, err
-		}
-
-		var workflow []v1alpha1.Pipeline
-		err = yaml.Unmarshal(workflowBytes, &workflow)
-		if err != nil {
-			return []unstructured.Unstructured{}, err
-		}
-
-		uPipelines, err := pipelinesToUnstructured(workflow)
-		if err != nil {
-			return []unstructured.Unstructured{}, err
-		}
-
-		return uPipelines, nil
-	}
-	return []unstructured.Unstructured{}, nil
 }
