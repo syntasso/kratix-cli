@@ -16,7 +16,7 @@ jobs:
   run-tests:
     docker:
       - image: cimg/go:1.22
-    resource_class: small
+    resource_class: medium
     steps:
       - attach_workspace:
           at: .
