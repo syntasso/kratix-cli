@@ -295,6 +295,9 @@ func FindContainer(dirEntries []fs.DirEntry, containers []v1alpha1.Container, na
 	}
 
 	if len(dirEntries) == 1 {
+		if name != "" && name != dirEntries[0].Name() {
+			return -1, fmt.Errorf("container %s not found in pipeline", name)
+		}
 		name = dirEntries[0].Name()
 	}
 
