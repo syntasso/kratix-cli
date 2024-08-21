@@ -187,10 +187,6 @@ func LoadWorkflows(dir string) (v1alpha1.Workflows, error) {
 		}
 	}
 
-	if missingWorkflows == 4 {
-		return workflows, fmt.Errorf("no workflow.yaml files found in dir: %s", dir)
-	}
-
 	if _, ok := pipelineMap["promise"]; ok {
 		workflows.Promise.Configure = pipelineMap["promise"]["configure"]
 		workflows.Promise.Delete = pipelineMap["promise"]["delete"]
