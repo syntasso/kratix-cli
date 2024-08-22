@@ -206,5 +206,13 @@ var _ = Describe("kratix build container", func() {
 			Expect(session).To(gbytes.Say("Building container with tag syntasso/postgres-resource:v1.0.0..."))
 			Expect(session).To(gbytes.Say("fake-docker build --tag syntasso/postgres-resource:v1.0.0 %s/workflows/promise/configure/postgresql/syntasso-postgres-resource", dir))
 		})
+
+		When("no workflows exists", func() {
+			It("should raise an error", func() {
+				r.exitCode = 1
+				session := r.run("build", "container", "promise/configure/postgresql", "--dir", ".")
+				Expect(session.Err).To(gbytes.Say("no workflows found"))
+			})
+		})
 	})
 })
