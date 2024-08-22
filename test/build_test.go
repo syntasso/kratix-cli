@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 var _ = Describe("build", func() {
 	var r *runner
 	var promiseDir, depDir string
+	var splitFileLogMessage = "No promise.yaml found, assuming --split was used to initialise the Promise"
 
 	BeforeEach(func() {
 		var err error
@@ -36,6 +38,18 @@ var _ = Describe("build", func() {
 		Expect(os.RemoveAll(depDir)).To(Succeed())
 	})
 
+	Describe("build --help", func() {
+		It("includes the available build subcommands", func() {
+			r = &runner{}
+			sess := r.run("build", "--help")
+			output := string(sess.Out.Contents())
+			Expect(output).To(SatisfyAll(
+				MatchRegexp("container\\s+Command to build a container image generated with 'add container'"),
+				MatchRegexp("promise\\s+Command to build a Kratix Promise"),
+			))
+		})
+	})
+
 	Context("after init promise", func() {
 		BeforeEach(func() {
 			r = &runner{exitCode: 0}
@@ -45,14 +59,17 @@ var _ = Describe("build", func() {
 				namespaceBytes(namespace("test1")),
 				deploymentBytes(deployment("test1"))), 0644)).To(Succeed())
 			r.run("update", "dependencies", depDir, "--dir", promiseDir)
+
 		})
 
 		It("builds a promise from api, dependencies and workflows files", func() {
 			sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
-			Expect(sess.Out.Contents()).ToNot(BeEmpty())
+			contents := sess.Out.Contents()
+			Expect(contents).ToNot(BeEmpty())
+			promiseBytes := bytes.TrimPrefix(contents, []byte(splitFileLogMessage))
 
 			var promise v1alpha1.Promise
-			Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+			Expect(yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
 			Expect(promise.Name).To(Equal("postgresql"))
 			Expect(promise.Kind).To(Equal("Promise"))
 			Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
@@ -75,9 +92,12 @@ var _ = Describe("build", func() {
 				r.run("add", "container", "promise/configure/pipeline0", "--image", "psql:latest", "-n", "configure-image", "--dir", promiseDir)
 				r.run("add", "container", "resource/delete/pipeline0", "--image", "psql:latest", "-n", "delete-image", "--dir", promiseDir)
 				sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
+				contents := sess.Out.Contents()
+				Expect(contents).ToNot(BeEmpty())
+				promiseBytes := bytes.TrimPrefix(contents, []byte(splitFileLogMessage))
 
 				var promise v1alpha1.Promise
-				Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+				Expect(yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
 				Expect(promise.Name).To(Equal("postgresql"))
 				Expect(promise.Kind).To(Equal("Promise"))
 				Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
@@ -118,9 +138,13 @@ var _ = Describe("build", func() {
 					Expect(os.RemoveAll(filepath.Join(promiseDir, "dependencies.yaml"))).To(Succeed())
 
 					sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
+					contents := sess.Out.Contents()
+					Expect(contents).ToNot(BeEmpty())
+					promiseBytes := bytes.TrimPrefix(contents, []byte(splitFileLogMessage))
+
 					Expect(sess.Out.Contents()).ToNot(BeEmpty())
 					var promise v1alpha1.Promise
-					Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+					Expect(yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
 					Expect(promise.Spec.Dependencies).To(BeNil())
 				})
 			})
@@ -130,9 +154,12 @@ var _ = Describe("build", func() {
 					Expect(os.WriteFile(filepath.Join(promiseDir, "dependencies.yaml"), []byte(""), 0644)).To(Succeed())
 
 					sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
-					Expect(sess.Out.Contents()).ToNot(BeEmpty())
+					contents := sess.Out.Contents()
+					Expect(contents).ToNot(BeEmpty())
+					promiseBytes := bytes.TrimPrefix(contents, []byte(splitFileLogMessage))
+
 					var promise v1alpha1.Promise
-					Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+					Expect(yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
 					Expect(promise.Spec.Dependencies).To(BeNil())
 				})
 			})
@@ -144,9 +171,12 @@ var _ = Describe("build", func() {
 					Expect(os.RemoveAll(filepath.Join(promiseDir, "api.yaml"))).To(Succeed())
 
 					sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
-					Expect(sess.Out.Contents()).ToNot(BeEmpty())
+					contents := sess.Out.Contents()
+					Expect(contents).ToNot(BeEmpty())
+					promiseBytes := bytes.TrimPrefix(contents, []byte(splitFileLogMessage))
+
 					var promise v1alpha1.Promise
-					Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+					Expect(yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
 					Expect(promise.Spec.API).To(BeNil())
 				})
 			})
@@ -155,9 +185,12 @@ var _ = Describe("build", func() {
 					Expect(os.WriteFile(filepath.Join(promiseDir, "api.yaml"), []byte(""), 0644)).To(Succeed())
 
 					sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
-					Expect(sess.Out.Contents()).ToNot(BeEmpty())
+					contents := sess.Out.Contents()
+					Expect(contents).ToNot(BeEmpty())
+					promiseBytes := bytes.TrimPrefix(contents, []byte(splitFileLogMessage))
+
 					var promise v1alpha1.Promise
-					Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+					Expect(yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
 					Expect(promise.Spec.API).To(BeNil())
 				})
 			})
@@ -191,10 +224,12 @@ var _ = Describe("build", func() {
 
 		It("builds a promise from api, dependencies and workflows files", func() {
 			sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
-			Expect(sess.Out.Contents()).ToNot(BeEmpty())
-
 			var promise v1alpha1.Promise
-			Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+			contents := sess.Out.Contents()
+			Expect(contents).ToNot(BeEmpty())
+			promiseBytes := bytes.TrimPrefix(contents, []byte(splitFileLogMessage))
+
+			Expect(yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
 			Expect(promise.Name).To(Equal("postgresql"))
 			Expect(promise.Kind).To(Equal("Promise"))
 			Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
@@ -216,10 +251,12 @@ var _ = Describe("build", func() {
 
 		It("builds a promise from api, dependencies and workflows files", func() {
 			sess := r.run("build", "promise", "postgresql", "--dir", promiseDir)
-			Expect(sess.Out.Contents()).ToNot(BeEmpty())
+			contents := sess.Out.Contents()
+			Expect(contents).ToNot(BeEmpty())
+			promiseBytes := bytes.TrimPrefix(contents, []byte(splitFileLogMessage))
 
 			var promise v1alpha1.Promise
-			Expect(yaml.Unmarshal(sess.Out.Contents(), &promise)).To(Succeed())
+			Expect(yaml.Unmarshal(promiseBytes, &promise)).To(Succeed())
 			Expect(promise.Name).To(Equal("postgresql"))
 			Expect(promise.Kind).To(Equal("Promise"))
 			Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))

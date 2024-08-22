@@ -16,11 +16,13 @@ jobs:
   run-tests:
     docker:
       - image: cimg/go:1.22
-    resource_class: small
+    resource_class: medium
     steps:
       - attach_workspace:
           at: .
-      - run: make test
+      - run:
+          command: make test
+          no_output_timeout: 2m
 
 workflows:
   test:

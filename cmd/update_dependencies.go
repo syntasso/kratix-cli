@@ -179,7 +179,13 @@ func updatePromiseDependencies(dependencies []v1alpha1.Dependency) error {
 
 func addDepsAsWorkflow(dependenciesDir string) error {
 	containerName = "configure-deps"
-	err := generateWorkflow("promise", "configure", "dependencies", containerName, image, true)
+	c := &ContainerCmdArgs{
+		Lifecycle: "promise",
+		Action:    "configure",
+		Pipeline:  "dependencies",
+	}
+
+	err := generateWorkflow(c, containerName, image, true)
 	if err != nil {
 		return err
 	}
