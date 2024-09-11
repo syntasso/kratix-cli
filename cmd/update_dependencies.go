@@ -14,11 +14,13 @@ import (
 )
 
 var updateDependenciesCmd = &cobra.Command{
-	Use:   "dependencies",
+	Use:   "dependencies PATH",
 	Short: "Commands to update promise dependencies",
-	Long:  "Commands to update promise dependencies",
-	Example: ` # update promise dependencies with files in 'local-dir'
-Kratix update dependencies local-dir/ `,
+	Long:  "Commands to update promise dependencies, by default dependencies are stored in the Promise spec.dependencies field",
+	Example: `# update promise dependencies with all files in 'local-dir'
+kratix update dependencies local-dir/
+# update promise dependencies with single file 'local-file'
+kratix update dependencies local-file`,
 	Args: cobra.ExactArgs(1),
 	RunE: updateDependencies,
 }
@@ -26,7 +28,7 @@ Kratix update dependencies local-dir/ `,
 func init() {
 	updateCmd.AddCommand(updateDependenciesCmd)
 	updateDependenciesCmd.Flags().StringVarP(&dir, "dir", "d", ".", "Directory to read Promise from")
-	updateDependenciesCmd.Flags().StringVarP(&image, "image", "i", "", "Name of the image in which to provide the dependencies within Promise Configure workflow.")
+	updateDependenciesCmd.Flags().StringVarP(&image, "image", "i", "", "Store dependencies to a Promise Configure workflow image with this image/tag")
 }
 
 func updateDependencies(cmd *cobra.Command, args []string) error {
@@ -221,31 +223,47 @@ func addDepsAsWorkflow(dependenciesDir string) error {
 }
 
 func copyFiles(src, dest string) error {
-	files, err := os.ReadDir(src)
+	srcInfo, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
-
-	for _, f := range files {
-		if f.IsDir() {
-			if err := os.Mkdir(filepath.Join(dest, f.Name()), 0755); err != nil {
-				return err
-			}
-			if err := copyFiles(filepath.Join(src, f.Name()), filepath.Join(dest, f.Name())); err != nil {
-				return err
-			}
-
-			continue
-		}
-
-		fileContents, err := os.ReadFile(filepath.Join(src, f.Name()))
+	if srcInfo.IsDir() {
+		files, err := os.ReadDir(src)
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(dest, f.Name()), fileContents, 0644); err != nil {
+
+		for _, f := range files {
+			if f.IsDir() {
+				if err := os.Mkdir(filepath.Join(dest, f.Name()), 0755); err != nil {
+					return err
+				}
+				if err := copyFiles(filepath.Join(src, f.Name()), filepath.Join(dest, f.Name())); err != nil {
+					return err
+				}
+
+				continue
+			}
+
+			fileContents, err := os.ReadFile(filepath.Join(src, f.Name()))
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(filepath.Join(dest, f.Name()), fileContents, 0644); err != nil {
+				return err
+			}
+		}
+	} else {
+		fileName := filepath.Base(src)
+		fileContents, err := os.ReadFile(src)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dest, fileName), fileContents, 0644); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
