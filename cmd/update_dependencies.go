@@ -19,9 +19,10 @@ var updateDependenciesCmd = &cobra.Command{
 	Short: "Commands to update promise dependencies",
 	Long:  "Commands to update promise dependencies, by default dependencies are stored in the Promise spec.dependencies field",
 	Example: `# update promise dependencies with all files in 'local-dir'
-kratix update dependencies local-dir/
-# update promise dependencies with single file 'local-file'
-kratix update dependencies local-file`,
+kratix update dependencies path/to/dir/
+
+# update promise dependencies with single file
+kratix update dependencies path/to/file.yaml`,
 	Args: cobra.ExactArgs(1),
 	RunE: updateDependencies,
 }
