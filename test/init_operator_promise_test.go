@@ -212,7 +212,7 @@ var _ = Describe("InitOperatorPromise", func() {
 		It("outputs a message", func() {
 			Expect(session.Out).To(SatisfyAll(
 				gbytes.Say(`Promise generated successfully.`),
-				gbytes.Say(`kratix update dependencies --image yourorg/your-image:tag`),
+				gbytes.Say(`kratix update dependencies assets/operator --image yourorg/your-image:tag`),
 			))
 		})
 	})
@@ -251,7 +251,7 @@ var _ = Describe("InitOperatorPromise", func() {
 		It("outputs a message", func() {
 			Expect(session.Out).To(SatisfyAll(
 				gbytes.Say(`Promise generated successfully.`),
-				gbytes.Say(`kratix update dependencies --image yourorg/your-image:tag`),
+				gbytes.Say(`kratix update dependencies assets/e2e-cnpg/manifests --image yourorg/your-image:tag`),
 			))
 		})
 	})

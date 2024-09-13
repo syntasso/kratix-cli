@@ -56,15 +56,15 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 	templateValues := generateTemplateValues(promiseName, "promise", "", "")
 
 	templates := map[string]string{
-		resourceFileName: "templates/promise/example-resource.yaml.tpl",
+		resourceFileName: fmt.Sprintf("templates/promise/%s.tpl", resourceFileName),
 		"README.md":      "templates/promise/README.md.tpl",
 	}
 
 	if split {
-		templates[apiFileName] = "templates/promise/api.yaml.tpl"
-		templates[dependenciesFileName] = "templates/promise/dependencies.yaml"
+		templates[apiFileName] = fmt.Sprintf("templates/promise/%s.tpl", apiFileName)
+		templates[dependenciesFileName] = fmt.Sprintf("templates/promise/%s", dependenciesFileName)
 	} else {
-		templates[promiseFileName] = "templates/promise/promise.yaml.tpl"
+		templates[promiseFileName] = fmt.Sprintf("templates/promise/%s.tpl", promiseFileName)
 	}
 
 	if err := templateFiles(promiseTemplates, outputDir, templates, templateValues); err != nil {
