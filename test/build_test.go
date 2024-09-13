@@ -31,6 +31,8 @@ var _ = Describe("build", func() {
 
 		depDir, err = os.MkdirTemp("", "dep")
 		Expect(err).NotTo(HaveOccurred())
+
+		r = &runner{}
 	})
 
 	AfterEach(func() {
@@ -40,7 +42,6 @@ var _ = Describe("build", func() {
 
 	Describe("build --help", func() {
 		It("includes the available build subcommands", func() {
-			r = &runner{}
 			sess := r.run("build", "--help")
 			output := string(sess.Out.Contents())
 			Expect(output).To(SatisfyAll(
@@ -52,7 +53,6 @@ var _ = Describe("build", func() {
 
 	Context("after init promise", func() {
 		BeforeEach(func() {
-			r = &runner{exitCode: 0}
 			r.run("init", "promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--dir", promiseDir)
 
 			Expect(os.WriteFile(filepath.Join(depDir, "deps.yaml"), slices.Concat(
@@ -218,7 +218,6 @@ var _ = Describe("build", func() {
 
 	Context("after init operator promise with split", func() {
 		BeforeEach(func() {
-			r = &runner{exitCode: 0}
 			r.run("init", "operator-promise", "postgresql", "--group", "syntasso.io", "--kind", "Database", "--split", "--dir", promiseDir, "--operator-manifests", "assets/operator", "--api-schema-from", "postgresqls.acid.zalan.do")
 		})
 
@@ -244,7 +243,6 @@ var _ = Describe("build", func() {
 
 	Context("after init helm promise with split", func() {
 		BeforeEach(func() {
-			r = &runner{exitCode: 0}
 			session := r.run("init", "helm-promise", "postgresql", "--chart-url", "https://helm.github.io/examples", "--dir", promiseDir, "--chart-name", "hello-world", "--group", "syntasso.io", "--kind", "Database", "--split")
 			Expect(session.Out).To(gbytes.Say("postgresql promise bootstrapped in %s", promiseDir))
 		})

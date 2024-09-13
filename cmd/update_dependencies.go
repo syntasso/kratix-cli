@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,7 +39,7 @@ func updateDependencies(cmd *cobra.Command, args []string) error {
 	}
 
 	var depBytes []byte
-	file := dependencyFile()
+	mode, fileToUpdate := promiseFileMode()
 	dependencies, err := buildDependencies(dependenciesDir)
 	if err != nil {
 		return err
@@ -48,26 +49,26 @@ func updateDependencies(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	switch file {
-	case dependenciesFileName:
+	switch mode {
+	case "split":
 		err = os.WriteFile(filepath.Join(dir, dependenciesFileName), depBytes, filePerm)
-	case promiseFileName:
+	case "flat":
 		err = updatePromiseDependencies(dependencies)
 	}
 
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Updated %s\n", file)
+	fmt.Printf("Updated %s\n", fileToUpdate)
 	return nil
 }
 
-func dependencyFile() string {
-	_, err := os.Stat(filepath.Join(dir, dependenciesFileName))
-	if _, promiseErr := os.Stat(filepath.Join(dir, promiseFileName)); os.IsNotExist(err) && promiseErr == nil {
-		return promiseFileName
+func promiseFileMode() (mode string, fileToUpdate string) {
+	_, dependencyFileErr := os.Stat(filepath.Join(dir, dependenciesFileName))
+	if _, promiseErr := os.Stat(filepath.Join(dir, promiseFileName)); os.IsNotExist(dependencyFileErr) && promiseErr == nil {
+		return "flat", promiseFileName
 	}
-	return dependenciesFileName
+	return "split", dependenciesFileName
 }
 
 func buildDependencies(dependenciesDir string) ([]v1alpha1.Dependency, error) {
@@ -204,11 +205,11 @@ func addDepsAsWorkflow(dependenciesDir string) error {
 		return err
 	}
 
-	file := dependencyFile()
-	switch file {
-	case dependenciesFileName:
+	mode, _ := promiseFileMode()
+	switch mode {
+	case "split":
 		err = os.Remove(filepath.Join(dir, dependenciesFileName))
-	case promiseFileName:
+	case "flat":
 		err = updatePromiseDependencies([]v1alpha1.Dependency{})
 	}
 	if err != nil {
@@ -227,7 +228,8 @@ func copyFiles(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	if srcInfo.IsDir() {
+
+	if srcInfo.Mode().IsDir() {
 		files, err := os.ReadDir(src)
 		if err != nil {
 			return err
@@ -245,25 +247,26 @@ func copyFiles(src, dest string) error {
 				continue
 			}
 
-			fileContents, err := os.ReadFile(filepath.Join(src, f.Name()))
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(filepath.Join(dest, f.Name()), fileContents, 0644); err != nil {
-				return err
-			}
-		}
-	} else {
-		fileName := filepath.Base(src)
-		fileContents, err := os.ReadFile(src)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(filepath.Join(dest, fileName), fileContents, 0644); err != nil {
-			return err
+			return writeToFile(filepath.Join(src, f.Name()), dest, f.Name())
 		}
 	}
 
+	if srcInfo.Mode().IsRegular() {
+		fileName := filepath.Base(src)
+		return writeToFile(src, dest, fileName)
+	}
+
+	return errors.New("unsupported type for dependencies: must be file or directory")
+}
+
+func writeToFile(src string, dest string, fileName string) error {
+	fileContents, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(dest, fileName), fileContents, 0644); err != nil {
+		return err
+	}
 	return nil
 }
 
