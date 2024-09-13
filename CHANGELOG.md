@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.2.0](https://github.com/syntasso/kratix-cli/compare/v0.1.0...v0.2.0) (2024-09-13)
+
+
+### Features
+
+* introduce 'build container' command [#36](https://github.com/syntasso/kratix-cli/issues/36) ([5882bb1](https://github.com/syntasso/kratix-cli/commit/5882bb1787c374ad51d3746188746791f900afb7))
+* refactor loadworkflows ([2a7c4bb](https://github.com/syntasso/kratix-cli/commit/2a7c4bb6ce37eebdf23c46083629416175f2b552))
+
+
+### Bug Fixes
+
+* build helm image multi arch ([410e279](https://github.com/syntasso/kratix-cli/commit/410e279c0e26b7db6d9b8a2ea9d64dad9b99e91d))
+* bump the resource class to medium when running tests ([2c976c8](https://github.com/syntasso/kratix-cli/commit/2c976c83e160479304ee5fc2c5358156baf408bb))
+* construct the correct docker push command ([8e6467e](https://github.com/syntasso/kratix-cli/commit/8e6467e98b34c2e30da67c7a9660748d50447de0))
+* ensure 'build promise' does not fail when there are no workflows and when logging that no promise.yaml has been found ([0dd8a90](https://github.com/syntasso/kratix-cli/commit/0dd8a907d951c2da6bf70f3ff6ef451cce894544))
+* error gracefully when no workflows exist when building a container ([d0a2810](https://github.com/syntasso/kratix-cli/commit/d0a28104245eed60b5dc3afaac75a546b56d0ec9))
+* error if the --name flag specifies a non-existent container name ([63aaefa](https://github.com/syntasso/kratix-cli/commit/63aaefafc20b3270bc6673ecf7b58a8d38f28bd9))
+* handle no promise or workflow file existing ([725c8c2](https://github.com/syntasso/kratix-cli/commit/725c8c29c40a0a63596b1fd80fb90842d342d13e))
+* increase no_output_timeout for helm operator tests ([29e4dac](https://github.com/syntasso/kratix-cli/commit/29e4dac408c5b413459d878b7c7a3d4ce9737d3c))
+* make 'build container' command description more descriptive ([e6f5b99](https://github.com/syntasso/kratix-cli/commit/e6f5b994c125e9f374e4efe07476463b8acb409c))
+* refactor parsing args logic ([e7ebf52](https://github.com/syntasso/kratix-cli/commit/e7ebf5233aa881e7046f549a92d93e6f46e37636))
+* update buildx example with build args ([2c69014](https://github.com/syntasso/kratix-cli/commit/2c6901448f81ba3faa41aec95b0e451433cd463e))
+
 ## [0.1.0](https://github.com/syntasso/kratix-cli/compare/v0.1.0...v0.1.0) (2024-07-30)
 
 
