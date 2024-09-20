@@ -110,6 +110,9 @@ workflows:
       - clone-cli
       - run-tests:
           requires: [clone-cli]
+          filters:
+            tags:
+              ignore: /release-please-.*/
       - update-release-pr:
           context: [goreleaser, github-token]
           requires: [run-tests]
