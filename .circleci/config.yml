@@ -55,9 +55,6 @@ jobs:
     docker:
       - image: cimg/node:current
     resource_class: small
-    parameters:
-      path:
-        type: string
     steps:
       - attach_workspace:
           at: .
