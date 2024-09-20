@@ -58,3 +58,6 @@ build-and-push-helm-promise-aspect:
 		--tag ${HELM_ASPECT_TAG}:latest \
 		--file aspects/helm-promise/Dockerfile \
 		aspects/helm-promise
+
+release:
+	goreleaser release --auto-snapshot --prepare --clean --config .goreleaser.yaml

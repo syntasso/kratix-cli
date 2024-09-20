@@ -1,5 +1,32 @@
 version: 2.1
 
+orbs:
+  gh: circleci/github-cli@2.3.0
+  golang: circleci/go@1.11.0
+
+commands:
+  install_software:
+    steps:
+      - golang/install:
+          cache: true
+          version: 1.22.6
+      - run:
+          name: Install yq
+          command: |
+            curl -L https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64 -o yq
+            mv yq ~/bin/yq
+            chmod +x ~/bin/yq
+      - run:
+          name: Install Release tools
+          command: |
+            echo "Installing goreleaser"
+            curl -sLo goreleaser.tar.gz https://github.com/goreleaser/goreleaser-pro/releases/download/v2.3.2-pro/goreleaser-pro_Linux_x86_64.tar.gz
+            tar -xzf goreleaser.tar.gz
+            mv goreleaser ~/bin/goreleaser
+            chmod +x ~/bin/goreleaser
+      - attach_workspace:
+          at: .
+
 jobs:
   clone-cli:
     docker:
@@ -24,9 +51,72 @@ jobs:
           command: make test
           no_output_timeout: 2m
 
+  update-release-pr:
+    docker:
+      - image: cimg/node:current
+    resource_class: small
+    parameters:
+      path:
+        type: string
+    steps:
+      - attach_workspace:
+          at: .
+      - run: sudo npm install -g release-please
+      - run:
+          name: Create pending releases
+          command: |
+            release-please \
+              --token=$GITHUB_TOKEN \
+              --repo-url=syntasso/kratix-cli \
+              github-release
+      - run:
+          name: Update Release PR
+          command: |
+            release-please \
+              --token=$GITHUB_TOKEN \
+              --repo-url=syntasso/kratix-cli \
+              release-pr
+
+
+  make-release:
+    executor: machine-medium
+    steps:
+      - attach_workspace:
+          at: .
+      - gh/setup
+      - install_software
+      - run:
+          name: Release Package
+          command: |
+            export VERSION="<< pipeline.git.tag >>"
+
+            gh config set prompt disabled
+
+            set -eux
+
+            VERSION="${VERSION}" make release
+
+            echo "Uploading release artefacts to GitHub"
+            gh release upload $CIRCLE_TAG ${PACKAGE_NAME}/dist/*.{json,gz}
+
 workflows:
   test:
     jobs:
       - clone-cli
       - run-tests:
           requires: [clone-cli]
+      - update-release-pr:
+          requires: [run-tests]
+          filters:
+            branches:
+              only:
+                - main
+  release:
+    jobs:
+      - make-release:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^.*-v.*/
+
