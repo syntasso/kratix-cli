@@ -122,6 +122,7 @@ workflows:
                 - main
   release:
     jobs:
+      - clone-cli
       - make-release:
           context: [goreleaser, github-token]
           filters:
