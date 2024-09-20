@@ -129,6 +129,7 @@ workflows:
             tags:
               only: /v.*/
       - make-release:
+          requires: [clone-cli]
           context: [goreleaser, github-token]
           filters:
             branches:
