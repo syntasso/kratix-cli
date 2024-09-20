@@ -102,7 +102,7 @@ jobs:
             VERSION="${VERSION}" make release
 
             echo "Uploading release artefacts to GitHub"
-            gh release upload $CIRCLE_TAG ${PACKAGE_NAME}/dist/*.{json,gz}
+            gh release upload $CIRCLE_TAG /dist/*.{json,gz}
 
 workflows:
   test:
