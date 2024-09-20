@@ -10,7 +10,7 @@ test: # Run tests
 	go run github.com/onsi/ginkgo/v2/ginkgo -r
 
 build: # Build the binary
-	go build -o bin/kratix main.go
+	CGO_ENABLED=0 go build -o bin/kratix main.go
 
 build-aspects: build-operator-promise-aspect build-helm-promise-aspect  # build all aspects
 
