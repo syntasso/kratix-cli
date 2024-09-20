@@ -103,6 +103,7 @@ workflows:
       - run-tests:
           requires: [clone-cli]
       - update-release-pr:
+          context: [goreleaser, github-token]
           requires: [run-tests]
           filters:
             branches:
@@ -111,6 +112,7 @@ workflows:
   release:
     jobs:
       - make-release:
+          context: [goreleaser, github-token]
           filters:
             branches:
               ignore: /.*/
