@@ -4,6 +4,14 @@ orbs:
   gh: circleci/github-cli@2.3.0
   golang: circleci/go@1.11.0
 
+executors:
+  machine-medium:
+    machine:
+      image: ubuntu-2204:2024.01.2
+      docker_layer_caching: true
+    working_directory: ~/repo
+    resource_class: medium
+
 commands:
   install_software:
     steps:
