@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/syntasso/kratix-cli/compare/v0.2.0...v0.2.1) (2024-09-20)
+
+
+### Bug Fixes
+
+* build a statically linked binary ([2dbcc96](https://github.com/syntasso/kratix-cli/commit/2dbcc9635f7a2e874973aa3083f1f2d3720a5622))
+
 ## [0.2.0](https://github.com/syntasso/kratix-cli/compare/v0.1.0...v0.2.0) (2024-09-13)
 
 
