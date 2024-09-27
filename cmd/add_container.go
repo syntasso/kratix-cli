@@ -51,7 +51,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	}
 
 	pipelineInput := args[0]
-	containerArgs, err := ParseContainerCmdArgs(pipelineInput)
+	containerArgs, err := ParseContainerCmdArgs(pipelineInput, 3)
 	if err != nil {
 		return err
 	}
@@ -68,16 +68,10 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 }
 
 func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrite bool) error {
-	if c.Lifecycle != "promise" && c.Lifecycle != "resource" {
-		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", c.Lifecycle)
-	}
-
-	if c.Action != "configure" && c.Action != "delete" {
-		return fmt.Errorf("invalid action: %s, expected one of: configure, delete", c.Action)
-	}
-
-	if c.Pipeline == "" {
-		return fmt.Errorf("pipeline name cannot be empty")
+	var err error
+	err = validateContainerArgs(c)
+	if err != nil {
+		return err
 	}
 
 	container := v1alpha1.Container{
@@ -100,7 +94,6 @@ func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrit
 	var pipelines []v1alpha1.Pipeline
 	var pipelineIdx = -1
 	var fileBytes []byte
-	var err error
 	if splitFiles && workflowFileFound(filePath) {
 		fileBytes, err = os.ReadFile(filePath)
 		if err != nil {
@@ -194,6 +187,22 @@ func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrit
 		return err
 	}
 	fmt.Printf("generated the %s/%s/%s/%s in %s \n", c.Lifecycle, c.Action, c.Pipeline, containerName, filePath)
+
+	return nil
+}
+
+func validateContainerArgs(c *ContainerCmdArgs) error {
+	if c.Lifecycle != "promise" && c.Lifecycle != "resource" {
+		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", c.Lifecycle)
+	}
+
+	if c.Action != "configure" && c.Action != "delete" {
+		return fmt.Errorf("invalid action: %s, expected one of: configure, delete", c.Action)
+	}
+
+	if c.Pipeline == "" {
+		return fmt.Errorf("pipeline name cannot be empty")
+	}
 
 	return nil
 }

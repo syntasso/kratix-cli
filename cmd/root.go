@@ -64,15 +64,26 @@ func templateFiles(templates embed.FS, outputDir string, filesToTemplate map[str
 	return nil
 }
 
-func ParseContainerCmdArgs(containerPath string) (*ContainerCmdArgs, error) {
+func ParseContainerCmdArgs(containerPath string, expectedArgCount int) (*ContainerCmdArgs, error) {
 	parts := strings.Split(containerPath, "/")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid pipeline format: %s, expected format: LIFECYCLE/ACTION/PIPELINE-NAME", containerPath)
+
+	if len(parts) != expectedArgCount {
+		expectedFormat := "LIFECYCLE/ACTION/PIPELINE-NAME"
+		if expectedArgCount == 4 {
+			expectedFormat += "/CONTAINER-NAME"
+		}
+		return nil, fmt.Errorf("invalid pipeline format: %s, expected format: %s", containerPath, expectedFormat)
 	}
 
-	return &ContainerCmdArgs{
+	cmdArgs := &ContainerCmdArgs{
 		Lifecycle: parts[0],
 		Action:    parts[1],
 		Pipeline:  parts[2],
-	}, nil
+	}
+
+	if expectedArgCount == 4 {
+		cmdArgs.Container = parts[3]
+	}
+
+	return cmdArgs, nil
 }

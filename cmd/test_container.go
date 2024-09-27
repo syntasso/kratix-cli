@@ -17,9 +17,4 @@ var (
 
 func init() {
 	testCmd.AddCommand(testContainerCmd)
-
-	testCmd.PersistentFlags().StringVarP(&testImage, "image", "i", "", "The image used by this container")
-	testCmd.PersistentFlags().StringVarP(&testcaseDir, "dir", "d", ".", "Directory containing testcases")
-
-	testCmd.MarkPersistentFlagRequired("image")
 }

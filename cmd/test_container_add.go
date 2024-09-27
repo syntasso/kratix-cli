@@ -6,47 +6,49 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 var testContainerAddCmd = &cobra.Command{
-	Use:   "add --image CONTAINER-IMAGE TESTCASE-NAME",
-	Short: "Adds a new testcase for the Kratix container",
+	Use:   "add LIFECYCLE/ACTION/PIPELINE-NAME/CONTAINER-NAME --testcase TESTCASE-NAME",
+	Short: "Adds a new testcase for the Kratix container image",
 	Example: `  # add a container testcase directory for a given image
-  > kratix test container add \
-     --image ghcr.io/syntasso/my-image:v0.1.0
+  > kratix test container add resource/configure/instance/syntasso-postgres-resource \
      --testcase handles_empty_metadata`,
 	RunE: TestContainerAdd,
 	Args: cobra.ExactArgs(1),
 }
 
 var (
-	inputObject string
+	inputObject, testcaseName string
 )
 
 func init() {
 	testContainerCmd.AddCommand(testContainerAddCmd)
 
 	testContainerAddCmd.Flags().StringVarP(&inputObject, "input-object", "o", "", "The path to the input object to use for this testcase")
+	testContainerAddCmd.Flags().StringVarP(&testcaseName, "testcase", "t", "", "The name of the testcase to add")
 
 	testContainerAddCmd.MarkFlagRequired("testcase")
 }
 
 func TestContainerAdd(cmd *cobra.Command, args []string) error {
-	testcaseName := args[0]
-
-	imageName := strings.Split(testImage, ":")[0]
-	formattedImageName := strings.ReplaceAll(imageName, "/", "_")
-	formattedImageName = strings.ReplaceAll(formattedImageName, ".", "_")
-
-	imageDir := path.Join(testcaseDir, formattedImageName)
-
-	// validate testcase name
-	var testcaseDir string
 	var err error
-	if testcaseDir, err = validateTestcaseName(testcaseName, imageDir); err != nil {
+
+	pipelineInput := args[0]
+	containerArgs, err := ParseContainerCmdArgs(pipelineInput, 4)
+	if err != nil {
+		return err
+	}
+
+	imageTestDir, err := getImageTestDir(containerArgs)
+	if err != nil {
+		return err
+	}
+
+	var testcaseDir string
+	if testcaseDir, err = validateTestcaseName(testcaseName, imageTestDir); err != nil {
 		return err
 	}
 
@@ -73,7 +75,22 @@ func TestContainerAdd(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		var objectFile string
+		if containerArgs.Lifecycle == "resource" {
+			objectFile = path.Join(dir, "example-resource.yaml")
+		} else {
+			objectFile = path.Join(dir, "promise.yaml")
+		}
+		fmt.Printf("No input object provided, copying %s\n", objectFile)
+		err = copyFile(objectFile, path.Join(beforeDir, "input", "object.yaml"))
+		if err != nil {
+			return err
+		}
 	}
+
+	fmt.Printf("Testcase %s added successfully! ✅\n\n", testcaseName)
+	fmt.Printf("Customise your testcase by editing the files in %s\n", testcaseDir)
 
 	return nil
 }
@@ -120,4 +137,14 @@ func validateTestcaseName(testcaseName, imageDir string) (string, error) {
 	}
 
 	return testcaseDir, nil
+}
+
+func getImageTestDir(containerArgs *ContainerCmdArgs) (string, error) {
+	containerDir := path.Join(outputDir, "workflows", containerArgs.Lifecycle, containerArgs.Action, containerArgs.Pipeline, containerArgs.Container)
+
+	if _, err := os.Stat(containerDir); os.IsNotExist(err) {
+		return "", fmt.Errorf("container directory does not exist: %s", containerDir)
+	}
+
+	return path.Join(containerDir, "test"), nil
 }

@@ -20,6 +20,7 @@ type ContainerCmdArgs struct {
 	Lifecycle string
 	Action    string
 	Pipeline  string
+	Container string
 }
 
 type BuildContainerOptions struct {
@@ -115,7 +116,7 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, container := range containersToBuild {
-		containerArgs, err := ParseContainerCmdArgs(container)
+		containerArgs, err := ParseContainerCmdArgs(container, 3)
 		if err != nil {
 			return err
 		}

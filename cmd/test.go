@@ -12,4 +12,6 @@ var testCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(testCmd)
+
+	testCmd.PersistentFlags().StringVarP(&outputDir, "dir", "d", ".", "The working directory containing the bootstrapped Promise")
 }
