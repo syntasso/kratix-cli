@@ -140,11 +140,15 @@ func validateTestcaseName(testcaseName, imageDir string) (string, error) {
 }
 
 func getImageTestDir(containerArgs *ContainerCmdArgs) (string, error) {
-	containerDir := path.Join(outputDir, "workflows", containerArgs.Lifecycle, containerArgs.Action, containerArgs.Pipeline, containerArgs.Container)
+	containerDir := getContainerDir(containerArgs)
 
 	if _, err := os.Stat(containerDir); os.IsNotExist(err) {
 		return "", fmt.Errorf("container directory does not exist: %s", containerDir)
 	}
 
 	return path.Join(containerDir, "test"), nil
+}
+
+func getContainerDir(containerArgs *ContainerCmdArgs) string {
+	return path.Join(outputDir, "workflows", containerArgs.Lifecycle, containerArgs.Action, containerArgs.Pipeline, containerArgs.Container)
 }
