@@ -47,13 +47,14 @@ type promiseTemplateValues struct {
 	Singular          string
 	SubCommand        string
 	ResourceConfigure string
+	PromiseConfigure  string
 	CRDSchema         string
 }
 
 func InitPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
 
-	templateValues := generateTemplateValues(promiseName, "promise", "", "")
+	templateValues := generateTemplateValues(promiseName, "promise", "[]", "")
 
 	templates := map[string]string{
 		resourceFileName: fmt.Sprintf("templates/promise/%s.tpl", resourceFileName),
@@ -98,6 +99,7 @@ func generateTemplateValues(promiseName, subCommand, resourceConfigure, crdSchem
 		Singular:          strings.ToLower(kind),
 		SubCommand:        subCommand,
 		ResourceConfigure: resourceConfigure,
+		PromiseConfigure:  "[]",
 		CRDSchema:         crdSchema,
 	}
 }

@@ -29,6 +29,7 @@ spec:
   workflows:
     promise:
       configure:
+{{ .PromiseConfigure | indent 8 }}
     resource:
       configure:
 {{ .ResourceConfigure | indent 8 }}
