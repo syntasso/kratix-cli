@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/syntasso/kratix-cli/compare/v0.2.1...v0.2.2) (2024-10-14)
+
+
+### Bug Fixes
+
+* create valid workflows for plain promise init ([3e979b6](https://github.com/syntasso/kratix-cli/commit/3e979b6d6fe0b994eacf82bebadc4c3285d24bf0))
+* create valid workflows for plain promise init ([9d57553](https://github.com/syntasso/kratix-cli/commit/9d575537dde75697745b64d6f4a21fb15dc574b0))
+
 ## [0.2.1](https://github.com/syntasso/kratix-cli/compare/v0.2.0...v0.2.1) (2024-09-20)
 
 
