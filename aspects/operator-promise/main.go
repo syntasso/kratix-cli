@@ -39,6 +39,8 @@ func main() {
 	outputObject.SetNamespace("default")
 	outputObject.SetKind(operatorKind)
 	outputObject.SetAPIVersion(operatorGroup + "/" + operatorVersion)
+	outputObject.SetLabels(uRequestObj.GetLabels())
+	outputObject.SetAnnotations(uRequestObj.GetAnnotations())
 
 	unstructured.SetNestedField(outputObject.Object, uRequestObj.Object["spec"], "spec")
 
