@@ -12,6 +12,11 @@ import (
 var expectedOutput = `apiVersion: example.com/v1
 kind: Example
 metadata:
+  annotations:
+    image-registry: ghcr.io
+  labels:
+    app.kubernetes.io/name: test-object
+    keyy: value
   name: test-object
   namespace: default
 spec:
