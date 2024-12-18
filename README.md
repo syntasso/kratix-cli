@@ -6,7 +6,7 @@ The best tool you'll ever find to build your Promises!
 To build the CLI, run:
 
 ```bash
-make build
+go install github.com/syntasso/kratix-cli/cmd/kratix@latest
 ```
 The binary will be available at `./bin/kratix`.
 
