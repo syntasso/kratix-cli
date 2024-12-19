@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/syntasso/kratix-cli/compare/v0.2.1...v0.3.0) (2024-12-19)
+
+
+### Features
+
+* `go install` will now install a `kratix` binary ([#66](https://github.com/syntasso/kratix-cli/issues/66)) ([5a84127](https://github.com/syntasso/kratix-cli/commit/5a841271180ef6dda336579b0d0d78319f354d7b)), closes [#65](https://github.com/syntasso/kratix-cli/issues/65)
+* set label&annos from request in operator promise ([#64](https://github.com/syntasso/kratix-cli/issues/64)) ([c9af9c2](https://github.com/syntasso/kratix-cli/commit/c9af9c20a66002aaf3a3a2a6b2b73c26d81094bc))
+
+
+### Bug Fixes
+
+* create valid workflows for plain promise init ([3e979b6](https://github.com/syntasso/kratix-cli/commit/3e979b6d6fe0b994eacf82bebadc4c3285d24bf0))
+* create valid workflows for plain promise init ([9d57553](https://github.com/syntasso/kratix-cli/commit/9d575537dde75697745b64d6f4a21fb15dc574b0))
+
 ## [0.2.1](https://github.com/syntasso/kratix-cli/compare/v0.2.0...v0.2.1) (2024-09-20)
 
 
