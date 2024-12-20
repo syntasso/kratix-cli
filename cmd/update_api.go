@@ -160,7 +160,7 @@ func updateCRDBytes(crd *apiextensionsv1.CustomResourceDefinition) ([]byte, erro
 			propNames := strings.Split(parsedProps[0], ".")
 			propType := parsedProps[1]
 
-			if !slices.Contains([]string{"string", "number", "integer", "object"}, propType) {
+			if !slices.Contains([]string{"string", "number", "integer", "object", "boolean"}, propType) {
 				return nil, fmt.Errorf("unsupported property type: %s", propType)
 			}
 
