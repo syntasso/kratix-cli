@@ -46,7 +46,7 @@ var _ = Describe("update", func() {
 		When("called with --help", func() {
 			It("prints the help", func() {
 				session := r.run("update", "api", "--help")
-				Expect(session.Out).To(gbytes.Say("Command to update promise API"))
+				Expect(session.Out).To(gbytes.Say("Command to update the Promise API"))
 			})
 		})
 
