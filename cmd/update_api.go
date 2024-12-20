@@ -16,24 +16,38 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const updateAPILongHelp = `Command to update the Promise API.
+
+It can be used to update the API GVK, or to add/remove properties to the API.
+
+The --group, --kind, --version, and --plural flags are used to update the API
+GVK. The --property flag is used to add or remove properties from the API. The
+format is PROPERTY-NAME:TYPE. Valid types are string, number, integer, object,
+and boolean.
+
+For object types, the property name can be nested using the '.' character.
+
+To remove a property, append a '-' to the property name.`
+
 var updateAPICmd = &cobra.Command{
 	Use:   "api --property PROPERTY-NAME:TYPE",
 	Short: "Command to update promise API",
-	Long:  "Command to update promise API",
-	Example: `  # add a new property of type string to the API
-  kratix update api --property region:string
+	Long:  updateAPILongHelp,
+	Example: `  # add a new property of type string to the API kratix update api
+	--property region:string
 
   # add an integer 'port' property nested into a 'service' object
   kratix update api --property service.port:integer
-  
+
   # removes the property from the API
   kratix update api --property region-
-  
+
   # updates the API group and the Kind
   kratix update api --group myorg.com --kind Database
-  
+
   # updates the version and the plural form
-  kratix update api --version v1beta3 --plural mydbs`,
+  kratix update api --version v1beta3 --plural mydbs
+  `,
 	RunE: UpdateAPI,
 }
 
