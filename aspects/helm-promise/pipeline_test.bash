@@ -12,6 +12,8 @@ function testOCI {
   mkdir -p $KRATIX_INPUT
   mkdir -p $KRATIX_OUTPUT
 
+
+
   cat <<EOF > "${KRATIX_INPUT}/object.yaml"
 metadata:
   name: foo
@@ -24,6 +26,8 @@ EOF
   rm -rf $KRATIX_INPUT
   rm -rf $KRATIX_OUTPUT
 }
+
+
 
 function testRepo {
   echo "  testing helm chart from a repo with a name"
@@ -45,6 +49,30 @@ EOF
   rm -rf $KRATIX_OUTPUT
 }
 
+
+function testOCIwithNamespace {
+  echo "  testing OCI helm chart with namespace"
+  export KRATIX_INPUT=/tmp/testOCI/kratix-input
+  export KRATIX_OUTPUT=/tmp/testOCI/kratix-output
+  export TARGET_NAMESPACE=kratix-worker-system
+  mkdir -p $KRATIX_INPUT
+  mkdir -p $KRATIX_OUTPUT
+
+
+
+  cat <<EOF > "${KRATIX_INPUT}/object.yaml"
+metadata:
+  name: foo
+spec:
+  foo: bar
+EOF
+
+  CHART_URL=oci://registry-1.docker.io/bitnamicharts/redis CHART_VERSION=19.6.1 $ROOT/pipeline.sh 2>&1 | grep "template foo oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1 --namespace kratix-worker-system --values values.yaml"
+  echo "  testing OCI helm chart with namespace passed"
+  rm -rf $KRATIX_INPUT
+  rm -rf $KRATIX_OUTPUT
+}
+
 function cleanup {
   rm values.yaml 2> /dev/null || true
 }
@@ -54,4 +82,5 @@ trap cleanup EXIT
 echo "running helm promise aspect tests"
 testOCI
 testRepo
+testOCIwithNamespace
 echo "all tests passed"
