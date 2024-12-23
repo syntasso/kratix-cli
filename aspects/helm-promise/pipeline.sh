@@ -26,4 +26,8 @@ if [ -n "${CHART_VERSION:-}" ]; then
     arguments="$arguments --version $CHART_VERSION"
 fi
 
+if [ -n "${TARGET_NAMESPACE:-}" ]; then
+    arguments="$arguments --namespace $TARGET_NAMESPACE"
+fi
+
 $HELM_BINARY template $name $arguments --values values.yaml > $KRATIX_OUTPUT/object.yaml
