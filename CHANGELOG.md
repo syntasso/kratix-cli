@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/syntasso/kratix-cli/compare/v0.3.0...v0.4.0) (2025-01-27)
+
+
+### Features
+
+* add support for boolean types ([63244bf](https://github.com/syntasso/kratix-cli/commit/63244bf40109c6070e99af418d0afc2c017e5bea))
+
+
+### Bug Fixes
+
+* improve help of update api subcommand ([42d6c46](https://github.com/syntasso/kratix-cli/commit/42d6c46d4da441c83801000b1e004e162049f658))
+* include path to main.go in goreleaseer ([#73](https://github.com/syntasso/kratix-cli/issues/73)) ([600bd11](https://github.com/syntasso/kratix-cli/commit/600bd114c25301b3be603b3833b3cfa60050e8f3))
+
 ## [0.3.0](https://github.com/syntasso/kratix-cli/compare/v0.2.1...v0.3.0) (2024-12-19)
 
 
