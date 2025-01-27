@@ -3,11 +3,19 @@
 The best tool you'll ever find to build your Promises!
 
 ## Installation
-To build the CLI, run:
+To install the CLI, run:
 
 ```bash
 go install github.com/syntasso/kratix-cli/cmd/kratix@latest
 ```
+
+## Build
+To build a dev version of the CLI, run:
+
+```bash
+make build
+```
+
 The binary will be available at `./bin/kratix`.
 
 ## Usage
