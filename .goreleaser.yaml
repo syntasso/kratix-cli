@@ -16,6 +16,7 @@ builds:
     ldflags:
       - -X main.version={{.Version}}
     binary: kratix
+    main: ./cmd/kratix/
 
 archives:
   - format: tar.gz
