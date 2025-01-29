@@ -60,4 +60,4 @@ build-and-push-helm-promise-aspect:
 		aspects/helm-promise
 
 release:
-	goreleaser release --auto-snapshot --prepare --clean --config .goreleaser.yaml
+	goreleaser release --prepare --clean --config .goreleaser.yaml

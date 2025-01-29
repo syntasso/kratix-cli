@@ -20,8 +20,8 @@ import (
 	"github.com/syntasso/kratix-cli/cmd"
 )
 
-// set at build time by goreleaser, equal to tag name without the v prefix
-var version = ""
+// needs to be updated before cutting a new release to desired version and should match the next version in .release-please-manifest.json
+var version = "0.4.0"
 
 func main() {
 	cmd.Execute(version)
