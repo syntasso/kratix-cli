@@ -13,6 +13,16 @@
         {
           "type": "fix",
           "section": "Bug Fixes"
+        },
+        {
+          "type": "chore",
+          "section": "Chores",
+          "hidden": false
+        },
+        {
+          "type": "build",
+          "section": "Build System",
+          "hidden": false
         }
       ]
     }
