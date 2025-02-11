@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/syntasso/kratix-cli/compare/v0.4.0...v0.4.1) (2025-02-11)
+
+
+### Chores
+
+* include chores in changelog ([d3fe2cc](https://github.com/syntasso/kratix-cli/commit/d3fe2cc2b2f1947a86ff460ae3a9825530cc0fec))
+* set version in code ([1de09d2](https://github.com/syntasso/kratix-cli/commit/1de09d2dc38f0c61f7989d36f62e24b40084917c))
+
 ## [0.4.0](https://github.com/syntasso/kratix-cli/compare/v0.3.0...v0.4.0) (2025-01-27)
 
 
