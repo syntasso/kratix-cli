@@ -8,11 +8,23 @@
       "changelog-sections": [
         {
           "type": "feat",
-          "section": "Features"
+          "section": "Features",
+          "hidden": false
         },
         {
           "type": "fix",
-          "section": "Bug Fixes"
+          "section": "Bug Fixes",
+          "hidden": false
+        },
+        {
+          "type": "perf",
+          "section": "Performance Improvements",
+          "hidden": false
+        },
+        {
+          "type": "revert",
+          "section": "Reverts",
+          "hidden": false
         },
         {
           "type": "chore",
