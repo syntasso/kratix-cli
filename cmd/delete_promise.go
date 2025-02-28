@@ -53,8 +53,6 @@ func init() {
 
 func deletePromise(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
-	fmt.Println("Deleting promise " + name)
-
 	k8sClient, err := getControllerRuntimeClient()
 	if err != nil {
 		return fmt.Errorf("Error getting clientset: %v", err)
@@ -66,16 +64,14 @@ func deletePromise(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Error getting promise: %v", err)
 	}
 
-	initialFinalizers := promise.GetFinalizers()
-
-	fmt.Printf("There are %d stages of deletion to execute before the promise is deleted\n", len(initialFinalizers))
-
 	err = k8sClient.Delete(ctx, promise)
 	if err != nil {
 		return fmt.Errorf("Error deleting promise: %v", err)
 	}
 
-	return loopOnFinalizers(ctx, k8sClient, initialFinalizers)
+	fmt.Printf("Deleting Promise: %s\n", name)
+
+	return loopOnFinalizers(ctx, k8sClient)
 }
 
 func getControllerRuntimeClient() (client.Client, error) {

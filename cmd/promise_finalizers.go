@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	"github.com/syntasso/kratix/api/v1alpha1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -27,6 +29,10 @@ type Finalizer struct {
 }
 
 var (
+	promiseFinalizersOrderedByExecution = []Finalizer{}
+)
+
+func init() {
 	promiseFinalizersOrderedByExecution = []Finalizer{
 		{
 			name:       runDeleteWorkflowsFinalizer,
@@ -53,9 +59,9 @@ var (
 			handleFunc: handleCRDCleanupFinalizer,
 		},
 	}
-)
+}
 
-func loopOnFinalizers(ctx context.Context, k8sClient client.Client, _ []string) error {
+func loopOnFinalizers(ctx context.Context, k8sClient client.Client) error {
 	promise := &v1alpha1.Promise{}
 	err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, promise)
 	if err != nil {
@@ -84,29 +90,76 @@ func loopOnFinalizers(ctx context.Context, k8sClient client.Client, _ []string) 
 		}
 	}
 
-	fmt.Println("Promise deleted")
+	fmt.Println("✅ Promise successfully deleted.")
 	return nil
 }
 
 func handleRunDeleteWorkflowsFinalizer(ctx context.Context, k8sClient client.Client) error {
-	fmt.Printf("  - Kratix is running any Delete workflows for the Promise. You can check the status of the workflows by running: kubectl get pods -n kratix-platform-system\n")
-	fmt.Printf("    This may take a few minutes, polling..")
+	index := getIndex(runDeleteWorkflowsFinalizer)
+	fmt.Printf("[%d/6] Running Delete Workflows...\n", index)
+	fmt.Printf("    Polling...")
 
-	pollUntilFinalizersRemoved(ctx, k8sClient, runDeleteWorkflowsFinalizer, nil)
+	pollUntilFinalizersRemoved(ctx, k8sClient, runDeleteWorkflowsFinalizer, func() {
+		labelSelector := client.MatchingLabels{
+			"kratix.io/promise-name":    name,
+			"kratix.io/workflow-action": "delete",
+			"kratix.io/workflow-type":   "promise",
+		}
+
+		pods := &corev1.PodList{}
+		err := k8sClient.List(context.TODO(), pods, labelSelector)
+		if err != nil {
+			fmt.Println("Error listing pods:", err)
+			return
+		}
+
+		if len(pods.Items) == 0 {
+			return
+		}
+
+		fmt.Printf("\n    Delete workflow Pod %s/%s still in-flight, status: %v \n", pods.Items[0].Namespace, pods.Items[0].Name, pods.Items[0].Status.Phase)
+	})
 	return nil
 }
 
 func handleRemoveAllWorkflowJobsFinalizer(ctx context.Context, k8sClient client.Client) error {
-	fmt.Printf("  - Kratix is deleting all Kuberntes Jobs relating to the Promise. You can check the status of the jobs by running: kubectl get jobs -n kratix-platform-system\n")
-	fmt.Printf("    This is normally very quick, polling..")
+	index := getIndex(removeAllWorkflowJobsFinalizer)
+	fmt.Printf("[%d/6] Deleting Kubernetes Jobs...\n", index)
+	fmt.Printf("    Polling...")
 
-	pollUntilFinalizersRemoved(ctx, k8sClient, removeAllWorkflowJobsFinalizer, nil)
+	pollUntilFinalizersRemoved(ctx, k8sClient, removeAllWorkflowJobsFinalizer, func() {
+		labelSelector := client.MatchingLabels{
+			"kratix.io/promise-name":    name,
+			"kratix.io/workflow-action": "delete",
+			"kratix.io/workflow-type":   "promise",
+		}
+
+		jobs := &batchv1.JobList{}
+		err := k8sClient.List(context.TODO(), jobs, labelSelector)
+		if err != nil {
+			fmt.Println("Error listing pods:", err)
+			return
+		}
+
+		if len(jobs.Items) == 0 {
+			return
+		}
+
+		names := []string{}
+		for _, resource := range jobs.Items {
+			names = append(names, resource.GetNamespace()+"/"+resource.GetName())
+		}
+
+		fmt.Printf("\n    %d Remaining Jobs: %v. Polling..", len(jobs.Items), names)
+	})
 	return nil
 }
 
 func handleResourceRequestCleanupFinalizer(ctx context.Context, k8sClient client.Client) error {
-	fmt.Printf("  - Kratix is deleting all resource requests for the Promise. You can check the status of the resource requests by running: kubectl get resource-requests -n kratix-platform-system\n")
-	fmt.Printf("    This can take a long time, polling..")
+	index := getIndex(resourceRequestCleanupFinalizer)
+	fmt.Printf("[%d/6] Deleting Resource Requests...\n", index)
+	fmt.Printf("    Checking status: kubectl get resource-requests -n kratix-platform-system\n")
+	fmt.Printf("    Polling...")
 
 	promise := &v1alpha1.Promise{}
 	err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, promise)
@@ -132,30 +185,33 @@ func handleResourceRequestCleanupFinalizer(ctx context.Context, k8sClient client
 			names = append(names, resource.GetNamespace()+"/"+resource.GetName())
 		}
 
-		fmt.Printf("\n   %d resources remaining: %v. Polling..", len(resourceList.Items), names)
+		fmt.Printf("\n    %d Remaining resource requests: %v. Polling..", len(resourceList.Items), names)
 	})
 	return nil
 }
 
 func handleDynamicControllerDependantResourcesCleanupFinalizer(ctx context.Context, k8sClient client.Client) error {
-	fmt.Printf("  - Kratix is deleting all additional Kubernetes resoures associated with the Promise\n")
-	fmt.Printf("    This is normally very quick, polling..")
+	index := getIndex(dynamicControllerDependantResourcesCleanupFinalizer)
+	fmt.Printf("[%d/6] Deleting Additional Kubernetes Resources...\n", index)
+	fmt.Printf("    Polling..")
 
 	pollUntilFinalizersRemoved(ctx, k8sClient, dynamicControllerDependantResourcesCleanupFinalizer, nil)
 	return nil
 }
 
 func handleDependenciesCleanupFinalizer(ctx context.Context, k8sClient client.Client) error {
-	fmt.Printf("  - Kratix is deleting any dependency workloads written to any StateStores\n")
-	fmt.Printf("    This is normally very quick, polling..")
+	index := getIndex(dependenciesCleanupFinalizer)
+	fmt.Printf("[%d/6] Removing Dependency Workloads...\n", index)
+	fmt.Printf("    Polling..")
 
 	pollUntilFinalizersRemoved(ctx, k8sClient, dependenciesCleanupFinalizer, nil)
 	return nil
 }
 
 func handleCRDCleanupFinalizer(ctx context.Context, k8sClient client.Client) error {
-	fmt.Printf("  - Kratix is deleting the CRD for the Promise\n")
-	fmt.Printf("    This is normally very quick, polling..")
+	index := getIndex(crdCleanupFinalizer)
+	fmt.Printf("[%d/6] Deleting CRD...\n", index)
+	fmt.Printf("    Polling..")
 
 	pollUntilFinalizersRemoved(ctx, k8sClient, crdCleanupFinalizer, nil)
 	return nil
@@ -187,4 +243,13 @@ func pollUntilFinalizersRemoved(ctx context.Context, k8sClient client.Client, fi
 		count++
 	}
 	fmt.Printf("\n\n")
+}
+
+func getIndex(finalizer string) int {
+	for i, f := range promiseFinalizersOrderedByExecution {
+		if f.name == finalizer {
+			return i + 1
+		}
+	}
+	return -1
 }
