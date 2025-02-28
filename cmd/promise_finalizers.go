@@ -21,6 +21,9 @@ const (
 	dependenciesCleanupFinalizer                        = v1alpha1.KratixPrefix + "dependencies-cleanup"
 	removeAllWorkflowJobsFinalizer                      = v1alpha1.KratixPrefix + "workflows-cleanup"
 	runDeleteWorkflowsFinalizer                         = v1alpha1.KratixPrefix + "delete-workflows"
+
+	green = "\033[32m"
+	reset = "\033[0m"
 )
 
 type Finalizer struct {
@@ -96,8 +99,7 @@ func loopOnFinalizers(ctx context.Context, k8sClient client.Client) error {
 
 func handleRunDeleteWorkflowsFinalizer(ctx context.Context, k8sClient client.Client) error {
 	index := getIndex(runDeleteWorkflowsFinalizer)
-	fmt.Printf("[%d/6] Running Delete Workflows...\n", index)
-	fmt.Printf("    Polling...")
+	fmt.Printf("[%s%d/6%s] Delete workflow in progress..", green, index, reset)
 
 	pollUntilFinalizersRemoved(ctx, k8sClient, runDeleteWorkflowsFinalizer, func() {
 		labelSelector := client.MatchingLabels{
@@ -117,15 +119,14 @@ func handleRunDeleteWorkflowsFinalizer(ctx context.Context, k8sClient client.Cli
 			return
 		}
 
-		fmt.Printf("\n    Delete workflow Pod %s/%s still in-flight, status: %v \n", pods.Items[0].Namespace, pods.Items[0].Name, pods.Items[0].Status.Phase)
+		fmt.Printf("\n    Delete workflow Pod %s/%s still in-flight, status: %v..", pods.Items[0].Namespace, pods.Items[0].Name, pods.Items[0].Status.Phase)
 	})
 	return nil
 }
 
 func handleRemoveAllWorkflowJobsFinalizer(ctx context.Context, k8sClient client.Client) error {
 	index := getIndex(removeAllWorkflowJobsFinalizer)
-	fmt.Printf("[%d/6] Deleting Kubernetes Jobs...\n", index)
-	fmt.Printf("    Polling...")
+	fmt.Printf("[%s%d/6%s] Workflow cleanup in progress..", green, index, reset)
 
 	pollUntilFinalizersRemoved(ctx, k8sClient, removeAllWorkflowJobsFinalizer, func() {
 		labelSelector := client.MatchingLabels{
@@ -150,16 +151,14 @@ func handleRemoveAllWorkflowJobsFinalizer(ctx context.Context, k8sClient client.
 			names = append(names, resource.GetNamespace()+"/"+resource.GetName())
 		}
 
-		fmt.Printf("\n    %d Remaining Jobs: %v. Polling..", len(jobs.Items), names)
+		fmt.Printf("\n      %d Remaining Jobs: %v. Polling..", len(jobs.Items), names)
 	})
 	return nil
 }
 
 func handleResourceRequestCleanupFinalizer(ctx context.Context, k8sClient client.Client) error {
 	index := getIndex(resourceRequestCleanupFinalizer)
-	fmt.Printf("[%d/6] Deleting Resource Requests...\n", index)
-	fmt.Printf("    Checking status: kubectl get resource-requests -n kratix-platform-system\n")
-	fmt.Printf("    Polling...")
+	fmt.Printf("[%s%d/6%s] Resource request cleanup in progress...", green, index, reset)
 
 	promise := &v1alpha1.Promise{}
 	err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, promise)
@@ -185,15 +184,14 @@ func handleResourceRequestCleanupFinalizer(ctx context.Context, k8sClient client
 			names = append(names, resource.GetNamespace()+"/"+resource.GetName())
 		}
 
-		fmt.Printf("\n    %d Remaining resource requests: %v. Polling..", len(resourceList.Items), names)
+		fmt.Printf("\n      %d Remaining resource requests: %v..", len(resourceList.Items), names)
 	})
 	return nil
 }
 
 func handleDynamicControllerDependantResourcesCleanupFinalizer(ctx context.Context, k8sClient client.Client) error {
 	index := getIndex(dynamicControllerDependantResourcesCleanupFinalizer)
-	fmt.Printf("[%d/6] Deleting Additional Kubernetes Resources...\n", index)
-	fmt.Printf("    Polling..")
+	fmt.Printf("[%s%d/6%s] Additional Kubernetes Resources cleanup in progress..", green, index, reset)
 
 	pollUntilFinalizersRemoved(ctx, k8sClient, dynamicControllerDependantResourcesCleanupFinalizer, nil)
 	return nil
@@ -201,8 +199,7 @@ func handleDynamicControllerDependantResourcesCleanupFinalizer(ctx context.Conte
 
 func handleDependenciesCleanupFinalizer(ctx context.Context, k8sClient client.Client) error {
 	index := getIndex(dependenciesCleanupFinalizer)
-	fmt.Printf("[%d/6] Removing Dependency Workloads...\n", index)
-	fmt.Printf("    Polling..")
+	fmt.Printf("[%s%d/6%s] Dependency Workloads cleanup in progress..", green, index, reset)
 
 	pollUntilFinalizersRemoved(ctx, k8sClient, dependenciesCleanupFinalizer, nil)
 	return nil
@@ -210,15 +207,14 @@ func handleDependenciesCleanupFinalizer(ctx context.Context, k8sClient client.Cl
 
 func handleCRDCleanupFinalizer(ctx context.Context, k8sClient client.Client) error {
 	index := getIndex(crdCleanupFinalizer)
-	fmt.Printf("[%d/6] Deleting CRD...\n", index)
-	fmt.Printf("    Polling..")
+	fmt.Printf("[%s%d/6%s] Deleting CRD..", green, index, reset)
 
 	pollUntilFinalizersRemoved(ctx, k8sClient, crdCleanupFinalizer, nil)
 	return nil
 }
 
 func pollUntilFinalizersRemoved(ctx context.Context, k8sClient client.Client, finalizer string, runFunc func()) {
-	count := 10
+	count := 5
 	for {
 		fmt.Printf(".")
 		promise := &v1alpha1.Promise{}
@@ -234,7 +230,7 @@ func pollUntilFinalizersRemoved(ctx context.Context, k8sClient client.Client, fi
 			break
 		}
 
-		if runFunc != nil && count == 10 {
+		if runFunc != nil && count == 5 {
 			runFunc()
 			count = 0
 		}
@@ -242,7 +238,7 @@ func pollUntilFinalizersRemoved(ctx context.Context, k8sClient client.Client, fi
 		time.Sleep(1 * time.Second)
 		count++
 	}
-	fmt.Printf("\n\n")
+	fmt.Printf("\n\n\n")
 }
 
 func getIndex(finalizer string) int {
