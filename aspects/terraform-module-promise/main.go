@@ -81,8 +81,14 @@ func main() {
 	}
 
 	// Add parameters from .spec
-	for key, value := range spec {
-		module["module"][uniqueName][key] = value
+	for key, value := range spec["vars"].(map[string]any) {
+		valSlice, ok := value.([]any)
+		//if its not an array and its not nil, add it to the module
+		//if its an array and its not empty, add it to the module
+		//this gets around adding a bunch of empty arrays to the module
+		if (!ok && value != nil) || (ok && len(valSlice) > 0) {
+			module["module"][uniqueName][key] = value
+		}
 	}
 
 	// Convert to JSON

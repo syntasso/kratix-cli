@@ -17,9 +17,14 @@ type TerraformVariable struct {
 
 // VariablesToCRDSpecSchema converts a list of Terraform variables to a CRD JSON schema and returns warnings for unsupported types
 func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProps, []string) {
-	specSchema := &v1.JSONSchemaProps{
+	varSchema := &v1.JSONSchemaProps{
 		Type:       "object",
 		Properties: make(map[string]v1.JSONSchemaProps),
+	}
+
+	specSchema := &v1.JSONSchemaProps{
+		Type:       "object",
+		Properties: map[string]v1.JSONSchemaProps{"vars": *varSchema},
 	}
 
 	var warnings []string
@@ -114,7 +119,7 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 			prop.Description = v.Description
 		}
 
-		specSchema.Properties[v.Name] = prop
+		varSchema.Properties[v.Name] = prop
 	}
 
 	return specSchema, warnings
