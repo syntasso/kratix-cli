@@ -7,12 +7,14 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
+// TerraformVariable represents a Terraform input variable
 type TerraformVariable struct {
 	Name        string
 	Type        string
 	Description string
 }
 
+// VariablesToCRDSpecSchema converts a list of Terraform variables to a CRD JSON schema
 func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProps, error) {
 	specSchema := &v1.JSONSchemaProps{
 		Type:       "object",
@@ -35,26 +37,32 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 
 		case strings.HasPrefix(terraformType, "list("):
 			innerType := extractInnerType(terraformType, "list")
-			mappedType, err := mapTerraformType(innerType)
-			if err != nil {
-				return nil, fmt.Errorf("unsupported list type: %s", innerType)
-			}
-			prop = v1.JSONSchemaProps{
-				Type: "array",
-				Items: &v1.JSONSchemaPropsOrArray{
-					Schema: &v1.JSONSchemaProps{Type: mappedType},
-				},
+
+			// Special handling for arrays of maps (e.g., list(map(any)))
+			if strings.HasPrefix(innerType, "map(") {
+				prop = v1.JSONSchemaProps{
+					Type: "array",
+					Items: &v1.JSONSchemaPropsOrArray{
+						Schema: &v1.JSONSchemaProps{
+							Type:                   "object",
+							XPreserveUnknownFields: boolPtr(true),
+						},
+					},
+				}
+			} else {
+				prop = v1.JSONSchemaProps{
+					Type: "array",
+					Items: &v1.JSONSchemaPropsOrArray{
+						Schema: &v1.JSONSchemaProps{Type: innerType},
+					},
+				}
 			}
 
 		case strings.HasPrefix(terraformType, "map("):
-			innerType := extractInnerType(terraformType, "map")
-			mappedType, err := mapTerraformType(innerType)
-			if err != nil {
-				return nil, fmt.Errorf("unsupported map value type: %s", innerType)
-			}
+			// Treat all maps as open objects that allow unknown fields
 			prop = v1.JSONSchemaProps{
-				Type:                 "object",
-				AdditionalProperties: &v1.JSONSchemaPropsOrBool{Schema: &v1.JSONSchemaProps{Type: mappedType}},
+				Type:                   "object",
+				XPreserveUnknownFields: boolPtr(true),
 			}
 
 		case strings.HasPrefix(terraformType, "object("):
@@ -80,21 +88,14 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 	return specSchema, nil
 }
 
+// extractInnerType extracts the inner type from a Terraform complex type (e.g., "list(string)" -> "string").
 func extractInnerType(terraformType, containerType string) string {
 	inner := strings.TrimPrefix(terraformType, containerType+"(")
 	inner = strings.TrimSuffix(inner, ")")
 	return strings.TrimSpace(inner)
 }
 
-func mapTerraformType(terraformType string) (string, error) {
-	switch terraformType {
-	case "string":
-		return "string", nil
-	case "number":
-		return "number", nil
-	case "bool", "boolean":
-		return "boolean", nil
-	default:
-		return "", fmt.Errorf("unsupported inner type: %s", terraformType)
-	}
+// boolPtr returns a pointer to a boolean value
+func boolPtr(b bool) *bool {
+	return &b
 }

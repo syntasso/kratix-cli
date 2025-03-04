@@ -13,6 +13,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/syntasso/kratix v0.121.0
 	github.com/zclconf/go-cty v1.13.0
+	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.15.2
 	k8s.io/api v0.30.2
 	k8s.io/apiextensions-apiserver v0.30.2
@@ -168,7 +169,6 @@ require (
 	gopkg.in/evanphx/json-patch.v5 v5.7.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiserver v0.30.2 // indirect
 	k8s.io/cli-runtime v0.30.0 // indirect
 	k8s.io/client-go v0.30.2 // indirect

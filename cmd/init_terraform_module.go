@@ -6,9 +6,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix-cli/internal"
 	"github.com/syntasso/kratix/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 // terraformModuleCmd represents the terraformModule command
@@ -84,15 +83,6 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 }
 
 func generateTerraformModuleResourceConfigurePipeline() (string, error) {
-	envVars := []corev1.EnvVar{{Name: "CHART_URL", Value: chartURL}}
-	if chartName != "" {
-		envVars = append(envVars, corev1.EnvVar{Name: "CHART_NAME", Value: chartName})
-	}
-
-	if chartVersion != "" {
-		envVars = append(envVars, corev1.EnvVar{Name: "CHART_VERSION", Value: chartVersion})
-	}
-
 	pipelines := []unstructured.Unstructured{
 		{
 			Object: map[string]interface{}{
@@ -104,9 +94,8 @@ func generateTerraformModuleResourceConfigurePipeline() (string, error) {
 				"spec": map[string]interface{}{
 					"containers": []interface{}{
 						v1alpha1.Container{
-							Name:  "instance-configure",
-							Image: "ghcr.io/syntasso/kratix-cli/helm-resource-configure:v0.1.0",
-							Env:   envVars,
+							Name:  "terraform-generate",
+							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.1.0",
 						},
 					},
 				},
