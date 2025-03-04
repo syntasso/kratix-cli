@@ -10,25 +10,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// GetEnv retrieves an environment variable or returns a default value if not set
-func GetEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
-}
-
 func main() {
 	// Default paths
 	yamlFile := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	outputDir := GetEnv("KRATIX_OUTPUT_DIR", "/kratix/output")
-	moduleSource := GetEnv("MODULE_SOURCE", "")
-
-	// Ensure MODEL_SOURCE is set
-	if moduleSource == "" {
-		fmt.Println("Error: MODEL_SOURCE environment variable is not set")
-		os.Exit(1)
-	}
+	moduleSource := MustHaveEnv("MODULE_SOURCE")
+	moduleVersion := MustHaveEnv("MODULE_VERSION")
 
 	// Read YAML file
 	yamlContent, err := os.ReadFile(yamlFile)
@@ -75,7 +62,7 @@ func main() {
 	module := map[string]map[string]map[string]any{
 		"module": {
 			uniqueName: {
-				"source": moduleSource,
+				"source": fmt.Sprintf("git::%s?ref=%s", moduleSource, moduleVersion),
 			},
 		},
 	}
@@ -114,4 +101,19 @@ func main() {
 	}
 
 	fmt.Printf("Terraform JSON configuration written to %s\n", path)
+}
+
+// GetEnv retrieves an environment variable or returns a default value if not set
+func GetEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
+}
+
+func MustHaveEnv(key string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	panic(fmt.Sprintf("Error: %s environment variable is not set", key))
 }
