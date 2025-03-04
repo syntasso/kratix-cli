@@ -12,19 +12,20 @@ import (
 )
 
 // terraformModuleCmd represents the terraformModule command
-var terraformModuleCmd = &cobra.Command{
-	Use:   "terraform-module",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+var (
+	terraformModuleCmd = &cobra.Command{
+		Use:   "tf-module-promise",
+		Short: "Initialize a new promise from a terraform module",
+		Long:  "Initialize a new promise from a terraform module",
+		Example: ` # Initialize a new promise from a terraform module in Git
+	  kratix init tf-module-promise vpc --version v5.19.0 --source https://github.com/terraform-aws-modules/terraform-aws-vpc.git --group syntasso.io --kind VPC
+		`,
+		RunE: InitFromTerraformModule,
+		Args: cobra.ExactArgs(1),
+	}
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	RunE: InitFromTerraformModule,
-}
-
-var moduleSource, moduleVersion string
+	moduleSource, moduleVersion string
+)
 
 func init() {
 	initCmd.AddCommand(terraformModuleCmd)
@@ -50,7 +51,7 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to marshal CRD schema: %w", err)
 	}
 
-	resourceConfigure, err := generateTerraformModuleResourceConfigurePipeline(versionedModuleSourceURL)
+	resourceConfigure, err := generateTerraformModuleResourceConfigurePipeline()
 	if err != nil {
 		return err
 	}
@@ -86,24 +87,28 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-func generateTerraformModuleResourceConfigurePipeline(versionedModuleSourceURL string) (string, error) {
+func generateTerraformModuleResourceConfigurePipeline() (string, error) {
 	pipelines := []unstructured.Unstructured{
 		{
-			Object: map[string]interface{}{
+			Object: map[string]any{
 				"apiVersion": "platform.kratix.io/v1alpha1",
 				"kind":       "Pipeline",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "instance-configure",
 				},
-				"spec": map[string]interface{}{
-					"containers": []interface{}{
+				"spec": map[string]any{
+					"containers": []any{
 						v1alpha1.Container{
 							Name:  "terraform-generate",
 							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.1.0",
 							Env: []corev1.EnvVar{
 								{
 									Name:  "MODULE_SOURCE",
-									Value: versionedModuleSourceURL,
+									Value: moduleSource,
+								},
+								{
+									Name:  "MODULE_VERSION",
+									Value: moduleVersion,
 								},
 							},
 						},
