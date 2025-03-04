@@ -39,16 +39,17 @@ func init() {
 }
 
 type promiseTemplateValues struct {
-	Name              string
-	Group             string
-	Kind              string
-	Version           string
-	Plural            string
-	Singular          string
-	SubCommand        string
-	ResourceConfigure string
-	PromiseConfigure  string
-	CRDSchema         string
+	Name                 string
+	Group                string
+	Kind                 string
+	Version              string
+	Plural               string
+	Singular             string
+	SubCommand           string
+	ResourceConfigure    string
+	PromiseConfigure     string
+	CRDSchema            string
+	DestinationSelectors string
 }
 
 func InitPromise(cmd *cobra.Command, args []string) error {

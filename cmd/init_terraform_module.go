@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix-cli/internal"
 	"github.com/syntasso/kratix/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
@@ -53,7 +54,8 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	}
 
 	promiseName := args[0]
-	templateValues := generateTemplateValues(promiseName, "helm-promise", resourceConfigure, string(crdSchema))
+	templateValues := generateTemplateValues(promiseName, "terraform-module-promise", resourceConfigure, string(crdSchema))
+	templateValues.DestinationSelectors = "- matchLabels:\n    environment: terraform"
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",
@@ -96,6 +98,12 @@ func generateTerraformModuleResourceConfigurePipeline() (string, error) {
 						v1alpha1.Container{
 							Name:  "terraform-generate",
 							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.1.0",
+							Env: []corev1.EnvVar{
+								{
+									Name:  "MODULE_SOURCE",
+									Value: moduleSource,
+								},
+							},
 						},
 					},
 				},
