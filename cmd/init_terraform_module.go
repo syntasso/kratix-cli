@@ -33,14 +33,16 @@ func init() {
 }
 
 func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
-	variables, err := internal.DownloadAndConvertTerraformToCRD(moduleSource, moduleVersion)
+	versionedModuleSourceURL := fmt.Sprintf("git::%s?ref=%s", moduleSource, moduleVersion)
+	variables, err := internal.DownloadAndConvertTerraformToCRD(versionedModuleSourceURL)
 	if err != nil {
 		return fmt.Errorf("failed to download and convert terraform module to CRD: %w", err)
 	}
 
-	crdSpecSchema, err := internal.VariablesToCRDSpecSchema(variables)
-	if err != nil {
-		return fmt.Errorf("failed to convert variables to CRD spec schema: %w", err)
+	crdSpecSchema, warnings := internal.VariablesToCRDSpecSchema(variables)
+
+	for _, warning := range warnings {
+		fmt.Println(warning)
 	}
 
 	crdSchema, err := yaml.Marshal(crdSpecSchema)
@@ -48,7 +50,7 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to marshal CRD schema: %w", err)
 	}
 
-	resourceConfigure, err := generateTerraformModuleResourceConfigurePipeline()
+	resourceConfigure, err := generateTerraformModuleResourceConfigurePipeline(versionedModuleSourceURL)
 	if err != nil {
 		return err
 	}
@@ -84,7 +86,7 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-func generateTerraformModuleResourceConfigurePipeline() (string, error) {
+func generateTerraformModuleResourceConfigurePipeline(versionedModuleSourceURL string) (string, error) {
 	pipelines := []unstructured.Unstructured{
 		{
 			Object: map[string]interface{}{
@@ -101,7 +103,7 @@ func generateTerraformModuleResourceConfigurePipeline() (string, error) {
 							Env: []corev1.EnvVar{
 								{
 									Name:  "MODULE_SOURCE",
-									Value: moduleSource,
+									Value: versionedModuleSourceURL,
 								},
 							},
 						},

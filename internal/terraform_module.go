@@ -15,14 +15,12 @@ import (
 	"github.com/zclconf/go-cty/cty/convert"
 )
 
-func DownloadAndConvertTerraformToCRD(repoURL, version string) ([]TerraformVariable, error) {
+func DownloadAndConvertTerraformToCRD(moduleSource string) ([]TerraformVariable, error) {
 	tempDir, err := os.MkdirTemp("", "terraform-module")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer os.RemoveAll(tempDir)
-
-	moduleSource := fmt.Sprintf("git::%s?ref=%s", repoURL, version)
 
 	err = getter.Get(tempDir, moduleSource)
 	if err != nil {
@@ -33,21 +31,9 @@ func DownloadAndConvertTerraformToCRD(repoURL, version string) ([]TerraformVaria
 
 	variables, err := parseVariablesWithHCL(absPath)
 	if err != nil {
-		fmt.Printf("Error parsing variables: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to parse variables: %w", err)
 	}
 
-	// Print results in a nicely formatted table
-	fmt.Println("Terraform Variables:")
-	fmt.Println("====================")
-	fmt.Printf("%-30s %-30s %-30s %-50s\n", "NAME", "TYPE", "DEFAULT", "DESCRIPTION")
-	fmt.Println(strings.Repeat("-", 140))
-
-	for _, v := range variables {
-		fmt.Printf("%-30s %-30s %-30s %-50s\n", v.Name, v.Type, "", truncateString(v.Description, 50))
-	}
-
-	fmt.Printf("\nTotal variables found: %d\n", len(variables))
 	return variables, nil
 }
 
@@ -60,7 +46,6 @@ func parseVariablesWithHCL(filePath string) ([]TerraformVariable, error) {
 		return nil, fmt.Errorf("failed to read file: %s", err)
 	}
 	fileContent := string(fileBytes)
-	fmt.Println("File content:", fileContent)
 
 	parser := hclparse.NewParser()
 	file, diags := parser.ParseHCLFile(filePath)
@@ -88,8 +73,6 @@ func parseVariablesWithHCL(filePath string) ([]TerraformVariable, error) {
 		variable := TerraformVariable{
 			Name: name,
 		}
-
-		fmt.Println("Parsing variable:", name)
 
 		// Parse variable block attributes
 		varContent, diags := block.Body.Content(&hcl.BodySchema{
