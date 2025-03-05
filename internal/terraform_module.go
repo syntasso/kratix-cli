@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/zclconf/go-cty/cty"
-	"github.com/zclconf/go-cty/cty/convert"
 )
 
 func DownloadAndConvertTerraformToCRD(moduleSource string) ([]TerraformVariable, error) {
@@ -161,51 +160,5 @@ func extractTypeFromExpr(expr hclsyntax.Expression, fileContent string) string {
 		}
 	}
 
-	// Fallback
 	return fmt.Sprintf("%T", expr)
-}
-
-func formatHCLValue(val cty.Value) string {
-	if val.IsNull() {
-		return "null"
-	}
-	switch val.Type() {
-	case cty.String:
-		return fmt.Sprintf("\"%s\"", val.AsString())
-	case cty.Number:
-		f, _ := val.AsBigFloat().Float64()
-		if f == float64(int64(f)) {
-			return fmt.Sprintf("%d", int64(f))
-		}
-		return fmt.Sprintf("%g", f)
-	case cty.Bool:
-		return fmt.Sprintf("%t", val.True())
-	case cty.List(cty.DynamicPseudoType), cty.Set(cty.DynamicPseudoType):
-		vals := val.AsValueSlice()
-		elements := make([]string, 0, len(vals))
-		for _, v := range vals {
-			elements = append(elements, formatHCLValue(v))
-		}
-		return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
-	case cty.Map(cty.DynamicPseudoType):
-		pairs := make([]string, 0)
-		for k, v := range val.AsValueMap() {
-			pairs = append(pairs, fmt.Sprintf("%s = %s", k, formatHCLValue(v)))
-		}
-		return fmt.Sprintf("{%s}", strings.Join(pairs, ", "))
-	default:
-		// Try to convert to string if possible
-		strVal, err := convert.Convert(val, cty.String)
-		if err == nil {
-			return strVal.AsString()
-		}
-		return "<complex value>"
-	}
-}
-
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }
