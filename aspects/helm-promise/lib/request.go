@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 )
 
 func TransformInputToOutput(group, version, kind string) error {

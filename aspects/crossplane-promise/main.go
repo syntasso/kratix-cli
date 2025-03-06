@@ -1,6 +1,10 @@
 package main
 
-import "github.com/syntasso/kratix-cli/aspects/helm-promise/lib"
+import (
+	"log"
+
+	"github.com/syntasso/kratix-cli/aspects/helm-promise/lib"
+)
 
 func main() {
 	group := lib.GetEnvOrDie("GROUP")
@@ -9,6 +13,6 @@ func main() {
 
 	err := lib.TransformInputToOutput(group, version, kind)
 	if err != nil {
-		panic(err)
+		log.Fatalf("%v", err)
 	}
 }
