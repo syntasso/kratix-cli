@@ -68,18 +68,13 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 	}
 
 	storedVersionIdx := findStoredVersionIdx(crd)
-
-	operatorGroup := crd.Spec.Group
-	operatorVersion := crd.Spec.Versions[storedVersionIdx].Name
-	operatorKind := crd.Spec.Names.Kind
-
 	updateOperatorCrd(crd, storedVersionIdx, group, names, version)
 
 	exampleResource := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": fmt.Sprintf("%s/%s", crd.Spec.Group, crd.Spec.Versions[0].Name),
 			"kind":       kind,
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "example-database",
 				"namespace": "default",
 			},
@@ -89,14 +84,28 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 
 	workflowDirectory := filepath.Join("workflows", "resource", "configure")
 
-	pipelines := generateResourceConfigurePipelines(operatorGroup, operatorVersion, operatorKind)
+	envs := []corev1.EnvVar{
+		{
+			Name:  "OPERATOR_GROUP",
+			Value: crd.Spec.Group,
+		},
+		{
+			Name:  "OPERATOR_VERSION",
+			Value: crd.Spec.Versions[storedVersionIdx].Name,
+		},
+		{
+			Name:  "OPERATOR_KIND",
+			Value: crd.Spec.Names.Kind,
+		},
+	}
+	pipelines := generateResourceConfigurePipelines("from-api-to-operator", "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0", envs)
 
 	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, dependencies, crd, pipelines, exampleResource)
 	if err != nil {
 		return err
 	}
 
-	err = writeOperatorPromiseFiles(outputDir, filesToWrite)
+	err = writePromiseFiles(outputDir, filesToWrite)
 	if err != nil {
 		return err
 	}
@@ -168,15 +177,15 @@ func updateOperatorCrd(crd *apiextensionsv1.CustomResourceDefinition, storedVers
 	}
 }
 
-func writeOperatorPromiseFiles(outputDir string, filesToWrite map[string]interface{}) error {
+func writePromiseFiles(outputDir string, filesToWrite map[string]any) error {
 	for key, value := range filesToWrite {
 		switch v := value.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			subdir := filepath.Join(outputDir, key)
 			if err := os.MkdirAll(subdir, os.ModePerm); err != nil {
 				return err
 			}
-			if err := writeOperatorPromiseFiles(subdir, v); err != nil {
+			if err := writePromiseFiles(subdir, v); err != nil {
 				return err
 			}
 		default:
@@ -192,35 +201,22 @@ func writeOperatorPromiseFiles(outputDir string, filesToWrite map[string]interfa
 	return nil
 }
 
-func generateResourceConfigurePipelines(group, version, kind string) []unstructured.Unstructured {
+func generateResourceConfigurePipelines(containerName, containerImage string, envs []corev1.EnvVar) []unstructured.Unstructured {
 	container := v1alpha1.Container{
-		Name:  "from-api-to-operator",
-		Image: "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0",
-		Env: []corev1.EnvVar{
-			{
-				Name:  "OPERATOR_GROUP",
-				Value: group,
-			},
-			{
-				Name:  "OPERATOR_VERSION",
-				Value: version,
-			},
-			{
-				Name:  "OPERATOR_KIND",
-				Value: kind,
-			},
-		},
+		Name:  containerName,
+		Image: containerImage,
+		Env:   envs,
 	}
 
 	pipeline := unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "platform.kratix.io/v1alpha1",
 			"kind":       "Pipeline",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name": "instance-configure",
 			},
-			"spec": map[string]interface{}{
-				"containers": []interface{}{container},
+			"spec": map[string]any{
+				"containers": []any{container},
 			},
 		},
 	}
@@ -228,21 +224,21 @@ func generateResourceConfigurePipelines(group, version, kind string) []unstructu
 	return []unstructured.Unstructured{pipeline}
 }
 
-func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[string]interface{} {
+func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[string]any {
 	crdSpec := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"]
 	requiredSpecFields := crdSpec.Required
 	if len(requiredSpecFields) == 0 {
 		return nil
 	}
 
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	for _, field := range requiredSpecFields {
 		m[field] = fmt.Sprintf("# type %s", crdSpec.Properties[field].Type)
 	}
 	return m
 }
 
-func getFilesToWrite(promiseName string, split bool, workflowDirectory string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]interface{}, error) {
+func getFilesToWrite(promiseName string, split bool, workflowDirectory string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]any, error) {
 	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md.tpl")
 	if err != nil {
 		return nil, err
@@ -260,11 +256,11 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 	}
 
 	if split {
-		return map[string]interface{}{
+		return map[string]any{
 			"dependencies.yaml":     dependencies,
 			"api.yaml":              crd,
 			"example-resource.yaml": exampleResource,
-			workflowDirectory: map[string]interface{}{
+			workflowDirectory: map[string]any{
 				"workflow.yaml": workflow,
 			},
 			"README.md": templatedReadme.String(),
@@ -276,7 +272,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 		return nil, err
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"promise.yaml":          promise,
 		"example-resource.yaml": exampleResource,
 		"README.md":             templatedReadme.String(),

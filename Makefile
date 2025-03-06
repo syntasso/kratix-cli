@@ -1,5 +1,6 @@
 OPERATOR_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-operator"
 HELM_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-resource-configure"
+CROSSPLANE_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim"
 KRATIX_CLI_VERSION ?= "v0.1.0"
 
 all: test build
@@ -46,7 +47,7 @@ build-helm-promise-aspect:
 	docker build \
 		--tag ${HELM_ASPECT_TAG}:${KRATIX_CLI_VERSION} \
 		--tag ${HELM_ASPECT_TAG}:latest \
-		--file aspects/operator-promise/Dockerfile \
+		--file aspects/helm-promise/Dockerfile \
 		.
 
 build-and-push-helm-promise-aspect:
@@ -58,6 +59,23 @@ build-and-push-helm-promise-aspect:
 		--tag ${HELM_ASPECT_TAG}:latest \
 		--file aspects/helm-promise/Dockerfile \
 		aspects/helm-promise
+
+build-crossplane-promise-aspect:
+	docker build \
+		--tag ${CROSSPLANE_ASPECT_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${CROSSPLANE_ASPECT_TAG}:latest \
+		--file aspects/crossplane-promise/Dockerfile \
+		.
+
+build-and-push-crossplane-promise-aspect:
+	docker buildx build \
+		--builder kratix-cli-image-builder \
+		--push \
+		--platform linux/arm64,linux/amd64\
+		--tag ${CROSSPLANE_ASPECT_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${CROSSPLANE_ASPECT_TAG}:latest \
+		--file aspects/crossplane-promise/Dockerfile \
+		aspects/crossplane-promise
 
 release:
 	goreleaser release --prepare --clean --config .goreleaser.yaml
