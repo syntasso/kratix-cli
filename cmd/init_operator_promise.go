@@ -100,7 +100,7 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 	}
 	pipelines := generateResourceConfigurePipelines("from-api-to-operator", "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0", envs)
 
-	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, "", dependencies, crd, pipelines, exampleResource)
+	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, nil, dependencies, crd, pipelines, exampleResource)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[s
 	return m
 }
 
-func getFilesToWrite(promiseName string, split bool, workflowDirectory, destinationSelectors string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]any, error) {
+func getFilesToWrite(promiseName string, split bool, workflowDirectory string, destinationSelectors []v1alpha1.PromiseScheduling, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]any, error) {
 	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md.tpl")
 	if err != nil {
 		return nil, err
@@ -252,11 +252,10 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory, destinat
 
 	templatedReadme := bytes.NewBuffer([]byte{})
 	err = readmeTemplate.Execute(templatedReadme, promiseTemplateValues{
-		SubCommand:           "operator-promise",
-		Name:                 promiseName,
-		Group:                crd.Spec.Group,
-		Kind:                 crd.Spec.Names.Kind,
-		DestinationSelectors: destinationSelectors,
+		SubCommand: "operator-promise",
+		Name:       promiseName,
+		Group:      crd.Spec.Group,
+		Kind:       crd.Spec.Names.Kind,
 	})
 
 	if err != nil {
@@ -275,7 +274,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory, destinat
 		}, nil
 	}
 
-	promise, err := generatePromise(promiseName, dependencies, crd, workflow)
+	promise, err := generatePromise(promiseName, destinationSelectors, dependencies, crd, workflow)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +286,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory, destinat
 	}, nil
 }
 
-func generatePromise(promiseName string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, pipelines []unstructured.Unstructured) (v1alpha1.Promise, error) {
+func generatePromise(promiseName string, destinationSelectors []v1alpha1.PromiseScheduling, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, pipelines []unstructured.Unstructured) (v1alpha1.Promise, error) {
 	promise := newPromise(promiseName)
 
 	crdBytes, err := json.Marshal(crd)
@@ -298,6 +297,7 @@ func generatePromise(promiseName string, dependencies []v1alpha1.Dependency, crd
 	promise.Spec.API = &runtime.RawExtension{Raw: crdBytes}
 	promise.Spec.Dependencies = dependencies
 	promise.Spec.Workflows.Resource.Configure = pipelines
+	promise.Spec.DestinationSelectors = destinationSelectors
 
 	return promise, nil
 }
