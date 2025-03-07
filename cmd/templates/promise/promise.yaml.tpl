@@ -26,6 +26,10 @@ spec:
 {{ .CRDSchema | indent 18 }}
           served: true
           storage: true
+{{- if .DestinationSelectors }}
+  destinationSelectors:
+{{ .DestinationSelectors | indent 4 }}
+{{- end }}
   workflows:
     promise:
       configure:

@@ -39,7 +39,12 @@ func TransformInputToOutput(group, version, kind string) error {
 	outputObject.SetLabels(uRequestObj.GetLabels())
 	outputObject.SetAnnotations(uRequestObj.GetAnnotations())
 
-	unstructured.SetNestedField(outputObject.Object, uRequestObj.Object["spec"], "spec")
+	spec := uRequestObj.Object["spec"]
+	if spec == nil {
+		//if we dont do this we get spec: nil as the output, which isn't valid
+		spec = map[string]any{}
+	}
+	unstructured.SetNestedField(outputObject.Object, spec, "spec")
 
 	outputObjectBytes, _ := yaml.Marshal(outputObject)
 	if err := os.WriteFile(outputFile, outputObjectBytes, 0644); err != nil {

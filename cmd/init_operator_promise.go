@@ -100,7 +100,7 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 	}
 	pipelines := generateResourceConfigurePipelines("from-api-to-operator", "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0", envs)
 
-	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, dependencies, crd, pipelines, exampleResource)
+	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, "", dependencies, crd, pipelines, exampleResource)
 	if err != nil {
 		return err
 	}
@@ -178,6 +178,12 @@ func updateOperatorCrd(crd *apiextensionsv1.CustomResourceDefinition, storedVers
 }
 
 func writePromiseFiles(outputDir string, filesToWrite map[string]any) error {
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+			return err
+		}
+	}
+
 	for key, value := range filesToWrite {
 		switch v := value.(type) {
 		case map[string]any:
@@ -238,7 +244,7 @@ func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[s
 	return m
 }
 
-func getFilesToWrite(promiseName string, split bool, workflowDirectory string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]any, error) {
+func getFilesToWrite(promiseName string, split bool, workflowDirectory, destinationSelectors string, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]any, error) {
 	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md.tpl")
 	if err != nil {
 		return nil, err
@@ -246,11 +252,13 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 
 	templatedReadme := bytes.NewBuffer([]byte{})
 	err = readmeTemplate.Execute(templatedReadme, promiseTemplateValues{
-		SubCommand: "operator-promise",
-		Name:       promiseName,
-		Group:      crd.Spec.Group,
-		Kind:       crd.Spec.Names.Kind,
+		SubCommand:           "operator-promise",
+		Name:                 promiseName,
+		Group:                crd.Spec.Group,
+		Kind:                 crd.Spec.Names.Kind,
+		DestinationSelectors: destinationSelectors,
 	})
+
 	if err != nil {
 		return nil, err
 	}
