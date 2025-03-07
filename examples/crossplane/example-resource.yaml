@@ -1,0 +1,9 @@
+apiVersion: syntasso.io/v1alpha1
+kind: S3Bucket
+metadata:
+  name: jakes-super-cool-example-database
+  namespace: default
+spec:
+  resourceConfig:
+    providerConfigName: default
+    region: us-west-2
