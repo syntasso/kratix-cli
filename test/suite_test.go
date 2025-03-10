@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,7 +67,6 @@ func (r *runner) run(args ...string) *gexec.Session {
 	if r.timeout > 0 {
 		t = r.timeout
 	}
-	fmt.Println(args)
 	EventuallyWithOffset(1, session).WithTimeout(t).Should(gexec.Exit(r.exitCode))
 	return session
 }

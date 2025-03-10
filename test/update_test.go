@@ -386,14 +386,7 @@ var _ = Describe("update", func() {
 							namespaceBytes(ns1),
 							namespaceBytes(ns2),
 							deploymentBytes(deployment1)), 0644)).To(Succeed())
-						files, _ := os.ReadDir(depDir)
-
-						for _, file := range files {
-							fmt.Println("File in dir: ", file.Name(), file.IsDir())
-						}
 						depFilePath := filepath.Join(depDir, "deps.yaml")
-						fmt.Println("depFilePath: ", depFilePath)
-
 						r.run("update", "dependencies", depFilePath)
 						session := r.run("update", "dependencies", depFilePath, "--image", "registry/image-name:v1.0.0")
 						Expect(session.Out).To(gbytes.Say("Dependencies added as a Promise workflow."))

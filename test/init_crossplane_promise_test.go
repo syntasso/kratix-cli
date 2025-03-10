@@ -10,7 +10,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = FDescribe("InitCrossplanePromise", func() {
+var _ = Describe("InitCrossplanePromise", func() {
 	var r *runner
 	var workingDir string
 	var initPromiseCmd []string

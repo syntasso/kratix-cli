@@ -68,6 +68,21 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 	}
 
 	storedVersionIdx := findStoredVersionIdx(crd)
+	operatorVersion := crd.Spec.Versions[storedVersionIdx].Name
+	envs := []corev1.EnvVar{
+		{
+			Name:  "OPERATOR_GROUP",
+			Value: crd.Spec.Group,
+		},
+		{
+			Name:  "OPERATOR_VERSION",
+			Value: operatorVersion,
+		},
+		{
+			Name:  "OPERATOR_KIND",
+			Value: crd.Spec.Names.Kind,
+		},
+	}
 	updateOperatorCrd(crd, storedVersionIdx, group, names, version)
 
 	exampleResource := &unstructured.Unstructured{
@@ -84,20 +99,6 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 
 	workflowDirectory := filepath.Join("workflows", "resource", "configure")
 
-	envs := []corev1.EnvVar{
-		{
-			Name:  "OPERATOR_GROUP",
-			Value: crd.Spec.Group,
-		},
-		{
-			Name:  "OPERATOR_VERSION",
-			Value: crd.Spec.Versions[storedVersionIdx].Name,
-		},
-		{
-			Name:  "OPERATOR_KIND",
-			Value: crd.Spec.Names.Kind,
-		},
-	}
 	pipelines := generateResourceConfigurePipelines("from-api-to-operator", "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0", envs)
 
 	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, nil, dependencies, crd, pipelines, exampleResource)

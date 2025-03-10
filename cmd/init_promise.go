@@ -35,7 +35,6 @@ const (
 
 func init() {
 	initCmd.AddCommand(initPromiseCmd)
-
 }
 
 type promiseTemplateValues struct {
