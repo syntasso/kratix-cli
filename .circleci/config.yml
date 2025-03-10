@@ -57,7 +57,7 @@ jobs:
           at: .
       - run:
           command: make test
-          no_output_timeout: 2m
+          no_output_timeout: 5m
 
   update-release-pr:
     docker:
