@@ -149,6 +149,7 @@ func generateExampleResource(crd *apiextensionsv1.CustomResourceDefinition) *uns
 				"name":      "example-request",
 				"namespace": "default",
 			},
+			"spec": topLevelRequiredFields(crd),
 		},
 	}
 }

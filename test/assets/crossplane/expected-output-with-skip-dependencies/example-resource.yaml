@@ -3,3 +3,5 @@ kind: S3Bucket
 metadata:
   name: example-request
   namespace: default
+spec:
+  resourceConfig: '# type object'
