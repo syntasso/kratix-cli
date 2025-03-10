@@ -48,9 +48,9 @@ var _ = Describe("From Crossplane to Promise Aspect", func() {
 		envVars = map[string]string{
 			"KRATIX_INPUT_FILE":  "assets/test-object.yaml",
 			"KRATIX_OUTPUT_FILE": "/dev/stdout",
-			"GROUP":              "example.com",
-			"VERSION":            "v1",
-			"KIND":               "Example",
+			"XRD_GROUP":          "example.com",
+			"XRD_VERSION":        "v1",
+			"XRD_KIND":           "Example",
 		}
 	})
 
@@ -82,8 +82,8 @@ var _ = Describe("From Crossplane to Promise Aspect", func() {
 		Expect(session).To(gexec.Exit(1))
 		Expect(session.Err).To(gbytes.Say("Expected %s to be set", envVar))
 	},
-		Entry("fails if operator group is not set", "GROUP"),
-		Entry("fails if operator version is not set", "VERSION"),
-		Entry("fails if operator kind is not set", "KIND"),
+		Entry("fails if operator group is not set", "XRD_GROUP"),
+		Entry("fails if operator version is not set", "XRD_VERSION"),
+		Entry("fails if operator kind is not set", "XRD_KIND"),
 	)
 })

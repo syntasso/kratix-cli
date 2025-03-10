@@ -5,11 +5,11 @@
   spec:
     containers:
     - env:
-      - name: GROUP
+      - name: XRD_GROUP
         value: awsblueprints.io
-      - name: VERSION
+      - name: XRD_VERSION
         value: v1alpha1
-      - name: KIND
+      - name: XRD_KIND
         value: ObjectStorage
       image: ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.1.0
       name: from-api-to-crossplane-claim

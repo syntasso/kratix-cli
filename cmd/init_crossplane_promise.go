@@ -197,15 +197,15 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 
 	envs := []corev1.EnvVar{
 		{
-			Name:  "GROUP",
+			Name:  "XRD_GROUP",
 			Value: xrd.Spec.Group,
 		},
 		{
-			Name:  "VERSION",
+			Name:  "XRD_VERSION",
 			Value: xrd.Spec.Versions[storedVersionIdx].Name,
 		},
 		{
-			Name:  "KIND",
+			Name:  "XRD_KIND",
 			Value: xrd.Spec.ClaimNames.Kind,
 		},
 	}

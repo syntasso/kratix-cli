@@ -7,9 +7,9 @@ import (
 )
 
 func main() {
-	group := lib.GetEnvOrDie("GROUP")
-	version := lib.GetEnvOrDie("VERSION")
-	kind := lib.GetEnvOrDie("KIND")
+	group := lib.GetEnvOrDie("XRD_GROUP")
+	version := lib.GetEnvOrDie("XRD_VERSION")
+	kind := lib.GetEnvOrDie("XRD_KIND")
 
 	err := lib.TransformInputToOutput(group, version, kind)
 	if err != nil {
