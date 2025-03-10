@@ -22,92 +22,79 @@ spec:
         schema:
           openAPIV3Schema:
             properties:
-              compositeDeletePolicy:
-                default: Background
-                enum:
-                - Background
-                - Foreground
-                type: string
-              compositionRef:
-                properties:
-                  name:
-                    type: string
-                required:
-                - name
-                type: object
-              compositionRevisionRef:
-                properties:
-                  name:
-                    type: string
-                required:
-                - name
-                type: object
-              compositionRevisionSelector:
-                properties:
-                  matchLabels:
-                    additionalProperties:
-                      type: string
-                    type: object
-                required:
-                - matchLabels
-                type: object
-              compositionSelector:
-                properties:
-                  matchLabels:
-                    additionalProperties:
-                      type: string
-                    type: object
-                required:
-                - matchLabels
-                type: object
-              compositionUpdatePolicy:
-                enum:
-                - Automatic
-                - Manual
-                type: string
-              publishConnectionDetailsTo:
-                properties:
-                  configRef:
-                    default:
-                      name: default
-                    properties:
-                      name:
-                        type: string
-                    type: object
-                  metadata:
-                    properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      labels:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      type:
-                        type: string
-                    type: object
-                  name:
-                    type: string
-                required:
-                - name
-                type: object
-              resourceRef:
-                properties:
-                  apiVersion:
-                    type: string
-                  kind:
-                    type: string
-                  name:
-                    type: string
-                required:
-                - apiVersion
-                - kind
-                - name
-                type: object
               spec:
                 description: ObjectStorageSpec defines the desired state of ObjectStorage
                 properties:
+                  compositeDeletePolicy:
+                    default: Background
+                    enum:
+                    - Background
+                    - Foreground
+                    type: string
+                  compositionRef:
+                    properties:
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  compositionRevisionRef:
+                    properties:
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  compositionRevisionSelector:
+                    properties:
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    required:
+                    - matchLabels
+                    type: object
+                  compositionSelector:
+                    properties:
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    required:
+                    - matchLabels
+                    type: object
+                  compositionUpdatePolicy:
+                    enum:
+                    - Automatic
+                    - Manual
+                    type: string
+                  publishConnectionDetailsTo:
+                    properties:
+                      configRef:
+                        default:
+                          name: default
+                        properties:
+                          name:
+                            type: string
+                        type: object
+                      metadata:
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          type:
+                            type: string
+                        type: object
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
                   resourceConfig:
                     description: ResourceConfig defines general properties of this
                       AWS resource.
@@ -143,6 +130,26 @@ spec:
                     - region
                     - tags
                     type: object
+                  resourceRef:
+                    properties:
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    type: object
+                  writeConnectionSecretToRef:
+                    properties:
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
                 required:
                 - resourceConfig
                 type: object
@@ -153,13 +160,6 @@ spec:
                     type: string
                   bucketName:
                     type: string
-                type: object
-              writeConnectionSecretToRef:
-                properties:
-                  name:
-                    type: string
-                required:
-                - name
                 type: object
             type: object
         served: true

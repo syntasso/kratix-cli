@@ -194,7 +194,7 @@ func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*api
 	crd.Name = fmt.Sprintf("%s.%s", crd.Spec.Names.Plural, group)
 
 	for key, value := range mandatoryAdditionalClaimFields {
-		schema.Properties[key] = value
+		schema.Properties["spec"].Properties[key] = value
 	}
 
 	crd.Spec.Versions = []apiextensionsv1.CustomResourceDefinitionVersion{
