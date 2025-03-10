@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,7 +55,7 @@ func (r *runner) run(args ...string) *gexec.Session {
 	cmd.Env = os.Environ()
 
 	testBin, err := filepath.Abs("assets/binaries")
-	Expect(err).NotTo(HaveOccurred())
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	cmdPath := testBin + ":" + os.Getenv("PATH")
 	if r.noPath {
 		cmdPath = ""
@@ -67,6 +68,7 @@ func (r *runner) run(args ...string) *gexec.Session {
 	if r.timeout > 0 {
 		t = r.timeout
 	}
+	fmt.Println(args)
 	EventuallyWithOffset(1, session).WithTimeout(t).Should(gexec.Exit(r.exitCode))
 	return session
 }

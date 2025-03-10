@@ -174,7 +174,7 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 		dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: objMap}})
 	}
 
-	storedVersionIdx := findXRDStoredVersionIdx(xrd)
+	storedVersionIdx := findXRDStoredVersionIndex(xrd)
 	if storedVersionIdx == -1 {
 		return fmt.Errorf("no served version found in XRD")
 	}
@@ -224,7 +224,6 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Crossplane Promise generated successfully.")
 	return nil
-
 }
 
 func generateDependenciesFromCompositions(compositionsFilepath string) ([]v1alpha1.Dependency, error) {
@@ -286,7 +285,7 @@ func generateCRDFromXRD(version xrdv1.CompositeResourceDefinitionVersion) (*apie
 	return crd, nil
 }
 
-func findXRDStoredVersionIdx(crd *xrdv1.CompositeResourceDefinition) int {
+func findXRDStoredVersionIndex(crd *xrdv1.CompositeResourceDefinition) int {
 	for i, version := range crd.Spec.Versions {
 		if version.Served {
 			return i
