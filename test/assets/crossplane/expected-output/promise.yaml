@@ -1,0 +1,278 @@
+apiVersion: platform.kratix.io/v1alpha1
+kind: Promise
+metadata:
+  creationTimestamp: null
+  name: s3buckets
+spec:
+  api:
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      creationTimestamp: null
+      name: s3buckets.syntasso.io
+    spec:
+      group: syntasso.io
+      names:
+        kind: S3Bucket
+        plural: s3buckets
+        singular: s3bucket
+      scope: Namespaced
+      versions:
+      - name: v1alpha1
+        schema:
+          openAPIV3Schema:
+            properties:
+              compositeDeletePolicy:
+                default: Background
+                enum:
+                - Background
+                - Foreground
+                type: string
+              compositionRef:
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              compositionRevisionRef:
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              compositionRevisionSelector:
+                properties:
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - matchLabels
+                type: object
+              compositionSelector:
+                properties:
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - matchLabels
+                type: object
+              compositionUpdatePolicy:
+                enum:
+                - Automatic
+                - Manual
+                type: string
+              publishConnectionDetailsTo:
+                properties:
+                  configRef:
+                    default:
+                      name: default
+                    properties:
+                      name:
+                        type: string
+                    type: object
+                  metadata:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      type:
+                        type: string
+                    type: object
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              resourceRef:
+                properties:
+                  apiVersion:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                - name
+                type: object
+              spec:
+                description: ObjectStorageSpec defines the desired state of ObjectStorage
+                properties:
+                  resourceConfig:
+                    description: ResourceConfig defines general properties of this
+                      AWS resource.
+                    properties:
+                      deletionPolicy:
+                        description: Defaults to Delete
+                        enum:
+                        - Delete
+                        - Orphan
+                        type: string
+                      name:
+                        description: Set the name of this resource in AWS to the value
+                          provided by this field.
+                        type: string
+                      providerConfigName:
+                        type: string
+                      region:
+                        type: string
+                      tags:
+                        items:
+                          properties:
+                            key:
+                              type: string
+                            value:
+                              type: string
+                          required:
+                          - key
+                          - value
+                          type: object
+                        type: array
+                    required:
+                    - providerConfigName
+                    - region
+                    - tags
+                    type: object
+                required:
+                - resourceConfig
+                type: object
+              status:
+                description: ObjectStorageStatus defines the observed state of ObjectStorage
+                properties:
+                  bucketArn:
+                    type: string
+                  bucketName:
+                    type: string
+                type: object
+              writeConnectionSecretToRef:
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+            type: object
+        served: true
+        storage: true
+    status:
+      acceptedNames:
+        kind: ""
+        plural: ""
+      conditions: null
+      storedVersions: null
+  dependencies:
+  - apiVersion: apiextensions.crossplane.io/v1
+    kind: CompositeResourceDefinition
+    metadata:
+      creationTimestamp: null
+      name: xobjectstorages.awsblueprints.io
+    spec:
+      claimNames:
+        kind: ObjectStorage
+        plural: objectstorages
+      connectionSecretKeys:
+      - region
+      - bucket-name
+      - s3-put-policy
+      group: awsblueprints.io
+      names:
+        kind: XObjectStorage
+        plural: xobjectstorages
+      versions:
+      - name: v1alpha1
+        referenceable: true
+        schema:
+          openAPIV3Schema:
+            properties:
+              spec:
+                description: ObjectStorageSpec defines the desired state of ObjectStorage
+                properties:
+                  resourceConfig:
+                    description: ResourceConfig defines general properties of this
+                      AWS resource.
+                    properties:
+                      deletionPolicy:
+                        description: Defaults to Delete
+                        enum:
+                        - Delete
+                        - Orphan
+                        type: string
+                      name:
+                        description: Set the name of this resource in AWS to the value
+                          provided by this field.
+                        type: string
+                      providerConfigName:
+                        type: string
+                      region:
+                        type: string
+                      tags:
+                        items:
+                          properties:
+                            key:
+                              type: string
+                            value:
+                              type: string
+                          required:
+                          - key
+                          - value
+                          type: object
+                        type: array
+                    required:
+                    - providerConfigName
+                    - region
+                    - tags
+                    type: object
+                required:
+                - resourceConfig
+                type: object
+              status:
+                description: ObjectStorageStatus defines the observed state of ObjectStorage
+                properties:
+                  bucketArn:
+                    type: string
+                  bucketName:
+                    type: string
+                type: object
+            type: object
+        served: true
+    status:
+      controllers:
+        compositeResourceClaimType:
+          apiVersion: ""
+          kind: ""
+        compositeResourceType:
+          apiVersion: ""
+          kind: ""
+  destinationSelectors:
+  - matchLabels:
+      crossplane: enabled
+  workflows:
+    promise: {}
+    resource:
+      configure:
+      - apiVersion: platform.kratix.io/v1alpha1
+        kind: Pipeline
+        metadata:
+          name: instance-configure
+        spec:
+          containers:
+          - env:
+            - name: GROUP
+              value: awsblueprints.io
+            - name: VERSION
+              value: v1alpha1
+            - name: KIND
+              value: ObjectStorage
+            image: ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.1.0
+            name: from-api-to-crossplane-claim
+status: {}

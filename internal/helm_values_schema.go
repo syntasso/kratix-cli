@@ -2,11 +2,12 @@ package internal
 
 import (
 	"fmt"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/utils/pointer"
 )
 
-func HelmValuesToSchema(values map[string]interface{}) (*apiextensionsv1.JSONSchemaProps, error) {
+func HelmValuesToSchema(values map[string]any) (*apiextensionsv1.JSONSchemaProps, error) {
 	schema := &apiextensionsv1.JSONSchemaProps{
 		Type:       "object",
 		Properties: map[string]apiextensionsv1.JSONSchemaProps{},
@@ -21,7 +22,7 @@ func HelmValuesToSchema(values map[string]interface{}) (*apiextensionsv1.JSONSch
 	return schema, nil
 }
 
-func getJSONSchema(value interface{}) (*apiextensionsv1.JSONSchemaProps, error) {
+func getJSONSchema(value any) (*apiextensionsv1.JSONSchemaProps, error) {
 	switch valueType := value.(type) {
 	case string:
 		return &apiextensionsv1.JSONSchemaProps{
@@ -39,7 +40,7 @@ func getJSONSchema(value interface{}) (*apiextensionsv1.JSONSchemaProps, error) 
 		return &apiextensionsv1.JSONSchemaProps{
 			Type: "boolean",
 		}, nil
-	case map[string]interface{}:
+	case map[string]any:
 		jsonSchema := map[string]apiextensionsv1.JSONSchemaProps{}
 		for k, v := range valueType {
 			t, err := getJSONSchema(v)
@@ -53,8 +54,8 @@ func getJSONSchema(value interface{}) (*apiextensionsv1.JSONSchemaProps, error) 
 			Properties:             jsonSchema,
 			XPreserveUnknownFields: pointer.Bool(true),
 		}, nil
-	case []interface{}:
-		v := value.([]interface{})
+	case []any:
+		v := value.([]any)
 		var schemaV *apiextensionsv1.JSONSchemaProps
 		if len(v) > 0 {
 			var err error

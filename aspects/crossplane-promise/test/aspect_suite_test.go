@@ -10,7 +10,7 @@ import (
 
 func TestTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Promise Aspect Test Suite")
+	RunSpecs(t, "Crossplane Promise Aspect Test Suite")
 }
 
 var binaryPath string

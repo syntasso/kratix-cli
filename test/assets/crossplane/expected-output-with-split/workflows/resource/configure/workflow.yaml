@@ -1,0 +1,15 @@
+- apiVersion: platform.kratix.io/v1alpha1
+  kind: Pipeline
+  metadata:
+    name: instance-configure
+  spec:
+    containers:
+    - env:
+      - name: GROUP
+        value: awsblueprints.io
+      - name: VERSION
+        value: v1alpha1
+      - name: KIND
+        value: ObjectStorage
+      image: ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.1.0
+      name: from-api-to-crossplane-claim

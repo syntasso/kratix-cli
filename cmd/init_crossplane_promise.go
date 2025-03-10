@@ -125,6 +125,7 @@ var (
 	crossplanePromiseCmd = &cobra.Command{
 		Use:   "crossplane-promise",
 		Short: "A brief description of your command",
+		Args:  cobra.ExactArgs(1),
 		Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -144,8 +145,7 @@ func init() {
 	crossplanePromiseCmd.Flags().StringVarP(&xrdPath, "xrd", "x", "", "Filepath to the XRD file")
 	crossplanePromiseCmd.Flags().StringVarP(&compositions, "compositions", "c", "", "Filepath to the Compositions file. Can contain a single Composition or multiple Compositions.")
 	crossplanePromiseCmd.Flags().BoolVarP(&skipDependencies, "skip-dependencies", "s", false, "Skip generating dependencies. For when the XRD and Compositions are already deployed to Crossplane")
-
-	crossplanePromiseCmd.MarkFlagRequired("xrd-path")
+	crossplanePromiseCmd.MarkFlagRequired("xrd")
 }
 
 func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
@@ -154,7 +154,7 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
 	}
 
-	xrd, err := fetchXRD()
+	xrd, err := getXRDFromFilepath()
 	if err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func findXRDStoredVersionIdx(crd *xrdv1.CompositeResourceDefinition) int {
 	return -1
 }
 
-func fetchXRD() (*xrdv1.CompositeResourceDefinition, error) {
+func getXRDFromFilepath() (*xrdv1.CompositeResourceDefinition, error) {
 	xrd := &xrdv1.CompositeResourceDefinition{}
 
 	// read xrdPath and unmarshal it into xrd
