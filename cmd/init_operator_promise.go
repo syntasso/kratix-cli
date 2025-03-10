@@ -97,8 +97,6 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	workflowDirectory := filepath.Join("workflows", "resource", "configure")
-
 	pipelines := generateResourceConfigurePipelines("from-api-to-operator", "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0", envs)
 
 	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, nil, dependencies, crd, pipelines, exampleResource)

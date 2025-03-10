@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -25,100 +24,18 @@ import (
 	xrdv1 "github.com/crossplane/crossplane/apis/apiextensions/v1"
 )
 
-var (
-	mandatoryAdditionalClaimFields = map[string]apiextensionsv1.JSONSchemaProps{
-		"compositeDeletePolicy": {
-			Type:    "string",
-			Enum:    []apiextensionsv1.JSON{{Raw: []byte(`"Background"`)}, {Raw: []byte(`"Foreground"`)}},
-			Default: &apiextensionsv1.JSON{Raw: []byte(`"Background"`)},
-		},
-		"compositionRef": {
-			Type: "object",
-			Properties: map[string]apiextensionsv1.JSONSchemaProps{
-				"name": {Type: "string"},
-			},
-			Required: []string{"name"},
-		},
-		"compositionRevisionRef": {
-			Type: "object",
-			Properties: map[string]apiextensionsv1.JSONSchemaProps{
-				"name": {Type: "string"},
-			},
-			Required: []string{"name"},
-		},
-		"compositionRevisionSelector": {
-			Type: "object",
-			Properties: map[string]apiextensionsv1.JSONSchemaProps{
-				"matchLabels": {
-					Type:                 "object",
-					AdditionalProperties: &apiextensionsv1.JSONSchemaPropsOrBool{Schema: &apiextensionsv1.JSONSchemaProps{Type: "string"}},
-				},
-			},
-			Required: []string{"matchLabels"},
-		},
-		"compositionSelector": {
-			Type: "object",
-			Properties: map[string]apiextensionsv1.JSONSchemaProps{
-				"matchLabels": {
-					Type:                 "object",
-					AdditionalProperties: &apiextensionsv1.JSONSchemaPropsOrBool{Schema: &apiextensionsv1.JSONSchemaProps{Type: "string"}},
-				},
-			},
-			Required: []string{"matchLabels"},
-		},
-		"compositionUpdatePolicy": {
-			Type: "string",
-			Enum: []apiextensionsv1.JSON{
-				{Raw: []byte(`"Automatic"`)},
-				{Raw: []byte(`"Manual"`)},
-			},
-		},
-		"publishConnectionDetailsTo": {
-			Type: "object",
-			Properties: map[string]apiextensionsv1.JSONSchemaProps{
-				"configRef": {
-					Type: "object",
-					Properties: map[string]apiextensionsv1.JSONSchemaProps{
-						"name": {Type: "string"},
-					},
-					Default: &apiextensionsv1.JSON{Raw: []byte(`{"name": "default"}`)},
-				},
-				"metadata": {
-					Type: "object",
-					Properties: map[string]apiextensionsv1.JSONSchemaProps{
-						"annotations": {
-							Type:                 "object",
-							AdditionalProperties: &apiextensionsv1.JSONSchemaPropsOrBool{Schema: &apiextensionsv1.JSONSchemaProps{Type: "string"}},
-						},
-						"labels": {
-							Type:                 "object",
-							AdditionalProperties: &apiextensionsv1.JSONSchemaPropsOrBool{Schema: &apiextensionsv1.JSONSchemaProps{Type: "string"}},
-						},
-						"type": {Type: "string"},
-					},
-				},
-				"name": {Type: "string"},
-			},
-			Required: []string{"name"},
-		},
-		"resourceRef": {
-			Type: "object",
-			Properties: map[string]apiextensionsv1.JSONSchemaProps{
-				"apiVersion": {Type: "string"},
-				"kind":       {Type: "string"},
-				"name":       {Type: "string"},
-			},
-			Required: []string{"apiVersion", "kind", "name"},
-		},
-		"writeConnectionSecretToRef": {
-			Type: "object",
-			Properties: map[string]apiextensionsv1.JSONSchemaProps{
-				"name": {Type: "string"},
-			},
-			Required: []string{"name"},
-		},
-	}
+const (
+	crossplaneContainerName  = "from-api-to-crossplane-claim"
+	crossplaneContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.1.0"
 
+	workflowDirectory = "workflows/resource/configure"
+
+	XRD_GROUP_ENV_VAR   = "XRD_GROUP"
+	XRD_VERSION_ENV_VAR = "XRD_VERSION"
+	XRD_KIND_ENV_VAR    = "XRD_KIND"
+)
+
+var (
 	crossplaneDestinationSelectors = []v1alpha1.PromiseScheduling{{MatchLabels: map[string]string{"crossplane": "enabled"}}}
 
 	// crossplanePromiseCmd represents the crossplanePromise command
@@ -154,7 +71,7 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
 	}
 
-	xrd, err := getXRDFromFilepath()
+	xrd, err := getXRD(xrdPath)
 	if err != nil {
 		return err
 	}
@@ -174,44 +91,32 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 		dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: objMap}})
 	}
 
-	storedVersionIdx := findXRDStoredVersionIndex(xrd)
-	if storedVersionIdx == -1 {
-		return fmt.Errorf("no served version found in XRD")
-	}
-
-	crd, err := generateCRDFromXRD(xrd.Spec.Versions[storedVersionIdx])
+	xrdStoredVersion, err := getXRDStoredVersion(xrd)
 	if err != nil {
 		return err
 	}
 
-	exampleResource := &unstructured.Unstructured{
-		Object: map[string]any{
-			"apiVersion": fmt.Sprintf("%s/%s", crd.Spec.Group, crd.Spec.Versions[0].Name),
-			"kind":       kind,
-			"metadata": map[string]string{
-				"name":      "example-database",
-				"namespace": "default",
-			},
-		},
+	crd, err := generateCRDFromXRD(xrdStoredVersion)
+	if err != nil {
+		return err
 	}
 
-	envs := []corev1.EnvVar{
+	pipelines := generateResourceConfigurePipelines(crossplaneContainerName, crossplaneContainerImage, []corev1.EnvVar{
 		{
-			Name:  "XRD_GROUP",
+			Name:  XRD_GROUP_ENV_VAR,
 			Value: xrd.Spec.Group,
 		},
 		{
-			Name:  "XRD_VERSION",
-			Value: xrd.Spec.Versions[storedVersionIdx].Name,
+			Name:  XRD_VERSION_ENV_VAR,
+			Value: xrdStoredVersion.Name,
 		},
 		{
-			Name:  "XRD_KIND",
+			Name:  XRD_KIND_ENV_VAR,
 			Value: xrd.Spec.ClaimNames.Kind,
 		},
-	}
-	pipelines := generateResourceConfigurePipelines("from-api-to-crossplane-claim", "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.1.0", envs)
+	})
 
-	workflowDirectory := filepath.Join("workflows", "resource", "configure")
+	exampleResource := generateExampleResource(crd)
 	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, crossplaneDestinationSelectors, dependencies, crd, pipelines, exampleResource)
 	if err != nil {
 		return err
@@ -224,6 +129,28 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Crossplane Promise generated successfully.")
 	return nil
+}
+
+func getXRDStoredVersion(xrd *xrdv1.CompositeResourceDefinition) (*xrdv1.CompositeResourceDefinitionVersion, error) {
+	for i, version := range xrd.Spec.Versions {
+		if version.Served {
+			return &xrd.Spec.Versions[i], nil
+		}
+	}
+	return nil, fmt.Errorf("no served version found in XRD")
+}
+
+func generateExampleResource(crd *apiextensionsv1.CustomResourceDefinition) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": fmt.Sprintf("%s/%s", crd.Spec.Group, crd.Spec.Versions[0].Name),
+			"kind":       kind,
+			"metadata": map[string]string{
+				"name":      "example-request",
+				"namespace": "default",
+			},
+		},
+	}
 }
 
 func generateDependenciesFromCompositions(compositionsFilepath string) ([]v1alpha1.Dependency, error) {
@@ -248,7 +175,7 @@ func generateDependenciesFromCompositions(compositionsFilepath string) ([]v1alph
 	return compositions, nil
 }
 
-func generateCRDFromXRD(version xrdv1.CompositeResourceDefinitionVersion) (*apiextensionsv1.CustomResourceDefinition, error) {
+func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*apiextensionsv1.CustomResourceDefinition, error) {
 	schemaRaw := version.Schema.OpenAPIV3Schema
 	schema := &apiextensionsv1.JSONSchemaProps{}
 	if err := yaml.Unmarshal(schemaRaw.Raw, schema); err != nil {
@@ -285,26 +212,15 @@ func generateCRDFromXRD(version xrdv1.CompositeResourceDefinitionVersion) (*apie
 	return crd, nil
 }
 
-func findXRDStoredVersionIndex(crd *xrdv1.CompositeResourceDefinition) int {
-	for i, version := range crd.Spec.Versions {
-		if version.Served {
-			return i
-		}
-	}
-	return -1
-}
-
-func getXRDFromFilepath() (*xrdv1.CompositeResourceDefinition, error) {
+func getXRD(path string) (*xrdv1.CompositeResourceDefinition, error) {
 	xrd := &xrdv1.CompositeResourceDefinition{}
-
-	// read xrdPath and unmarshal it into xrd
-	contents, err := os.ReadFile(xrdPath)
+	contents, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", xrdPath, err)
+		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
 	}
 
 	if err := yaml.Unmarshal(contents, xrd); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal file %s: %w", xrdPath, err)
+		return nil, fmt.Errorf("failed to unmarshal file %s: %w", path, err)
 	}
 
 	return xrd, nil
