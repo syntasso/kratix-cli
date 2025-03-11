@@ -3,9 +3,8 @@ package internal_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/syntasso/kratix-cli/internal"
 
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"github.com/syntasso/kratix-cli/internal"
 )
 
 var _ = Describe("VariablesToCRDSpecSchema", func() {
@@ -25,37 +24,55 @@ var _ = Describe("VariablesToCRDSpecSchema", func() {
 			schema, warnings := internal.VariablesToCRDSpecSchema(vars)
 
 			Expect(warnings).To(BeEmpty(), "There should be no warnings for supported types")
-			Expect(len(schema.Properties)).To(Equal(1))
-			Expect(len(schema.Properties["vars"].Properties)).To(Equal(8))
+			Expect(schema.Properties).To(HaveKey("vars"))
+			Expect(len(schema.Properties["vars"].Properties)).To(Equal(len(vars)))
 
-			Expect(schema.Properties["vars"].Properties).To(HaveKeyWithValue("stringVar", v1.JSONSchemaProps{Type: "string"}))
-			Expect(schema.Properties["vars"].Properties).To(HaveKeyWithValue("numberVar", v1.JSONSchemaProps{Type: "number"}))
-			Expect(schema.Properties["vars"].Properties).To(HaveKeyWithValue("boolVar", v1.JSONSchemaProps{Type: "boolean"}))
+			Expect(schema.Properties["vars"].Properties["stringVar"].Type).To(Equal("string"))
+			Expect(schema.Properties["vars"].Properties["numberVar"].Type).To(Equal("number"))
+			Expect(schema.Properties["vars"].Properties["boolVar"].Type).To(Equal("boolean"))
 
-			Expect(schema.Properties["vars"].Properties).To(HaveKey("listStringVar"))
 			Expect(schema.Properties["vars"].Properties["listStringVar"].Type).To(Equal("array"))
 			Expect(schema.Properties["vars"].Properties["listStringVar"].Items.Schema.Type).To(Equal("string"))
 
-			Expect(schema.Properties["vars"].Properties).To(HaveKey("mapStringVar"))
 			Expect(schema.Properties["vars"].Properties["mapStringVar"].Type).To(Equal("object"))
 			Expect(schema.Properties["vars"].Properties["mapStringVar"].AdditionalProperties.Schema.Type).To(Equal("string"))
 
-			Expect(schema.Properties["vars"].Properties).To(HaveKey("listObjectVar"))
 			Expect(schema.Properties["vars"].Properties["listObjectVar"].Type).To(Equal("array"))
 			Expect(schema.Properties["vars"].Properties["listObjectVar"].Items.Schema.Type).To(Equal("object"))
-			Expect(schema.Properties["vars"].Properties["listObjectVar"].Items.Schema.Properties).To(HaveKeyWithValue("key1", v1.JSONSchemaProps{Type: "string"}))
-			Expect(schema.Properties["vars"].Properties["listObjectVar"].Items.Schema.Properties).To(HaveKeyWithValue("key2", v1.JSONSchemaProps{Type: "number"}))
+			Expect(schema.Properties["vars"].Properties["listObjectVar"].Items.Schema.XPreserveUnknownFields).NotTo(BeNil())
 
-			Expect(schema.Properties["vars"].Properties).To(HaveKey("complexMap"))
 			Expect(schema.Properties["vars"].Properties["complexMap"].Type).To(Equal("object"))
-			Expect(schema.Properties["vars"].Properties["complexMap"].XPreserveUnknownFields).NotTo(BeNil())
-			Expect(*schema.Properties["vars"].Properties["complexMap"].XPreserveUnknownFields).To(BeTrue())
+			Expect(schema.Properties["vars"].Properties["complexMap"].XPreserveUnknownFields).To(BeNil())
+			Expect(schema.Properties["vars"].Properties["complexMap"].AdditionalProperties.Schema.Type).To(Equal("object"))
+			Expect(schema.Properties["vars"].Properties["complexMap"].AdditionalProperties.Schema.AdditionalProperties.Schema.Type).To(Equal("array"))
+			Expect(schema.Properties["vars"].Properties["complexMap"].AdditionalProperties.Schema.AdditionalProperties.Schema.Items.Schema.Type).To(Equal("string"))
 
-			Expect(schema.Properties["vars"].Properties).To(HaveKey("complexMap2"))
 			Expect(schema.Properties["vars"].Properties["complexMap2"].Type).To(Equal("object"))
-			Expect(schema.Properties["vars"].Properties["complexMap2"].XPreserveUnknownFields).NotTo(BeNil())
-			Expect(*schema.Properties["vars"].Properties["complexMap2"].XPreserveUnknownFields).To(BeTrue())
+			Expect(schema.Properties["vars"].Properties["complexMap2"].XPreserveUnknownFields).To(BeNil())
+			Expect(schema.Properties["vars"].Properties["complexMap2"].AdditionalProperties.Schema.Type).To(Equal("object"))
+			Expect(schema.Properties["vars"].Properties["complexMap2"].AdditionalProperties.Schema.XPreserveUnknownFields).NotTo(BeNil())
+		})
+	})
 
+	Context("when processing complex nested Terraform types", func() {
+		It("should correctly handle deeply nested structures", func() {
+			vars := []internal.TerraformVariable{
+				{Name: "deeplyNested", Type: "list(object({ name = string, secret = set(object({ secret_name = string, items = map(string) })) }))"},
+				{Name: "probe", Type: "object({ failure_threshold = optional(number, null), initial_delay_seconds = optional(number, null), http_get = optional(object({ path = optional(string), http_headers = optional(list(object({ name = string, value = string })), null) }), null) })"},
+			}
+
+			schema, warnings := internal.VariablesToCRDSpecSchema(vars)
+
+			Expect(warnings).To(BeEmpty(), "There should be no warnings for supported nested types")
+			Expect(schema.Properties).To(HaveKey("vars"))
+			Expect(schema.Properties["vars"].Properties).To(HaveKey("deeplyNested"))
+			Expect(schema.Properties["vars"].Properties["deeplyNested"].Type).To(Equal("array"))
+			Expect(schema.Properties["vars"].Properties["deeplyNested"].Items.Schema.Type).To(Equal("object"))
+			Expect(schema.Properties["vars"].Properties["deeplyNested"].Items.Schema.XPreserveUnknownFields).NotTo(BeNil())
+
+			Expect(schema.Properties["vars"].Properties).To(HaveKey("probe"))
+			Expect(schema.Properties["vars"].Properties["probe"].Type).To(Equal("object"))
+			Expect(schema.Properties["vars"].Properties["probe"].XPreserveUnknownFields).NotTo(BeNil())
 		})
 	})
 

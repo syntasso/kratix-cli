@@ -51,15 +51,17 @@ spec:
                     encryption_key:
                       description: CMEK encryption key self-link expected in the format projects/PROJECT/locations/LOCATION/keyRings/KEY-RING/cryptoKeys/CRYPTO-KEY.
                       type: string
+                    env_secret_vars:
+                      description: '[Beta] Environment variables (Secret Manager)'
+                      items:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      type: array
                     env_vars:
                       description: Environment variables (cleartext)
                       items:
-                        properties:
-                          name:
-                            type: string
-                          value:
-                            type: string
                         type: object
+                        x-kubernetes-preserve-unknown-fields: true
                       type: array
                     force_override:
                       description: Option to force override existing mapping
@@ -75,6 +77,12 @@ spec:
                         type: string
                       description: Resource limits to the container
                       type: object
+                    liveness_probe:
+                      description: |
+                        Periodic probe of container liveness. Container will be restarted if the probe fails.
+                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     location:
                       description: Cloud Run service deployment location
                       type: string
@@ -85,12 +93,8 @@ spec:
                       type: array
                     ports:
                       description: Port which the container listens to (http1 or h2c)
-                      properties:
-                        name:
-                          type: string
-                        port:
-                          type: number
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     project_id:
                       description: The project ID to deploy to
                       type: string
@@ -116,6 +120,14 @@ spec:
                     service_name:
                       description: The name of the Cloud Run service to create
                       type: string
+                    startup_probe:
+                      description: |
+                        Startup probe of application within the container.
+                        All other probes are disabled if a startup probe is provided, until it succeeds.
+                        Container will not be added to service endpoints if the probe fails.
+                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     template_annotations:
                       additionalProperties:
                         type: string
@@ -133,16 +145,8 @@ spec:
                     traffic_split:
                       description: Managing traffic routing to the service
                       items:
-                        properties:
-                          latest_revision:
-                            type: boolean
-                          percent:
-                            type: number
-                          revision_name:
-                            type: string
-                          tag:
-                            type: string
                         type: object
+                        x-kubernetes-preserve-unknown-fields: true
                       type: array
                     verified_domain_name:
                       description: List of Custom Domain Name
@@ -153,12 +157,15 @@ spec:
                       description: '[Beta] Volume Mounts to be attached to the container (when using
                         secret)'
                       items:
-                        properties:
-                          mount_path:
-                            type: string
-                          name:
-                            type: string
                         type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      type: array
+                    volumes:
+                      description: '[Beta] Volumes needed for environment variables (when using
+                        secret)'
+                      items:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
                       type: array
                   type: object
               type: object
