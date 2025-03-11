@@ -79,7 +79,7 @@ build-and-push-terraform-module-promise-aspect:
 		.
 
 build-and-load-terraform-module-promise-aspect: build-terraform-module-promise-aspect
-  kind load docker-image ${TERRAFORM_MODULE_TAG}:${KRATIX_CLI_VERSION} --name platform
+	kind load docker-image ${TERRAFORM_MODULE_TAG}:${KRATIX_CLI_VERSION} --name platform
 
 
 release:
