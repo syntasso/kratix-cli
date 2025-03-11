@@ -15,7 +15,7 @@ import (
 var expectedOutput = `{
   "module": {
     "testobject_non-default_test-object": {
-      "source": "example.com",
+      "source": "git::example.com?ref=1.0.0",
       "strArr": [
         {
           "field": "value"
@@ -68,6 +68,7 @@ var _ = Describe("From Operator to Promise Aspect", func() {
 			"KRATIX_INPUT_FILE": "assets/test-object.yaml",
 			"KRATIX_OUTPUT_DIR": tmpDir,
 			"MODULE_SOURCE":     "example.com",
+			"MODULE_VERSION":    "1.0.0",
 		}
 
 		fmt.Println("tmpDir: ", tmpDir)

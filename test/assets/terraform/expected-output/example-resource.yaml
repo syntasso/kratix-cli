@@ -1,0 +1,4 @@
+apiVersion: gcp.com/v2
+kind: GoogleCloudRun
+metadata:
+  name: example-googlecloudrun

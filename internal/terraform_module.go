@@ -14,21 +14,26 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-func DownloadAndConvertTerraformToCRD(moduleSource string) ([]TerraformVariable, error) {
-	tempDir, err := os.MkdirTemp("", "terraform-module")
+var (
+	getModule func(dst, src string, opts ...getter.ClientOption) error = getter.Get
+	mkdirTemp func(dir, pattern string) (string, error)                = os.MkdirTemp
+)
+
+func GetVariablesFromModule(moduleSource string) ([]TerraformVariable, error) {
+	tempDir, err := mkdirTemp("", "terraform-module")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	err = getter.Get(tempDir, moduleSource)
+	err = getModule(tempDir, moduleSource)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download module: %w", err)
 	}
 
 	absPath := filepath.Join(tempDir, "variables.tf")
 
-	variables, err := parseVariablesWithHCL(absPath)
+	variables, err := extractVariablesFromVarsFile(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse variables: %w", err)
 	}
@@ -36,16 +41,29 @@ func DownloadAndConvertTerraformToCRD(moduleSource string) ([]TerraformVariable,
 	return variables, nil
 }
 
-func parseVariablesWithHCL(filePath string) ([]TerraformVariable, error) {
-	var variables []TerraformVariable
+func extractVariablesFromVarsFile(filePath string) ([]TerraformVariable, error) {
+	fileContent, err := readFileContent(filePath)
+	if err != nil {
+		return nil, err
+	}
 
-	// Read file content to access it later for raw source extraction
+	blocks, err := parseHCLVariables(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return extractVariables(blocks, fileContent), nil
+}
+
+func readFileContent(filePath string) (string, error) {
 	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %s", err)
+		return "", fmt.Errorf("failed to read file: %s", err)
 	}
-	fileContent := string(fileBytes)
+	return string(fileBytes), nil
+}
 
+func parseHCLVariables(filePath string) ([]*hcl.Block, error) {
 	parser := hclparse.NewParser()
 	file, diags := parser.ParseHCLFile(filePath)
 	if diags.HasErrors() {
@@ -54,77 +72,70 @@ func parseVariablesWithHCL(filePath string) ([]TerraformVariable, error) {
 
 	content, diags := file.Body.Content(&hcl.BodySchema{
 		Blocks: []hcl.BlockHeaderSchema{
-			{
-				Type:       "variable",
-				LabelNames: []string{"name"},
-			},
+			{Type: "variable", LabelNames: []string{"name"}},
 		},
 	})
 	if diags.HasErrors() {
 		return nil, fmt.Errorf("failed to parse body content: %s", diags.Error())
 	}
 
-	for _, block := range content.Blocks {
+	return content.Blocks, nil
+}
+
+func extractVariables(blocks []*hcl.Block, fileContent string) []TerraformVariable {
+	var variables []TerraformVariable
+
+	for _, block := range blocks {
 		if block.Type != "variable" || len(block.Labels) == 0 {
 			continue
 		}
-		name := block.Labels[0]
-		variable := TerraformVariable{
-			Name: name,
-		}
-
-		// Parse variable block attributes
-		varContent, diags := block.Body.Content(&hcl.BodySchema{
+		variable := TerraformVariable{Name: block.Labels[0]}
+		varContent, _ := block.Body.Content(&hcl.BodySchema{
 			Attributes: []hcl.AttributeSchema{
 				{Name: "type", Required: false},
 				{Name: "default", Required: false},
 				{Name: "description", Required: false},
 			},
 		})
-		if diags.HasErrors() {
-			// We can continue even with errors
-			fmt.Printf("Warning: Some attributes for variable %s couldn't be parsed: %s\n", name, diags.Error())
-		}
 
-		// Extract type using HCL range and source extraction
-		if typeAttr, ok := varContent.Attributes["type"]; ok {
-			rng := typeAttr.Expr.Range()
-			// Extract type from source code based on the range
-			if rng.Start.Line > 0 && rng.Start.Byte < len(fileContent) && rng.End.Byte <= len(fileContent) {
-				// Extract just the type expression from the file content
-				typeExprText := fileContent[rng.Start.Byte:rng.End.Byte]
-				variable.Type = strings.TrimSpace(typeExprText)
-
-				// If we got a syntax expression, try to get a more specific representation
-				if syntaxExpr, ok := typeAttr.Expr.(hclsyntax.Expression); ok {
-					variable.Type = extractTypeFromExpr(syntaxExpr, fileContent)
-				}
-			}
-		}
-
-		// Extract description
-		if descAttr, ok := varContent.Attributes["description"]; ok {
-			descVal, diags := descAttr.Expr.Value(nil)
-			if !diags.HasErrors() && descVal.Type() == cty.String {
-				variable.Description = descVal.AsString()
-			} else {
-				// If evaluation fails, extract from source
-				rng := descAttr.Expr.Range()
-				if rng.Start.Line > 0 && rng.Start.Byte < len(fileContent) && rng.End.Byte <= len(fileContent) {
-					descExprText := fileContent[rng.Start.Byte:rng.End.Byte]
-					// For string literals, strip quotes
-					if strings.HasPrefix(descExprText, "\"") && strings.HasSuffix(descExprText, "\"") {
-						descExprText = descExprText[1 : len(descExprText)-1]
-					}
-					variable.Description = strings.TrimSpace(descExprText)
-				}
-			}
-		}
-
+		variable.Type = extractType(varContent, fileContent)
+		variable.Description = extractDescription(varContent, fileContent)
 		variables = append(variables, variable)
 	}
 
-	return variables, nil
+	return variables
+}
+
+func extractType(varContent *hcl.BodyContent, fileContent string) string {
+	if typeAttr, ok := varContent.Attributes["type"]; ok {
+		rng := typeAttr.Expr.Range()
+		if rng.Start.Line > 0 && rng.Start.Byte < len(fileContent) && rng.End.Byte <= len(fileContent) {
+			typeExprText := fileContent[rng.Start.Byte:rng.End.Byte]
+			if syntaxExpr, ok := typeAttr.Expr.(hclsyntax.Expression); ok {
+				return extractTypeFromExpr(syntaxExpr, fileContent)
+			}
+			return strings.TrimSpace(typeExprText)
+		}
+	}
+	return ""
+}
+
+func extractDescription(varContent *hcl.BodyContent, fileContent string) string {
+	if descAttr, ok := varContent.Attributes["description"]; ok {
+		descVal, diags := descAttr.Expr.Value(nil)
+		if !diags.HasErrors() && descVal.Type() == cty.String {
+			return descVal.AsString()
+		}
+		rng := descAttr.Expr.Range()
+		if rng.Start.Line > 0 && rng.Start.Byte < len(fileContent) && rng.End.Byte <= len(fileContent) {
+			descExprText := fileContent[rng.Start.Byte:rng.End.Byte]
+			if strings.HasPrefix(descExprText, "\"") && strings.HasSuffix(descExprText, "\"") {
+				return strings.TrimSpace(descExprText[1 : len(descExprText)-1])
+			}
+			return strings.TrimSpace(descExprText)
+		}
+	}
+	return ""
 }
 
 // extractTypeFromExpr tries to get a more meaningful representation of a type expression

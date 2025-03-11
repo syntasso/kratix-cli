@@ -18,7 +18,7 @@ var (
 		Short: "Initialize a new promise from a terraform module",
 		Long:  "Initialize a new promise from a terraform module",
 		Example: ` # Initialize a new promise from a terraform module in Git
-	  kratix init tf-module-promise vpc --version v5.19.0 --source https://github.com/terraform-aws-modules/terraform-aws-vpc.git --group syntasso.io --kind VPC
+	  kratix init tf-module-promise vpc --module-version v5.19.0 --module-source https://github.com/terraform-aws-modules/terraform-aws-vpc.git --group syntasso.io --kind VPC --version v1alpha1
 		`,
 		RunE: InitFromTerraformModule,
 		Args: cobra.ExactArgs(1),
@@ -29,13 +29,15 @@ var (
 
 func init() {
 	initCmd.AddCommand(terraformModuleCmd)
-	terraformModuleCmd.Flags().StringVarP(&moduleSource, "source", "s", "", "source of the terraform module")
-	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "version", "v", "", "version of the terraform module")
+	terraformModuleCmd.Flags().StringVarP(&moduleSource, "module-source", "s", "", "source of the terraform module")
+	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "module-version", "m", "", "version of the terraform module")
+	terraformModuleCmd.MarkFlagRequired("module-source")
+	terraformModuleCmd.MarkFlagRequired("module-version")
 }
 
 func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	versionedModuleSourceURL := fmt.Sprintf("git::%s?ref=%s", moduleSource, moduleVersion)
-	variables, err := internal.DownloadAndConvertTerraformToCRD(versionedModuleSourceURL)
+	variables, err := internal.GetVariablesFromModule(versionedModuleSourceURL)
 	if err != nil {
 		return fmt.Errorf("failed to download and convert terraform module to CRD: %w", err)
 	}
@@ -78,13 +80,8 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	dirName := "the current directory"
-	if outputDir != "." {
-		dirName = outputDir
-	}
-
-	fmt.Printf("%s promise bootstrapped in %s\n", promiseName, dirName)
-	return err
+	fmt.Println("Promise generated successfully.")
+	return nil
 }
 
 func generateTerraformModuleResourceConfigurePipeline() (string, error) {
