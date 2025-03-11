@@ -12,6 +12,7 @@ type TerraformVariable struct {
 	Name        string
 	Type        string
 	Description string
+	Default     any
 }
 
 // VariablesToCRDSpecSchema converts a list of Terraform variables to a CRD JSON schema and returns warnings for unsupported types
@@ -24,9 +25,18 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 	var warnings []string
 
 	for _, v := range variables {
+		if v.Type == "" {
+			inferredType := inferTypeFromDefault(v.Default)
+			if inferredType == "" {
+				warnings = append(warnings, fmt.Sprintf("warning: Type not set for variable %s and cannot be inferred from the default value, skipping", v.Name))
+				continue
+			}
+			v.Type = inferredType
+		}
+
 		prop, warn := convertTerraformTypeToCRD(v.Type)
 		if warn != "" {
-			warnings = append(warnings, fmt.Sprintf("warning: unable to automatically convert %s into CRD, skipping", v.Type))
+			warnings = append(warnings, fmt.Sprintf("warning: unable to automatically convert %s of type %s into CRD, skipping", v.Name, v.Type))
 			continue
 		}
 
@@ -38,6 +48,27 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 	}
 
 	return varSchema, warnings
+}
+
+func inferTypeFromDefault(value any) string {
+	switch v := value.(type) {
+	case string:
+		return "string"
+	case float64, int:
+		return "number"
+	case bool:
+		return "boolean"
+	case []any:
+		if len(v) > 0 {
+			innerType := inferTypeFromDefault(v[0])
+			if innerType != "" {
+				return fmt.Sprintf("list(%s)", innerType)
+			}
+		}
+		return "list"
+	default:
+		return ""
+	}
 }
 
 func convertTerraformTypeToCRD(terraformType string) (v1.JSONSchemaProps, string) {
