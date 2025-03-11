@@ -21,11 +21,6 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 		Properties: make(map[string]v1.JSONSchemaProps),
 	}
 
-	specSchema := &v1.JSONSchemaProps{
-		Type:       "object",
-		Properties: map[string]v1.JSONSchemaProps{"vars": *varSchema},
-	}
-
 	var warnings []string
 
 	for _, v := range variables {
@@ -42,7 +37,7 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 		varSchema.Properties[v.Name] = prop
 	}
 
-	return specSchema, warnings
+	return varSchema, warnings
 }
 
 func convertTerraformTypeToCRD(terraformType string) (v1.JSONSchemaProps, string) {

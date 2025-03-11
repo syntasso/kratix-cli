@@ -68,7 +68,7 @@ func main() {
 	}
 
 	// Add parameters from .spec
-	for key, value := range spec["vars"].(map[string]any) {
+	for key, value := range spec {
 		valSlice, ok := value.([]any)
 		//if its not an array and its not nil, add it to the module
 		//if its an array and its not empty, add it to the module
