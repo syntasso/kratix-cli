@@ -78,5 +78,9 @@ build-and-push-terraform-module-promise-aspect:
 		--file aspects/terraform-module-promise/Dockerfile \
 		.
 
+build-and-load-terraform-module-promise-aspect: build-terraform-module-promise-aspect
+  kind load docker-image ${TERRAFORM_MODULE_TAG}:${KRATIX_CLI_VERSION} --name platform
+
+
 release:
 	goreleaser release --prepare --clean --config .goreleaser.yaml
