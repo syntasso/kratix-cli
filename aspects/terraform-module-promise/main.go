@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,32 +12,25 @@ import (
 )
 
 func main() {
-	// Default paths
 	yamlFile := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	outputDir := GetEnv("KRATIX_OUTPUT_DIR", "/kratix/output")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
 	moduleVersion := MustHaveEnv("MODULE_VERSION")
 
-	// Read YAML file
 	yamlContent, err := os.ReadFile(yamlFile)
 	if err != nil {
-		fmt.Printf("Error reading YAML file %s: %v\n", yamlFile, err)
-		os.Exit(1)
+		log.Fatalf("Error reading YAML file %s: %v\n", yamlFile, err)
 	}
 
-	// Parse YAML into a map
 	var data map[string]any
 	err = yaml.Unmarshal(yamlContent, &data)
 	if err != nil {
-		fmt.Printf("Error parsing YAML file: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error parsing YAML file: %v\n", err)
 	}
 
-	// Extract metadata fields
 	metadata, ok := data["metadata"].(map[string]any)
 	if !ok {
-		fmt.Println("Error: metadata section not found in YAML file")
-		os.Exit(1)
+		log.Fatalf("Error: metadata section not found in YAML file")
 	}
 
 	namespace, _ := metadata["namespace"].(string)
@@ -44,60 +38,47 @@ func main() {
 	kind, _ := data["kind"].(string)
 
 	if namespace == "" || name == "" || kind == "" {
-		fmt.Println("Error: metadata.namespace, metadata.name, or kind is missing")
-		os.Exit(1)
+		log.Fatalf("Error: metadata.namespace, metadata.name, or kind is missing")
 	}
 
-	// Construct the output filename
-	uniqueName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
+	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	// Extract .spec section
 	spec, ok := data["spec"].(map[string]any)
 	if !ok {
-		fmt.Println("Error: .spec section not found in YAML file")
-		os.Exit(1)
+		log.Fatalf("Error: .spec section not found in YAML file")
 	}
-
-	// Create a valid Terraform JSON module block
 	module := map[string]map[string]map[string]any{
 		"module": {
-			uniqueName: {
+			uniqueFileName: {
 				"source": fmt.Sprintf("git::%s?ref=%s", moduleSource, moduleVersion),
 			},
 		},
 	}
 
-	// Add parameters from .spec
 	for key, value := range spec {
 		valSlice, ok := value.([]any)
-		//if its not an array and its not nil, add it to the module
-		//if its an array and its not empty, add it to the module
-		//this gets around adding a bunch of empty arrays to the module
+		// 1. if its not an array and its not nil, add it to the module
+		// 2. if its an array and its not empty, add it to the module
+		// this gets around adding a bunch of empty arrays to the module
 		if (!ok && value != nil) || (ok && len(valSlice) > 0) {
-			module["module"][uniqueName][key] = value
+			module["module"][uniqueFileName][key] = value
 		}
 	}
 
-	// Convert to JSON
 	jsonData, err := json.MarshalIndent(module, "", "  ")
 	if err != nil {
-		fmt.Printf("Error generating JSON: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error generating JSON: %v\n", err)
 	}
 
-	// Ensure output directory exists
 	err = os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
-		fmt.Printf("Error creating output directory: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error creating output directory: %v\n", err)
 	}
 
-	// Write JSON to the dynamically generated filename
-	path := filepath.Join(outputDir, uniqueName+".tf.json")
+	path := filepath.Join(outputDir, uniqueFileName+".tf.json")
 	err = os.WriteFile(path, jsonData, 0644)
 	if err != nil {
-		fmt.Printf("Error writing Terraform JSON file: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error writing Terraform JSON file: %v\n", err)
 	}
 
 	fmt.Printf("Terraform JSON configuration written to %s\n", path)
