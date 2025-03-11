@@ -53,7 +53,7 @@ func InitHelmPromise(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	templateValues := generateTemplateValues(promiseName, "helm-promise", resourceConfigure, crdSchema)
+	templateValues := generateTemplateValues(promiseName, "helm-promise", flags(), resourceConfigure, crdSchema)
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",
@@ -170,4 +170,16 @@ func getChartName() string {
 		return chartName
 	}
 	return chartURL
+}
+
+func flags() string {
+	flags := fmt.Sprintf("--chart-url %s", chartURL)
+	if chartName != "" {
+		flags += fmt.Sprintf(" --chart-name %s", chartName)
+	}
+	if chartVersion != "" {
+		flags += fmt.Sprintf(" --chart-version %s", chartVersion)
+	}
+
+	return flags
 }

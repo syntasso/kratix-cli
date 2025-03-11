@@ -251,6 +251,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory string, d
 	templatedReadme := bytes.NewBuffer([]byte{})
 	err = readmeTemplate.Execute(templatedReadme, promiseTemplateValues{
 		SubCommand: "operator-promise",
+		ExtraFlags: fmt.Sprintf("--operator-manifests %s --api-schema-from %s", operatorManifestsDir, targetCrdName),
 		Name:       promiseName,
 		Group:      crd.Spec.Group,
 		Kind:       crd.Spec.Names.Kind,

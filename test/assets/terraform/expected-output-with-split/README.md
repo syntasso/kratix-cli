@@ -3,7 +3,7 @@
 This Promise was generated with:
 
 ```
-kratix init terraform-module-promise googlecloudrun --group gcp.com --kind GoogleCloudRun
+kratix init tf-module-promise googlecloudrun --module-source https://github.com/GoogleCloudPlatform/terraform-google-cloud-run --module-version v0.16.4 --group gcp.com --kind GoogleCloudRun
 ```
 
 ## Updating API properties

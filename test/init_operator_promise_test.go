@@ -117,7 +117,7 @@ var _ = Describe("InitOperatorPromise", func() {
 				Expect(generatedFiles).To(ContainElement("README.md"))
 				readmeContents, err := os.ReadFile(filepath.Join(workingDir, "README.md"))
 				Expect(err).ToNot(HaveOccurred())
-				Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
+				Expect(string(readmeContents)).To(ContainSubstring("init operator-promise postgresql --operator-manifests assets/operator --api-schema-from postgresqls.acid.zalan.do --group myorg.com --kind database"))
 			})
 		})
 
@@ -206,7 +206,7 @@ var _ = Describe("InitOperatorPromise", func() {
 			Expect(filepath.Join(workingDir, "README.md")).To(BeAnExistingFile())
 			readmeContents, err := os.ReadFile(filepath.Join(workingDir, "README.md"))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(readmeContents).To(ContainSubstring("init operator-promise postgresql --group myorg.com --kind database"))
+			Expect(string(readmeContents)).To(ContainSubstring("init operator-promise postgresql --operator-manifests assets/operator --api-schema-from postgresqls.acid.zalan.do --group myorg.com --kind database"))
 		})
 
 		It("outputs a message", func() {

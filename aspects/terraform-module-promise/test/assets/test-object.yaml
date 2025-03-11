@@ -4,20 +4,19 @@ metadata:
   name: test-object
   namespace: non-default
 spec:
-  vars:
-    strArr:
-    - field: value
-    intArr:
-    - 1
-    listBool:
-    - true
-    field: value
-    mapWithinMap:
-      entryMap:
-        entry: value
-        entry2: 2
-        entry3: false
+  strArr:
+  - field: value
+  intArr:
+  - 1
+  listBool:
+  - true
+  field: value
+  mapWithinMap:
+    entryMap:
       entry: value
       entry2: 2
       entry3: false
-    number: 7
+    entry: value
+    entry2: 2
+    entry3: false
+  number: 7

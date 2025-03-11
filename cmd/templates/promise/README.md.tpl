@@ -3,7 +3,7 @@
 This Promise was generated with:
 
 ```
-kratix init {{ .SubCommand }} {{ .Name }} --group {{ .Group }} --kind {{ .Kind }}
+kratix init {{ .SubCommand }} {{ .Name }} {{ .ExtraFlags }} --group {{ .Group }} --kind {{ .Kind }}
 ```
 
 ## Updating API properties

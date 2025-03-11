@@ -59,7 +59,8 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	}
 
 	promiseName := args[0]
-	templateValues := generateTemplateValues(promiseName, "terraform-module-promise", resourceConfigure, string(crdSchema))
+	flags := fmt.Sprintf("--module-source %s --module-version %s", moduleSource, moduleVersion)
+	templateValues := generateTemplateValues(promiseName, "tf-module-promise", flags, resourceConfigure, string(crdSchema))
 	templateValues.DestinationSelectors = "- matchLabels:\n    environment: terraform"
 
 	templates := map[string]string{
