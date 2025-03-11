@@ -77,5 +77,8 @@ build-and-push-crossplane-promise-aspect:
 		--file aspects/crossplane-promise/Dockerfile \
 		aspects/crossplane-promise
 
+build-and-load-crossplane-promise-aspect: build-crossplane-promise-aspect
+	kind load docker-image ${CROSSPLANE_ASPECT_TAG}:${KRATIX_CLI_VERSION} --name platform
+
 release:
 	goreleaser release --prepare --clean --config .goreleaser.yaml
