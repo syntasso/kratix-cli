@@ -15,10 +15,9 @@ import (
 var (
 	terraformModuleCmd = &cobra.Command{
 		Use:   "tf-module-promise",
-		Short: "Initialize a new promise from a terraform module",
-		Long:  "Initialize a new promise from a terraform module",
-		Example: ` # Initialize a new promise from a terraform module in Git
-	  kratix init tf-module-promise vpc --module-version v5.19.0 --module-source https://github.com/terraform-aws-modules/terraform-aws-vpc.git --group syntasso.io --kind VPC --version v1alpha1
+		Short: "Initialize a Promise from a Terraform Module stored in Git",
+		Example: `  # Initialize a Promise from a Terraform Module in git
+  kratix init tf-module-promise vpc --module-version v5.19.0 --module-source https://github.com/terraform-aws-modules/terraform-aws-vpc.git --group syntasso.io --kind VPC --version v1alpha1
 		`,
 		RunE: InitFromTerraformModule,
 		Args: cobra.ExactArgs(1),
