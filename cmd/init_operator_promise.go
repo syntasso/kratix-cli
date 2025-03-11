@@ -18,6 +18,11 @@ import (
 	yamlsig "sigs.k8s.io/yaml"
 )
 
+const (
+	operatorContainerName  = "from-api-to-operator"
+	operatorContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0"
+)
+
 var operatorPromiseCmd = &cobra.Command{
 	Use:   "operator-promise PROMISE-NAME --group PROMISE-API-GROUP --version PROMISE-API-VERSION --kind PROMISE-API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-schema-from CRD-NAME",
 	Short: "Generate a Promise from a given Kubernetes Operator.",
@@ -97,7 +102,7 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	pipelines := generateResourceConfigurePipelines("from-api-to-operator", "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0", envs)
+	pipelines := generateResourceConfigurePipelines(operatorContainerName, operatorContainerImage, envs)
 
 	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, nil, dependencies, crd, pipelines, exampleResource)
 	if err != nil {

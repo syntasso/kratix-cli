@@ -9,8 +9,8 @@ import (
 
 func main() {
 	group := lib.GetEnvOrDie(cmd.XRD_GROUP_ENV_VAR)
-	version := lib.GetEnvOrDie("XRD_VERSION")
-	kind := lib.GetEnvOrDie("XRD_KIND")
+	version := lib.GetEnvOrDie(cmd.XRD_VERSION_ENV_VAR)
+	kind := lib.GetEnvOrDie(cmd.XRD_KIND_ENV_VAR)
 
 	err := lib.TransformInputToOutput(group, version, kind)
 	if err != nil {
