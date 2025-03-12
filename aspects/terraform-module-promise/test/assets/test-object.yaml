@@ -1,0 +1,22 @@
+apiVersion: mypromise.com/v1
+kind: TestObject
+metadata:
+  name: test-object
+  namespace: non-default
+spec:
+  strArr:
+  - field: value
+  intArr:
+  - 1
+  listBool:
+  - true
+  field: value
+  mapWithinMap:
+    entryMap:
+      entry: value
+      entry2: 2
+      entry3: false
+    entry: value
+    entry2: 2
+    entry3: false
+  number: 7

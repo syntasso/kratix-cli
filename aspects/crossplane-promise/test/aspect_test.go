@@ -34,8 +34,8 @@ func runWithEnv(envVars map[string]string) *gexec.Session {
 	}
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit())
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	EventuallyWithOffset(1, session, "10s").Should(gexec.Exit())
 	return session
 }
 

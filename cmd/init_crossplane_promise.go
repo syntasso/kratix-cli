@@ -113,7 +113,14 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 	})
 
 	exampleResource := generateExampleResource(crd)
-	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, crossplaneDestinationSelectors, dependencies, crd, pipelines, exampleResource)
+	flags := fmt.Sprintf("--xrd %s", xrdPath)
+	if compositions != "" {
+		flags = fmt.Sprintf("%s --compositions %s", flags, compositions)
+	}
+	if skipDependencies {
+		flags = fmt.Sprintf("%s --skip-dependencies", flags)
+	}
+	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, flags, crossplaneDestinationSelectors, dependencies, crd, pipelines, exampleResource)
 	if err != nil {
 		return err
 	}

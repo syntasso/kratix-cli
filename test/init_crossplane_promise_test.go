@@ -139,9 +139,3 @@ var _ = Describe("InitCrossplanePromise", func() {
 		})
 	})
 })
-
-func cat(file string) string {
-	content, err := os.ReadFile(file)
-	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	return string(content)
-}

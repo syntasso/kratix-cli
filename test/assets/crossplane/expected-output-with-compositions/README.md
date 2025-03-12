@@ -1,10 +1,10 @@
-|-
+|
   # Promise Template
 
   This Promise was generated with:
 
   ```
-  kratix init operator-promise s3buckets --group syntasso.io --kind S3Bucket
+  kratix init operator-promise s3buckets --xrd assets/crossplane/xrd.yaml --compositions assets/crossplane/composition.yaml --group syntasso.io --kind S3Bucket
   ```
 
   ## Updating API properties

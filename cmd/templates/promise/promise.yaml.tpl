@@ -22,7 +22,6 @@ spec:
               type: object
               properties:
                 spec:
-                  type: object
 {{ .CRDSchema | indent 18 }}
           served: true
           storage: true
