@@ -17,7 +17,6 @@ var _ = Describe("InitterraformPromise", func() {
 	var initPromiseCmd []string
 	var session *gexec.Session
 
-	//./bin/kratix init tf-module-promise gcr --version v0.16.4 --source https://github.com/GoogleCloudPlatform/terraform-google-cloud-run --group gcp.com --kind cloudrun --dir tmp-cr
 	BeforeEach(func() {
 		var err error
 		workingDir, err = os.MkdirTemp("", "kratix-test")
