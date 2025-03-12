@@ -71,7 +71,6 @@ var _ = Describe("From TF module to Promise Aspect", func() {
 			"MODULE_VERSION":    "1.0.0",
 		}
 
-		fmt.Println("tmpDir: ", tmpDir)
 	})
 
 	AfterEach(func() {
