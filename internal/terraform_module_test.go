@@ -14,12 +14,7 @@ import (
 )
 
 var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
-	var (
-		tempDir       string
-		variablesPath string
-		dst           string
-		src           string
-	)
+var dst, src, tempDir, variablesPath string
 
 	BeforeEach(func() {
 		var err error
