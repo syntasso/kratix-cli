@@ -305,14 +305,14 @@ func expectDependenciesToMatchOperatorManifests(dependencies v1alpha1.Dependenci
 }
 
 func expectPipelinesToMatchOperatorPipelines(pipelines []v1alpha1.Pipeline) {
-	Expect(pipelines).To(HaveLen(1))
+	ExpectWithOffset(1, pipelines).To(HaveLen(1))
 	pipeline := pipelines[0]
-	Expect(pipeline.Spec.Containers).To(HaveLen(1))
-	Expect(pipeline.Spec.Containers[0].Name).To(Equal("from-api-to-operator"))
-	Expect(pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0"))
+	ExpectWithOffset(1, pipeline.Spec.Containers).To(HaveLen(1))
+	ExpectWithOffset(1, pipeline.Spec.Containers[0].Name).To(Equal("from-api-to-operator"))
+	ExpectWithOffset(1, pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0"))
 
-	Expect(pipeline.Spec.Containers[0].Env).To(HaveLen(3))
-	Expect(pipeline.Spec.Containers[0].Env).To(ConsistOf([]corev1.EnvVar{
+	ExpectWithOffset(1, pipeline.Spec.Containers[0].Env).To(HaveLen(3))
+	ExpectWithOffset(1, pipeline.Spec.Containers[0].Env).To(ConsistOf([]corev1.EnvVar{
 		{Name: "OPERATOR_GROUP", Value: "acid.zalan.do"},
 		{Name: "OPERATOR_KIND", Value: "postgresql"},
 		{Name: "OPERATOR_VERSION", Value: "v1Stored"},
@@ -321,20 +321,20 @@ func expectPipelinesToMatchOperatorPipelines(pipelines []v1alpha1.Pipeline) {
 
 func expectExampleResourceToMatchOperatorResource(workingDir string) {
 	exampleResourceContents, err := os.ReadFile(filepath.Join(workingDir, "example-resource.yaml"))
-	Expect(err).ToNot(HaveOccurred())
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 
 	exampleResource := &unstructured.Unstructured{}
-	Expect(yaml.Unmarshal(exampleResourceContents, exampleResource)).To(Succeed())
+	ExpectWithOffset(1, yaml.Unmarshal(exampleResourceContents, exampleResource)).To(Succeed())
 
-	Expect(exampleResource.GetName()).To(Equal("example-database"))
-	Expect(exampleResource.GetNamespace()).To(Equal("default"))
-	Expect(exampleResource.GetKind()).To(Equal("database"))
-	Expect(exampleResource.GetAPIVersion()).To(Equal("myorg.com/v1Stored"))
+	ExpectWithOffset(1, exampleResource.GetName()).To(Equal("example-database"))
+	ExpectWithOffset(1, exampleResource.GetNamespace()).To(Equal("default"))
+	ExpectWithOffset(1, exampleResource.GetKind()).To(Equal("database"))
+	ExpectWithOffset(1, exampleResource.GetAPIVersion()).To(Equal("myorg.com/v1Stored"))
 
 	spec, found, err := unstructured.NestedMap(exampleResource.Object, "spec")
-	Expect(err).ToNot(HaveOccurred())
-	Expect(found).To(BeTrue())
-	Expect(spec).To(Equal(map[string]interface{}{
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	ExpectWithOffset(1, found).To(BeTrue())
+	ExpectWithOffset(1, spec).To(Equal(map[string]interface{}{
 		"numberOfInstances": "# type integer",
 		"teamId":            "# type string",
 		"postgresql":        "# type object",

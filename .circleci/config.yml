@@ -5,12 +5,12 @@ orbs:
   golang: circleci/go@1.11.0
 
 executors:
-  machine-medium:
+  machine-large:
     machine:
       image: ubuntu-2204:2024.01.2
       docker_layer_caching: true
     working_directory: ~/repo
-    resource_class: medium
+    resource_class: large
 
 commands:
   install_software:
@@ -51,13 +51,13 @@ jobs:
   run-tests:
     docker:
       - image: cimg/go:1.22
-    resource_class: medium
+    resource_class: large
     steps:
       - attach_workspace:
           at: .
       - run:
           command: make test
-          no_output_timeout: 2m
+          no_output_timeout: 5m
 
   update-release-pr:
     docker:
@@ -84,7 +84,7 @@ jobs:
 
 
   make-release:
-    executor: machine-medium
+    executor: machine-large
     steps:
       - attach_workspace:
           at: .

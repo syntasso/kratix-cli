@@ -1,5 +1,6 @@
 OPERATOR_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-operator"
 HELM_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-resource-configure"
+CROSSPLANE_ASPECT_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim"
 TERRAFORM_MODULE_TAG ?= "ghcr.io/syntasso/kratix-cli/terraform-generate"
 KRATIX_CLI_VERSION ?= "v0.1.0"
 
@@ -48,7 +49,7 @@ build-helm-promise-aspect:
 	docker build \
 		--tag ${HELM_ASPECT_TAG}:${KRATIX_CLI_VERSION} \
 		--tag ${HELM_ASPECT_TAG}:latest \
-		--file aspects/operator-promise/Dockerfile \
+		--file aspects/helm-promise/Dockerfile \
 		.
 
 build-and-push-helm-promise-aspect:
@@ -60,6 +61,26 @@ build-and-push-helm-promise-aspect:
 		--tag ${HELM_ASPECT_TAG}:latest \
 		--file aspects/helm-promise/Dockerfile \
 		aspects/helm-promise
+
+build-crossplane-promise-aspect:
+	docker build \
+		--tag ${CROSSPLANE_ASPECT_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${CROSSPLANE_ASPECT_TAG}:latest \
+		--file aspects/crossplane-promise/Dockerfile \
+		.
+
+build-and-push-crossplane-promise-aspect:
+	docker buildx build \
+		--builder kratix-cli-image-builder \
+		--push \
+		--platform linux/arm64,linux/amd64\
+		--tag ${CROSSPLANE_ASPECT_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${CROSSPLANE_ASPECT_TAG}:latest \
+		--file aspects/crossplane-promise/Dockerfile \
+		aspects/crossplane-promise
+
+build-and-load-crossplane-promise-aspect: build-crossplane-promise-aspect
+	kind load docker-image ${CROSSPLANE_ASPECT_TAG}:${KRATIX_CLI_VERSION} --name platform
 
 build-terraform-module-promise-aspect:
 	docker build \
