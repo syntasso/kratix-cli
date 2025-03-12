@@ -81,7 +81,7 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println("Promise generated successfully.")
+	fmt.Println("Promise generated successfully. It is set to schedule to Destinations with the label `environment: terraform` by default. To modify this behavior, update the `.spec.destinationSelectors` field in `promise.yaml`")
 	return nil
 }
 
