@@ -1,0 +1,13 @@
+- apiVersion: platform.kratix.io/v1alpha1
+  kind: Pipeline
+  metadata:
+    name: instance-configure
+  spec:
+    containers:
+    - env:
+      - name: MODULE_SOURCE
+        value: https://github.com/GoogleCloudPlatform/terraform-google-cloud-run
+      - name: MODULE_VERSION
+        value: v0.16.4
+      image: ghcr.io/syntasso/kratix-cli/terraform-generate:v0.1.0
+      name: terraform-generate

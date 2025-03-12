@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	helmclient "github.com/mittwald/go-helm-client"
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix-cli/internal"
@@ -42,7 +43,7 @@ func init() {
 
 func InitHelmPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
-	resourceConfigure, err := generateResourceConfigurePipeline()
+	resourceConfigure, err := generateHelmResourceConfigurePipeline()
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func InitHelmPromise(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	templateValues := generateTemplateValues(promiseName, "helm-promise", resourceConfigure, crdSchema)
+	templateValues := generateTemplateValues(promiseName, "helm-promise", flags(), resourceConfigure, crdSchema)
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",
@@ -81,7 +82,7 @@ func InitHelmPromise(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateResourceConfigurePipeline() (string, error) {
+func generateHelmResourceConfigurePipeline() (string, error) {
 	envVars := []corev1.EnvVar{{Name: "CHART_URL", Value: chartURL}}
 	if chartName != "" {
 		envVars = append(envVars, corev1.EnvVar{Name: "CHART_NAME", Value: chartName})
@@ -169,4 +170,16 @@ func getChartName() string {
 		return chartName
 	}
 	return chartURL
+}
+
+func flags() string {
+	flags := fmt.Sprintf("--chart-url %s", chartURL)
+	if chartName != "" {
+		flags += fmt.Sprintf(" --chart-name %s", chartName)
+	}
+	if chartVersion != "" {
+		flags += fmt.Sprintf(" --chart-version %s", chartVersion)
+	}
+
+	return flags
 }
