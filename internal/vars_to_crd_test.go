@@ -22,7 +22,6 @@ var _ = Describe("VariablesToCRDSpecSchema", func() {
 			{Name: "probe", Type: "object({ failure_threshold = optional(number, null), initial_delay_seconds = optional(number, null), http_get = optional(object({ path = optional(string), http_headers = optional(list(object({ name = string, value = string })), null) }), null) })"},
 		}
 
-		// Run schema conversion
 		schema, warnings := internal.VariablesToCRDSpecSchema(vars)
 
 		Expect(warnings).To(BeEmpty(), "There should be no warnings for supported types")
