@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -39,7 +36,7 @@ var (
 	// crossplanePromiseCmd represents the crossplanePromise command
 	crossplanePromiseCmd = &cobra.Command{
 		Use:   "crossplane-promise",
-		Short: "A brief description of your command",
+		Short: "Initialize a new Promise from a Crossplane XRD",
 		Example: `  # initialize a new promise from a Crossplane XRD and Composition
   kratix init crossplane-promise s3buckets --xrd xrd.yaml --group syntasso.io --kind S3Bucket --dir --compositions composition.yaml
 `,
