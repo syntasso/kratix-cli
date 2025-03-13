@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/syntasso/kratix-cli/compare/v0.4.0...v0.5.0) (2025-03-13)
+
+
+### Features
+
+* Init Promise from Crossplane Composition ([#78](https://github.com/syntasso/kratix-cli/issues/78)) ([5223d31](https://github.com/syntasso/kratix-cli/commit/5223d317cfe09008659bb4399e697ece65b226e4))
+* Init Promise from Terraform Module ([#77](https://github.com/syntasso/kratix-cli/issues/77)) ([76dac2e](https://github.com/syntasso/kratix-cli/commit/76dac2eb0786cf086925991de26315b4378a7612))
+
+
+### Chores
+
+* include chores in changelog ([d3fe2cc](https://github.com/syntasso/kratix-cli/commit/d3fe2cc2b2f1947a86ff460ae3a9825530cc0fec))
+* set version in code ([1de09d2](https://github.com/syntasso/kratix-cli/commit/1de09d2dc38f0c61f7989d36f62e24b40084917c))
+
 ## [0.4.0](https://github.com/syntasso/kratix-cli/compare/v0.3.0...v0.4.0) (2025-01-27)
 
 
