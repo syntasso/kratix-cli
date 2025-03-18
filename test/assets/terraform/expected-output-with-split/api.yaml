@@ -16,7 +16,6 @@ spec:
           type: object
           properties:
             spec:
-              type: object
               properties:
                 argument:
                   description: Arguments passed to the ENTRYPOINT command, include these only if

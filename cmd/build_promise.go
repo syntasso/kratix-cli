@@ -102,6 +102,9 @@ func newPromise(promiseName string) v1alpha1.Promise {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: promiseName,
+			Labels: map[string]string{
+				"kratix.io/promise-version": "v0.0.1",
+			},
 		},
 	}
 }
