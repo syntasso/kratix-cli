@@ -2,6 +2,8 @@ apiVersion: platform.kratix.io/v1alpha1
 kind: Promise
 metadata:
   creationTimestamp: null
+  labels:
+    kratix.io/promise-version: v0.0.1
   name: s3buckets
 spec:
   api:
