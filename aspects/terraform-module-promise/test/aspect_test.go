@@ -42,6 +42,14 @@ var expectedOutput = `{
   }
 }`
 
+var expectedOutputNoSpec = `{
+  "module": {
+    "testobject_non-default_test-object": {
+      "source": "git::example.com?ref=1.0.0"
+    }
+  }
+}`
+
 func runWithEnv(envVars map[string]string) *gexec.Session {
 	cmd := exec.Command(binaryPath)
 	for key, value := range envVars {
@@ -84,5 +92,16 @@ var _ = Describe("From TF module to Promise Aspect", func() {
 		output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(output)).To(MatchJSON(expectedOutput))
+	})
+
+	It("handles objects without a spec field", func() {
+		envVars["KRATIX_INPUT_FILE"] = "assets/test-object-no-spec.yaml"
+		session := runWithEnv(envVars)
+		Eventually(session).Should(gexec.Exit())
+		Expect(session.Buffer()).To(gbytes.Say("Terraform JSON configuration written to %s/testobject_non-default_test-object.tf.json", tmpDir))
+		Expect(session).To(gexec.Exit(0))
+		output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(output)).To(MatchJSON(expectedOutputNoSpec))
 	})
 })
