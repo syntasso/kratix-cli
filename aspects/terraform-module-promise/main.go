@@ -43,10 +43,6 @@ func main() {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	spec, ok := data["spec"].(map[string]any)
-	if !ok {
-		log.Fatalf("Error: .spec section not found in YAML file")
-	}
 	module := map[string]map[string]map[string]any{
 		"module": {
 			uniqueFileName: {
@@ -55,13 +51,16 @@ func main() {
 		},
 	}
 
-	for key, value := range spec {
-		valSlice, ok := value.([]any)
-		// 1. if its not an array and its not nil, add it to the module
-		// 2. if its an array and its not empty, add it to the module
-		// this gets around adding a bunch of empty arrays to the module
-		if (!ok && value != nil) || (ok && len(valSlice) > 0) {
-			module["module"][uniqueFileName][key] = value
+	// Handle spec if it exists
+	if spec, ok := data["spec"].(map[string]any); ok {
+		for key, value := range spec {
+			valSlice, ok := value.([]any)
+			// 1. if its not an array and its not nil, add it to the module
+			// 2. if its an array and its not empty, add it to the module
+			// this gets around adding a bunch of empty arrays to the module
+			if (!ok && value != nil) || (ok && len(valSlice) > 0) {
+				module["module"][uniqueFileName][key] = value
+			}
 		}
 	}
 
