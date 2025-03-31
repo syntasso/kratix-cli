@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/syntasso/kratix-cli/compare/v0.5.0...v0.5.1) (2025-03-31)
+
+
+### Bug Fixes
+
+* dont error when .spec isn't provided in terraform request ([88e030b](https://github.com/syntasso/kratix-cli/commit/88e030b71743c28955de7260c65dacea951f189f))
+
 ## [0.5.0](https://github.com/syntasso/kratix-cli/compare/v0.4.0...v0.5.0) (2025-03-19)
 
 
