@@ -11,6 +11,21 @@ test: # Run tests
 	./aspects/helm-promise/pipeline_test.bash
 	go run github.com/onsi/ginkgo/v2/ginkgo -r
 
+.PHONY: check-version-alignment
+check-version-alignment:
+	@manifest_version=$$(jq -r '."."' .release-please-manifest.json); \
+	go_version=$$(awk -F'"' '/var version =/ {print $$2}' cmd/kratix/main.go); \
+	if [ "$$manifest_version" != "$$go_version" ]; then \
+		echo "❌ Version mismatch:"; \
+		echo " - .release-please-manifest.json => $$manifest_version"; \
+		echo " - cmd/kratix/main.go            => $$go_version"; \
+		echo ""; \
+		echo "💡 Please update main.go to match the release version."; \
+		exit 1; \
+	else \
+		echo "✅ Versions are aligned: $$manifest_version"; \
+	fi
+
 build: # Build the binary
 	CGO_ENABLED=0 go build -o bin/kratix ./cmd/kratix/main.go
 
@@ -103,5 +118,6 @@ build-and-load-terraform-module-promise-aspect: build-terraform-module-promise-a
 	kind load docker-image ${TERRAFORM_MODULE_TAG}:${KRATIX_CLI_VERSION} --name platform
 
 
-release:
+release: check-version-alignment
 	goreleaser release --prepare --clean --config .goreleaser.yaml
+
