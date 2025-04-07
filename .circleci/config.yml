@@ -124,6 +124,8 @@ workflows:
           filters:
             tags:
               ignore: /release-please-.*/
+            branches:
+              ignore: /release-please-.*/
       - check-version-alignment:
           requires: [clone-cli]
           filters:
