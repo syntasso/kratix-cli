@@ -2,7 +2,7 @@ version: 2.1
 
 orbs:
   gh: circleci/github-cli@2.3.0
-  golang: circleci/go@1.11.0
+  golang: circleci/go@3.0.1
 
 executors:
   machine-large:
@@ -17,7 +17,7 @@ commands:
     steps:
       - golang/install:
           cache: true
-          version: 1.22.6
+          version: 1.22.8
       - run:
           name: Install yq
           command: |
