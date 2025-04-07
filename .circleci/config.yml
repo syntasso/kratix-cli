@@ -60,6 +60,16 @@ jobs:
           command: make test
           no_output_timeout: 5m
 
+  check-version-alignment:
+    docker:
+      - image: cimg/go:1.22
+    resource_class: large
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          command: make check-version-alignment
+
   update-release-pr:
     docker:
       - image: cimg/node:current
@@ -114,6 +124,11 @@ workflows:
           filters:
             tags:
               ignore: /release-please-.*/
+      - check-version-alignment:
+          requires: [clone-cli]
+          filters:
+            branches:
+              only: /release-please-.*/
       - update-release-pr:
           context: [goreleaser, github-token]
           requires: [run-tests]
