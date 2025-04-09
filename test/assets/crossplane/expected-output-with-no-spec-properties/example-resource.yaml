@@ -1,0 +1,6 @@
+apiVersion: syntasso.io/v1alpha1
+kind: S3Bucket
+metadata:
+  name: example-request
+  namespace: default
+spec: null

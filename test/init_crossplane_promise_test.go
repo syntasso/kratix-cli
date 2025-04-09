@@ -64,6 +64,53 @@ var _ = Describe("InitCrossplanePromise", func() {
 
 	Describe("generating a promise from an crossplane", func() {
 		var generatedFiles []string
+		Describe("generating a promise with the required flags", func() {
+			When("the XRD file has a spec.properties", func() {
+				BeforeEach(func() {
+					session = r.run(initPromiseCmd...)
+					fileEntries, err := os.ReadDir(workingDir)
+					generatedFiles = []string{}
+					for _, fileEntry := range fileEntries {
+						generatedFiles = append(generatedFiles, fileEntry.Name())
+					}
+					Expect(err).ToNot(HaveOccurred())
+				})
+				It("generates a promise", func() {
+					files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
+					Expect(generatedFiles).To(ConsistOf(files))
+					Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/crossplane/expected-output/promise.yaml")))
+					Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/crossplane/expected-output/example-resource.yaml")))
+					Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/crossplane/expected-output/README.md")))
+					Expect(session.Out).To(SatisfyAll(
+						gbytes.Say(`Promise generated successfully.`),
+					))
+				})
+			})
+
+			When("the XRD file does not have a spec.properties", func() {
+				BeforeEach(func() {
+					r.flags["--xrd"] = "assets/crossplane/xrd-with-no-spec-properties.yaml"
+					session = r.run(initPromiseCmd...)
+					fileEntries, err := os.ReadDir(workingDir)
+					generatedFiles = []string{}
+					for _, fileEntry := range fileEntries {
+						generatedFiles = append(generatedFiles, fileEntry.Name())
+					}
+					Expect(err).ToNot(HaveOccurred())
+				})
+				It("generates a promise", func() {
+					files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
+					Expect(generatedFiles).To(ConsistOf(files))
+					Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-no-spec-properties/promise.yaml")))
+					Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-no-spec-properties/example-resource.yaml")))
+					Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/crossplane/expected-output-with-no-spec-properties/README.md")))
+					Expect(session.Out).To(SatisfyAll(
+						gbytes.Say(`Promise generated successfully.`),
+					))
+				})
+			})
+		})
+
 		Describe("with the --split flag", func() {
 			BeforeEach(func() {
 				r.flags["--split"] = ""
