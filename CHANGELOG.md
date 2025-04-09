@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.2](https://github.com/syntasso/kratix-cli/compare/v0.5.1...v0.5.2) (2025-04-09)
+
+
+### Bug Fixes
+
+* support empty spec.properties in xrd for the init-crossplane command ([d543cbf](https://github.com/syntasso/kratix-cli/commit/d543cbf17ae20fd8e1f05fdd63f2c2c44856392c))
+
+
+### Chores
+
+* adding check to ensure released version alignment ([728999d](https://github.com/syntasso/kratix-cli/commit/728999ded544f9099b8be9ba2be67f63fab981b1))
+* bump cli version ([887685e](https://github.com/syntasso/kratix-cli/commit/887685e0a6be6a922e984115c53f90336dac2b9a))
+* bump golang orb version ([99d11a4](https://github.com/syntasso/kratix-cli/commit/99d11a48d7415a0730bcbcf1ea5b8bc0ce99ef41))
+* ignore release please branches ([947a0fe](https://github.com/syntasso/kratix-cli/commit/947a0fe2b04fe099fe53eb15b1c45094bf0a14a8))
+* run check on release-please branches ([671e053](https://github.com/syntasso/kratix-cli/commit/671e053f83d9fd8d9cc340548b5ccdd2baf87c20))
+
 ## [0.5.1](https://github.com/syntasso/kratix-cli/compare/v0.5.0...v0.5.1) (2025-03-31)
 
 
