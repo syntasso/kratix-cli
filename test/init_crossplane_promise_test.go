@@ -64,63 +64,30 @@ var _ = Describe("InitCrossplanePromise", func() {
 
 	Describe("generating a promise from an crossplane", func() {
 		var generatedFiles []string
-		Describe("generating a promise with the required flags", func() {
-			When("the XRD file has a spec.properties", func() {
-				BeforeEach(func() {
-					session = r.run(initPromiseCmd...)
-					fileEntries, err := os.ReadDir(workingDir)
-					generatedFiles = []string{}
-					for _, fileEntry := range fileEntries {
-						generatedFiles = append(generatedFiles, fileEntry.Name())
-					}
-					Expect(err).ToNot(HaveOccurred())
-				})
-				It("generates a promise", func() {
-					files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
-					Expect(generatedFiles).To(ConsistOf(files))
-					Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/crossplane/expected-output/promise.yaml")))
-					Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/crossplane/expected-output/example-resource.yaml")))
-					Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/crossplane/expected-output/README.md")))
-					Expect(session.Out).To(SatisfyAll(
-						gbytes.Say(`Promise generated successfully.`),
-					))
-				})
-			})
-
-			When("the XRD file does not have a spec.properties", func() {
-				BeforeEach(func() {
-					r.flags["--xrd"] = "assets/crossplane/xrd-with-no-spec-properties.yaml"
-					session = r.run(initPromiseCmd...)
-					fileEntries, err := os.ReadDir(workingDir)
-					generatedFiles = []string{}
-					for _, fileEntry := range fileEntries {
-						generatedFiles = append(generatedFiles, fileEntry.Name())
-					}
-					Expect(err).ToNot(HaveOccurred())
-				})
-				It("generates a promise", func() {
-					files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
-					Expect(generatedFiles).To(ConsistOf(files))
-					Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-no-spec-properties/promise.yaml")))
-					Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-no-spec-properties/example-resource.yaml")))
-					Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/crossplane/expected-output-with-no-spec-properties/README.md")))
-					Expect(session.Out).To(SatisfyAll(
-						gbytes.Say(`Promise generated successfully.`),
-					))
-				})
-			})
-		})
+		DescribeTable("generating a promise with different XRDs",
+			func(xrdPath, expectedOutputDir string) {
+				if xrdPath != "" {
+					r.flags["--xrd"] = xrdPath
+				}
+				session = r.run(initPromiseCmd...)
+				generatedFiles = getFiles(workingDir)
+				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
+				Expect(generatedFiles).To(ConsistOf(files))
+				expectFilesEqual(workingDir, expectedOutputDir, files)
+				Expect(session.Out).To(SatisfyAll(
+					gbytes.Say(`Promise generated successfully.`),
+				))
+			},
+			Entry("with spec.properties", "", "assets/crossplane/expected-output"),
+			Entry("with empty openAPIV3Schema", "assets/crossplane/xrd-with-empty-openAPIV3Schema.yaml", "assets/crossplane/expected-output-with-empty-openAPIV3Schema"),
+			Entry("with no spec.properties", "assets/crossplane/xrd-with-no-spec-properties.yaml", "assets/crossplane/expected-output-with-no-spec-properties"),
+		)
 
 		Describe("with the --split flag", func() {
 			BeforeEach(func() {
 				r.flags["--split"] = ""
 				session = r.run(initPromiseCmd...)
-				fileEntries, err := os.ReadDir(workingDir)
-				generatedFiles = []string{}
-				for _, fileEntry := range fileEntries {
-					generatedFiles = append(generatedFiles, fileEntry.Name())
-				}
-				Expect(err).ToNot(HaveOccurred())
+				generatedFiles = getFiles(workingDir)
 			})
 
 			It("generates the expected files", func() {
@@ -141,20 +108,13 @@ var _ = Describe("InitCrossplanePromise", func() {
 			BeforeEach(func() {
 				r.flags["--compositions"] = "assets/crossplane/composition.yaml"
 				session = r.run(initPromiseCmd...)
-				fileEntries, err := os.ReadDir(workingDir)
-				generatedFiles = []string{}
-				for _, fileEntry := range fileEntries {
-					generatedFiles = append(generatedFiles, fileEntry.Name())
-				}
-				Expect(err).ToNot(HaveOccurred())
+				generatedFiles = getFiles(workingDir)
 			})
 
 			It("generates the expected files", func() {
 				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
 				Expect(generatedFiles).To(ConsistOf(files))
-				Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-compositions/promise.yaml")))
-				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-compositions/example-resource.yaml")))
-				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/crossplane/expected-output-with-compositions/README.md")))
+				expectFilesEqual(workingDir, "assets/crossplane/expected-output-with-compositions", files)
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
 				))
@@ -165,20 +125,13 @@ var _ = Describe("InitCrossplanePromise", func() {
 			BeforeEach(func() {
 				r.flags["--skip-dependencies"] = ""
 				session = r.run(initPromiseCmd...)
-				fileEntries, err := os.ReadDir(workingDir)
-				generatedFiles = []string{}
-				for _, fileEntry := range fileEntries {
-					generatedFiles = append(generatedFiles, fileEntry.Name())
-				}
-				Expect(err).ToNot(HaveOccurred())
+				generatedFiles = getFiles(workingDir)
 			})
 
 			It("generates a single promise.yaml", func() {
 				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
 				Expect(generatedFiles).To(ConsistOf(files))
-				Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-skip-dependencies/promise.yaml")))
-				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-skip-dependencies/example-resource.yaml")))
-				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/crossplane/expected-output-with-skip-dependencies/README.md")))
+				expectFilesEqual(workingDir, "assets/crossplane/expected-output-with-skip-dependencies", files)
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
 				))
@@ -186,3 +139,19 @@ var _ = Describe("InitCrossplanePromise", func() {
 		})
 	})
 })
+
+func getFiles(dir string) []string {
+	fileEntries, err := os.ReadDir(dir)
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	var files []string
+	for _, fileEntry := range fileEntries {
+		files = append(files, fileEntry.Name())
+	}
+	return files
+}
+
+func expectFilesEqual(actualDir, expectedDir string, files []string) {
+	for _, file := range files {
+		ExpectWithOffset(1, cat(filepath.Join(actualDir, file))).To(Equal(cat(filepath.Join(expectedDir, file))))
+	}
+}

@@ -193,6 +193,9 @@ func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*api
 	}
 	crd.Name = fmt.Sprintf("%s.%s", crd.Spec.Names.Plural, group)
 
+	if schema.Properties == nil {
+		schema.Properties = make(map[string]apiextensionsv1.JSONSchemaProps)
+	}
 	specProp := schema.Properties["spec"]
 	if schema.Properties["spec"].Properties == nil {
 		specProp.Properties = make(map[string]apiextensionsv1.JSONSchemaProps)
