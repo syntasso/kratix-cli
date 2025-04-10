@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.5.3](https://github.com/syntasso/kratix-cli/compare/v0.5.2...v0.5.3) (2025-04-10)
+
+
+### Bug Fixes
+
+* support empty openAPIV3Schema in xrd for the init-crossplane command ([#88](https://github.com/syntasso/kratix-cli/issues/88)) ([c4738ca](https://github.com/syntasso/kratix-cli/commit/c4738ca6e23b28922539da252f94c8c14dfa8f64))
+
+
+### Chores
+
+* bump cli version ([b8877d9](https://github.com/syntasso/kratix-cli/commit/b8877d967c73b83c0de012bf28448382cc61dd7e))
+
+
+### Build System
+
+* **deps:** bump helm.sh/helm/v3 from 3.15.2 to 3.17.3 ([461d877](https://github.com/syntasso/kratix-cli/commit/461d8774b5864645bddd9660bb3cb1decc3a5995))
+* **deps:** bump helm.sh/helm/v3 from 3.15.2 to 3.17.3 ([735f500](https://github.com/syntasso/kratix-cli/commit/735f50016c533fc6bf05c5df25cda2978ba4e7d0))
+
 ## [0.5.2](https://github.com/syntasso/kratix-cli/compare/v0.5.1...v0.5.2) (2025-04-09)
 
 
