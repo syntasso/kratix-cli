@@ -152,6 +152,6 @@ func getFiles(dir string) []string {
 
 func expectFilesEqual(actualDir, expectedDir string, files []string) {
 	for _, file := range files {
-		Expect(cat(filepath.Join(actualDir, file))).To(Equal(cat(filepath.Join(expectedDir, file))))
+		ExpectWithOffset(1, cat(filepath.Join(actualDir, file))).To(Equal(cat(filepath.Join(expectedDir, file))))
 	}
 }
