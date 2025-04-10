@@ -5,6 +5,27 @@
 
 ### Bug Fixes
 
+* bump go version to 1.23.0 ([40d6dfa](https://github.com/syntasso/kratix-cli/commit/40d6dfa6b5e284a2ff626754d12c57b1af56cc03))
+* revert v0.5.3 release in release-please-config.json ([65c00f1](https://github.com/syntasso/kratix-cli/commit/65c00f12d875861d49cdd719c43cfad29011d70f))
+* support empty openAPIV3Schema in xrd for the init-crossplane command ([#88](https://github.com/syntasso/kratix-cli/issues/88)) ([c4738ca](https://github.com/syntasso/kratix-cli/commit/c4738ca6e23b28922539da252f94c8c14dfa8f64))
+
+
+### Chores
+
+* bump cli version ([b8877d9](https://github.com/syntasso/kratix-cli/commit/b8877d967c73b83c0de012bf28448382cc61dd7e))
+* **main:** release 0.5.3 ([#89](https://github.com/syntasso/kratix-cli/issues/89)) ([da1d94d](https://github.com/syntasso/kratix-cli/commit/da1d94d46bab44ab35dd148096a4d723dcf60ae2))
+
+
+### Build System
+
+* **deps:** bump helm.sh/helm/v3 from 3.15.2 to 3.17.3 ([461d877](https://github.com/syntasso/kratix-cli/commit/461d8774b5864645bddd9660bb3cb1decc3a5995))
+* **deps:** bump helm.sh/helm/v3 from 3.15.2 to 3.17.3 ([735f500](https://github.com/syntasso/kratix-cli/commit/735f50016c533fc6bf05c5df25cda2978ba4e7d0))
+
+## [0.5.3](https://github.com/syntasso/kratix-cli/compare/v0.5.2...v0.5.3) (2025-04-10)
+
+
+### Bug Fixes
+
 * support empty openAPIV3Schema in xrd for the init-crossplane command ([#88](https://github.com/syntasso/kratix-cli/issues/88)) ([c4738ca](https://github.com/syntasso/kratix-cli/commit/c4738ca6e23b28922539da252f94c8c14dfa8f64))
 
 
