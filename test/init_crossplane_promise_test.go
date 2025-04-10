@@ -142,7 +142,7 @@ var _ = Describe("InitCrossplanePromise", func() {
 
 func getFiles(dir string) []string {
 	fileEntries, err := os.ReadDir(dir)
-	Expect(err).ToNot(HaveOccurred())
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	var files []string
 	for _, fileEntry := range fileEntries {
 		files = append(files, fileEntry.Name())
