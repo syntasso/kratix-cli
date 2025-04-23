@@ -1,0 +1,34 @@
+name: Release Kratix CLI
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  make-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+          check-latest: true
+      - name: Install goreleaser
+        run: |
+          curl -sLo goreleaser.tar.gz https://github.com/goreleaser/goreleaser-pro/releases/download/v2.3.2-pro/goreleaser-pro_Linux_x86_64.tar.gz
+          tar -xzf goreleaser.tar.gz goreleaser
+          sudo mv goreleaser /usr/local/bin/goreleaser
+          chmod +x /usr/local/bin/goreleaser
+          rm goreleaser.tar.gz
+      - name: Run make release
+        run: |
+          gh config set prompt disabled
+          make release
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_CREATOR_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+      - name: Upload release artifacts
+        run: |
+          gh release upload ${{ github.ref_name }} dist/*.{json,gz}
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_CREATOR_TOKEN }}
