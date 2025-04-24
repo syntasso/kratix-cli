@@ -2,7 +2,7 @@ module github.com/syntasso/kratix-cli
 
 go 1.23.0
 
-toolchain go1.24.1
+toolchain go1.23.8
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
