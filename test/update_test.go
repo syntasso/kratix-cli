@@ -278,6 +278,43 @@ var _ = Describe("update", func() {
 					matchPromise(workingDir, "postgresql", "syntasso.io", "v1alpha1", "Database", "database", "databases")
 				})
 			})
+
+			When("contains multiple files", func() {
+				var namespace1File, namespace2File, deploymentFile string
+
+				BeforeEach(func() {
+					namespace1File = "namespace1.yaml"
+					namespace2File = "namespace2.yaml"
+					deploymentFile = "deployment.yaml"
+
+					Expect(os.WriteFile(filepath.Join(depDir, namespace1File), namespaceBytes(ns1), 0644)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(depDir, namespace2File), namespaceBytes(ns2), 0644)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(depDir, deploymentFile), deploymentBytes(deployment1), 0644)).To(Succeed())
+				})
+
+				It("processes all valid files and updates the dependencies", func() {
+					Expect(r.run("update", "dependencies", depDir).Out).To(gbytes.Say("Updated promise.yaml"))
+
+					generatedDeps := getDependencies(workingDir, false)
+					Expect(generatedDeps).To(HaveLen(3))
+
+					var kinds []string
+					for _, d := range generatedDeps {
+						kinds = append(kinds, d.Object["kind"].(string))
+					}
+					Expect(kinds).To(ConsistOf("Namespace", "Namespace", "Deployment"))
+				})
+
+				It("should work with --image flag", func() {
+					session := r.run("update", "dependencies", depDir, "--image", "registry/image-name:v1.0.0")
+					Expect(session.Out).To(gbytes.Say("Dependencies added as a Promise workflow."))
+					Expect(session.Out).To(gbytes.Say("Run the following command to build the dependencies image:"))
+					Expect(session.Out).To(gbytes.Say("docker build -t registry/image-name:v1.0.0 workflows/promise/configure/dependencies/configure-deps"))
+					Expect(session.Out).To(gbytes.Say("Don't forget to push the image to a registry!"))
+
+					verifyGeneratedFilesWithImageFlag(workingDir, namespace1File, namespace2File, deploymentFile)
+				})
+			})
 		})
 
 		Context("dependencies.yaml exists", func() {
@@ -714,4 +751,42 @@ func deployment(name string) *appsv1.Deployment {
 			Name: name,
 		},
 	}
+}
+
+func verifyGeneratedFilesWithImageFlag(workingDir string, files ...string) {
+	By("generating a script that copies resources to output", func() {
+		scriptFilepath := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/scripts/pipeline.sh")
+		Expect(scriptFilepath).To(BeAnExistingFile())
+		scriptContents, _ := os.ReadFile(scriptFilepath)
+		Expect(string(scriptContents)).To(ContainSubstring("cp /resources/* /kratix/output"))
+	})
+
+	By("copying the dependencies to the resources directory", func() {
+		resourcesDir := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/resources")
+		Expect(resourcesDir).To(BeADirectory())
+		for _, file := range files {
+			Expect(filepath.Join(resourcesDir, file)).To(BeAnExistingFile())
+		}
+	})
+
+	By("generating a Dockerfile", func() {
+		dockerfile := filepath.Join(workingDir, "workflows/promise/configure/dependencies/configure-deps/Dockerfile")
+		Expect(dockerfile).To(BeAnExistingFile())
+		dockerfileContents, _ := os.ReadFile(dockerfile)
+		Expect(string(dockerfileContents)).To(SatisfyAll(
+			ContainSubstring("ADD resources resources"),
+		))
+	})
+
+	By("adding the promise workflow to the workflows.yaml", func() {
+		pipelines := getWorkflows(workingDir)
+		configurePromiseWorkflows := pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]
+		Expect(configurePromiseWorkflows).To(HaveLen(1))
+
+		Expect(configurePromiseWorkflows[0].Spec.Containers).To(HaveLen(1))
+		Expect(configurePromiseWorkflows[0].Spec.Containers[0]).To(Equal(v1alpha1.Container{
+			Name:  "configure-deps",
+			Image: "registry/image-name:v1.0.0",
+		}))
+	})
 }

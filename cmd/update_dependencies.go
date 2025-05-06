@@ -248,16 +248,18 @@ func copyFiles(src, dest string) error {
 				continue
 			}
 
-			return writeToFile(filepath.Join(src, f.Name()), dest, f.Name())
+			if err := writeToFile(filepath.Join(src, f.Name()), dest, f.Name()); err != nil {
+				return err
+			}
 		}
-	}
-
-	if srcInfo.Mode().IsRegular() {
+	} else if srcInfo.Mode().IsRegular() {
 		fileName := filepath.Base(src)
 		return writeToFile(src, dest, fileName)
+	} else {
+		return errors.New("unsupported type for dependencies: must be file or directory")
 	}
 
-	return errors.New("unsupported type for dependencies: must be file or directory")
+	return nil
 }
 
 func writeToFile(src string, dest string, fileName string) error {
