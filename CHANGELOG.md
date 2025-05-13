@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.4](https://github.com/syntasso/kratix-cli/compare/v0.5.3...v0.5.4) (2025-05-13)
+
+
+### Bug Fixes
+
+* include all dependency files from a directory when using --image ([3387b88](https://github.com/syntasso/kratix-cli/commit/3387b88a0e2c2d1673781edd1f3c9fcc2bab3a9c))
+* include all dependency files from a directory when using --image ([cee117a](https://github.com/syntasso/kratix-cli/commit/cee117a654cef5c46db37bb7157357a515919bd9))
+
 ## [0.5.3](https://github.com/syntasso/kratix-cli/compare/v0.5.2...v0.5.3) (2025-04-10)
 
 
