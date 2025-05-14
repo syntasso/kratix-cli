@@ -28,10 +28,15 @@ jobs:
           rm goreleaser.tar.gz
       - name: Run make release
         run: |
+          set -ex
           if [ -z "${VERSION}" ]; then
             echo "VERSION is empty; assuming this workflow is triggered with manual version"
             export VERSION="${MANUAL_VERSION}"
+            git fetch --tags origin
+            git checkout tags/${VERSION}
           fi
+          echo "releasing"
+          echo $VERSION
           gh config set prompt disabled
           make release
           gh release upload ${VERSION} dist/*.{json,gz}
