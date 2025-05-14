@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.5](https://github.com/syntasso/kratix-cli/compare/v0.5.4...v0.5.5) (2025-05-14)
+
+
+### Chores
+
+* make it possible to trigger release manually ([d339bb8](https://github.com/syntasso/kratix-cli/commit/d339bb82814bcf5b741e9faff16472d3432d469e))
+* release fixes to cut 0.5.4 correctly ([573b575](https://github.com/syntasso/kratix-cli/commit/573b5759565817bb11e756f401e3cb7305dfede3))
+
 ## [0.5.4](https://github.com/syntasso/kratix-cli/compare/v0.5.3...v0.5.4) (2025-05-13)
 
 
