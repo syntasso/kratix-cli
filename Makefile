@@ -120,4 +120,3 @@ build-and-load-terraform-module-promise-aspect: build-terraform-module-promise-a
 
 release: check-version-alignment
 	goreleaser release --prepare --clean --config .goreleaser.yaml
-

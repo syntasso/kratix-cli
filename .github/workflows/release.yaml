@@ -1,5 +1,6 @@
 name: Release Kratix CLI
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -8,6 +9,8 @@ jobs:
   make-release:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -20,15 +23,19 @@ jobs:
           sudo mv goreleaser /usr/local/bin/goreleaser
           chmod +x /usr/local/bin/goreleaser
           rm goreleaser.tar.gz
+ 
+          echo "Installing syft which is used in goreleaser"
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
       - name: Run make release
         run: |
           gh config set prompt disabled
           make release
         env:
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CREATOR_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ github.ref_name }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
       - name: Upload release artifacts
         run: |
           gh release upload ${{ github.ref_name }} dist/*.{json,gz}
         env:
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CREATOR_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
