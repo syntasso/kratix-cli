@@ -79,7 +79,7 @@ function cleanup {
 
 trap cleanup EXIT
 
-echo "running helm promise aspect tests"
+echo "running helm promise Stage tests"
 testOCI
 testRepo
 testOCIwithNamespace

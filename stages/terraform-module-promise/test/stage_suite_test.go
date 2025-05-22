@@ -10,14 +10,14 @@ import (
 
 func TestTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Terraform Module Aspect Test Suite")
+	RunSpecs(t, "Terraform Module Stage Test Suite")
 }
 
 var binaryPath string
 
 var _ = BeforeSuite(func() {
 	var err error
-	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/aspects/terraform-module-promise")
+	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/terraform-module-promise")
 	Expect(err).NotTo(HaveOccurred())
 })
 

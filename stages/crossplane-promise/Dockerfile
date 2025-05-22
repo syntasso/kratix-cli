@@ -4,8 +4,8 @@ ARG TARGETOS
 WORKDIR /workspace
 COPY go.mod go.mod
 COPY go.sum go.sum
-COPY aspects/crossplane-promise/main.go main.go
-COPY aspects/helm-promise/ aspects/helm-promise/
+COPY stages/crossplane-promise/main.go main.go
+COPY stages/helm-promise/ stages/helm-promise/
 COPY cmd/ cmd/
 COPY internal/ internal/
 RUN go mod download

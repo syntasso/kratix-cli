@@ -10,14 +10,14 @@ import (
 
 func TestTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Crossplane Promise Aspect Test Suite")
+	RunSpecs(t, "Operator Promise Stage Test Suite")
 }
 
 var binaryPath string
 
 var _ = BeforeSuite(func() {
 	var err error
-	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/aspects/crossplane-promise")
+	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/operator-promise")
 	Expect(err).NotTo(HaveOccurred())
 })
 
