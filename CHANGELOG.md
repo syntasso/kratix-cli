@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.5](https://github.com/syntasso/kratix-cli/compare/v0.5.4...v0.5.5) (2025-05-22)
+
+
+### Chores
+
+* aspect -&gt; stage ([#106](https://github.com/syntasso/kratix-cli/issues/106)) ([46a2dd7](https://github.com/syntasso/kratix-cli/commit/46a2dd782c53ae27fe4a37eebd0ffec45a7f568a))
+* checkout at a tag for goreleaser [skip ci] ([623812c](https://github.com/syntasso/kratix-cli/commit/623812ceac73d712ef81471dc3941c8d489da658))
+* fix bash in release.yaml [skip ci] ([8852458](https://github.com/syntasso/kratix-cli/commit/885245834249995ab630e248c91d0a8c0aa88289))
+* make it possible to trigger release manually ([d339bb8](https://github.com/syntasso/kratix-cli/commit/d339bb82814bcf5b741e9faff16472d3432d469e))
+* release fixes to cut 0.5.4 correctly ([573b575](https://github.com/syntasso/kratix-cli/commit/573b5759565817bb11e756f401e3cb7305dfede3))
+
 ## [0.5.4](https://github.com/syntasso/kratix-cli/compare/v0.5.3...v0.5.4) (2025-05-13)
 
 
