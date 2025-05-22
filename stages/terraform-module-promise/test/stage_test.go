@@ -61,7 +61,7 @@ func runWithEnv(envVars map[string]string) *gexec.Session {
 	return session
 }
 
-var _ = Describe("From TF module to Promise Aspect", func() {
+var _ = Describe("From TF module to Promise Stage", func() {
 	var (
 		envVars map[string]string
 		tmpDir  string
