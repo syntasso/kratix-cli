@@ -309,7 +309,7 @@ func getPipelineIdx(pipelines []v1alpha1.Pipeline, pipelineName string) (int, er
 		}
 	}
 
-	return -1, nil
+	return -1, fmt.Errorf("Pipeline not found: %s. Check 'promise.yaml/workflows/metadata/name: <pipeline_name>' and pipeline folder name 'workflows/resource/[configure|]/<pipeline_name>' are in sync.", pipelineName)
 }
 
 func getContainerIdx(pipeline v1alpha1.Pipeline, containerName string) int {
