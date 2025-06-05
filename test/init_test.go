@@ -149,7 +149,7 @@ func matchPromise(dir, name, group, version, kind, singular, plural string) {
 	ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
 
 	ExpectWithOffset(1, promise.Name).To(Equal(name))
-	promiseCRD, err := promise.GetAPIAsCRD()
+	_, promiseCRD, err := promise.GetAPI()
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	matchCRD(promiseCRD, group, version, kind, singular, plural)
 }
