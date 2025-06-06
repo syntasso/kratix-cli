@@ -74,7 +74,7 @@ var _ = Describe("build", func() {
 			Expect(promise.Kind).To(Equal("Promise"))
 			Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
 
-			promiseCRD, err := promise.GetAPIAsCRD()
+			_, promiseCRD, err := promise.GetAPI()
 			Expect(err).NotTo(HaveOccurred())
 			matchCRD(promiseCRD, "syntasso.io", "v1alpha1", "Database", "database", "databases")
 
@@ -114,7 +114,7 @@ var _ = Describe("build", func() {
 				Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Name).To(Equal("delete-image"))
 				Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Image).To(Equal("psql:latest"))
 
-				promiseCRD, err := promise.GetAPIAsCRD()
+				_, promiseCRD, err := promise.GetAPI()
 				Expect(err).NotTo(HaveOccurred())
 				matchCRD(promiseCRD, "syntasso.io", "v1alpha1", "Database", "database", "databases")
 			})
@@ -233,7 +233,7 @@ var _ = Describe("build", func() {
 			Expect(promise.Kind).To(Equal("Promise"))
 			Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
 
-			promiseCRD, err := promise.GetAPIAsCRD()
+			_, promiseCRD, err := promise.GetAPI()
 			Expect(err).NotTo(HaveOccurred())
 			matchCRD(promiseCRD, "syntasso.io", "v1Stored", "Database", "database", "databases")
 

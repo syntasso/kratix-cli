@@ -700,7 +700,7 @@ func getCRDProperties(dir string, split bool) map[string]apiextensionsv1.JSONSch
 
 		var promise v1alpha1.Promise
 		ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
-		crd, err = promise.GetAPIAsCRD()
+		_, crd, err = promise.GetAPI()
 		ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	}
 	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties

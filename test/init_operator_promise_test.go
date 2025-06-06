@@ -181,7 +181,7 @@ var _ = Describe("InitOperatorPromise", func() {
 			})
 
 			By("setting the promise api", func() {
-				crd, err := promise.GetAPIAsCRD()
+				_, crd, err := promise.GetAPI()
 				Expect(err).ToNot(HaveOccurred())
 				expectCRDToMatchOperatorCRD(*crd)
 			})
