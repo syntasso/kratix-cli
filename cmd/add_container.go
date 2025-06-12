@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"crypto/sha1"
 	"embed"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -199,8 +201,18 @@ func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrit
 }
 
 func generateContainerName(image string) string {
-	nameAndVersion := strings.ReplaceAll(image, "/", "-")
-	return strings.Split(nameAndVersion, ":")[0]
+	name := strings.Split(image, ":")[0]
+	name = strings.NewReplacer("/", "-", ".", "-").Replace(name)
+	name = strings.Trim(name, "-")
+
+	if len(name) <= 63 {
+		return name
+	}
+
+	hash := sha1.Sum([]byte(name))
+	suffix := hex.EncodeToString(hash[:])[:7]
+	prefix := strings.TrimRight(name[:63-len(suffix)-1], "-")
+	return fmt.Sprintf("%s-%s", prefix, suffix)
 }
 
 func findPipelinesForLifecycleAction(c *ContainerCmdArgs, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
