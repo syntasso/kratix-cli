@@ -2,9 +2,12 @@ package integration_test
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -208,6 +211,33 @@ var _ = Describe("add", func() {
 				})
 			})
 
+			When("the container image name is very long", func() {
+				It("truncates the generated container name", func() {
+					longImage := "ghcr.io/blahblah/idp-reference-architecture/database-configure-pipeline:v0.1.0"
+					expectedName := generateExpectedContainerName(longImage)
+					sess := r.run("add", "container", "promise/configure/pipeline0", "--image", longImage, "--dir", dir)
+					Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/%s in %s/promise.yaml", expectedName, dir)))
+
+					pipelines := getWorkflows(dir)
+					Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Name).To(Equal(expectedName))
+					Expect(len(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Name)).To(BeNumerically("<=", 63))
+				})
+
+				It("generates unique names for similar long images", func() {
+					longImageA := "ghcr.io/blahblah/idp-reference-architecture/database-configure-pipelineaa:v0.1.0"
+					longImageB := "ghcr.io/blahblah/idp-reference-architecture/database-configure-pipelinebb:v0.1.0"
+
+					r.run("add", "container", "promise/configure/pipeline0", "--image", longImageA, "--dir", dir)
+					r.run("add", "container", "promise/configure/pipeline0", "--image", longImageB, "--dir", dir)
+
+					pipelines := getWorkflows(dir)
+					names := pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers
+					Expect(names[0].Name).NotTo(Equal(names[1].Name))
+					Expect(len(names[0].Name)).To(BeNumerically("<=", 63))
+					Expect(len(names[1].Name)).To(BeNumerically("<=", 63))
+				})
+			})
+
 			When("the files were generated with the --split flag", func() {
 				var dir string
 
@@ -294,4 +324,17 @@ func pipelineWorkflowPathExists(dir, workflow, action, pipelineName, containerNa
 		found = true
 	}
 	return found
+}
+
+func generateExpectedContainerName(image string) string {
+	name := strings.Split(image, ":")[0]
+	name = strings.NewReplacer("/", "-", ".", "-").Replace(name)
+	name = strings.Trim(name, "-")
+	if len(name) <= 63 {
+		return name
+	}
+	h := sha1.Sum([]byte(name))
+	suffix := hex.EncodeToString(h[:])[:7]
+	prefix := strings.TrimRight(name[:63-len(suffix)-1], "-")
+	return fmt.Sprintf("%s-%s", prefix, suffix)
 }
