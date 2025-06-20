@@ -44,12 +44,16 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 			prop.Description = v.Description
 		}
 
-		if v.Default != nil && !strings.Contains(v.Type, "object") {
-			raw, err := json.Marshal(v.Default)
-			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("warning: failed to marshal default value for variable %s: %v", v.Name, err))
+		if v.Default != nil {
+			if strings.Contains(v.Type, "object") {
+				warnings = append(warnings, fmt.Sprintf("warning: default value for variable %s is set but type %s does not support defaults, skipping", v.Name, v.Type))
 			} else {
-				prop.Default = &v1.JSON{Raw: raw}
+				raw, err := json.Marshal(v.Default)
+				if err != nil {
+					warnings = append(warnings, fmt.Sprintf("warning: failed to marshal default value for variable %s: %v", v.Name, err))
+				} else {
+					prop.Default = &v1.JSON{Raw: raw}
+				}
 			}
 		}
 

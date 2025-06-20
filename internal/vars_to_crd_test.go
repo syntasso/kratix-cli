@@ -88,7 +88,10 @@ var _ = Describe("VariablesToCRDSpecSchema", func() {
 			}
 
 			schema, warnings := internal.VariablesToCRDSpecSchema(vars)
-			Expect(warnings).To(BeEmpty())
+
+			Expect(warnings).To(ContainElement(
+				"warning: default value for variable defaultObject is set but type object({ key = string }) does not support defaults, skipping",
+			))
 
 			Expect(schema.Properties).To(HaveKey("defaultObject"))
 			Expect(schema.Properties["defaultObject"].Type).To(Equal("object"))
