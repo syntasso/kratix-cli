@@ -100,10 +100,45 @@ func extractVariables(blocks []*hcl.Block, fileContent string) []TerraformVariab
 
 		variable.Type = extractType(varContent, fileContent)
 		variable.Description = extractDescription(varContent, fileContent)
+		d, err := extractDefault(varContent, fileContent)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error extracting default for variable %s: %s\n", variable.Name, err)
+			fmt.Fprintln(os.Stderr, "Continuing without default value")
+		}
+		variable.Default = d
 		variables = append(variables, variable)
 	}
 
 	return variables
+}
+
+func extractDefault(varContent *hcl.BodyContent, fileContent string) (any, error) {
+	if defaultAttr, ok := varContent.Attributes["default"]; ok {
+		defaultVal, diags := defaultAttr.Expr.Value(nil)
+		if diags.HasErrors() {
+			return nil, fmt.Errorf("failed to evaluate default value: %s", diags.Error())
+		}
+
+		if defaultVal.IsNull() {
+			return nil, nil
+		}
+		if defaultVal.Type() == cty.String {
+			return defaultVal.AsString(), nil
+		}
+		if defaultVal.Type() == cty.Number {
+			return defaultVal.AsBigFloat().String(), nil
+		}
+		if defaultVal.Type() == cty.Bool {
+			return defaultVal.True(), nil
+		}
+		if defaultVal.Type().IsTupleType() || defaultVal.Type().IsListType() || defaultVal.Type().IsMapType() {
+			return defaultVal.AsValueSlice(), nil
+		}
+
+		return defaultVal, nil
+	}
+
+	return nil, nil
 }
 
 func extractType(varContent *hcl.BodyContent, fileContent string) string {

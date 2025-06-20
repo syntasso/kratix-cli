@@ -7,7 +7,7 @@ toolchain go1.23.8
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/crossplane/crossplane v1.19.0
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/hashicorp/go-getter v1.7.8
 	github.com/hashicorp/hcl/v2 v2.23.0
 	github.com/mittwald/go-helm-client v0.12.10
