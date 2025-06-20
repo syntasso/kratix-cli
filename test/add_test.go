@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/syntasso/kratix/api/v1alpha1"
+
+	"github.com/go-logr/logr"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
@@ -294,7 +294,7 @@ func getWorkflows(dir string) map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.P
 	var promise v1alpha1.Promise
 	ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &promise)).To(Succeed())
 
-	pipelines, err := v1alpha1.NewPipelinesMap(&promise, ctrl.LoggerFrom(context.Background()))
+	pipelines, err := v1alpha1.NewPipelinesMap(&promise, logr.FromContextOrDiscard(context.Background()))
 
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return pipelines
