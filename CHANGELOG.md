@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.0](https://github.com/syntasso/kratix-cli/compare/v0.5.4...v0.6.0) (2025-06-23)
+
+
+### Features
+
+* Add defaults to primative tf variables ([#113](https://github.com/syntasso/kratix-cli/issues/113)) ([96976ca](https://github.com/syntasso/kratix-cli/commit/96976ca33288dab69e5373dae3ce322812eee111))
+
+
+### Chores
+
+* aspect -&gt; stage ([#106](https://github.com/syntasso/kratix-cli/issues/106)) ([46a2dd7](https://github.com/syntasso/kratix-cli/commit/46a2dd782c53ae27fe4a37eebd0ffec45a7f568a))
+* checkout at a tag for goreleaser [skip ci] ([623812c](https://github.com/syntasso/kratix-cli/commit/623812ceac73d712ef81471dc3941c8d489da658))
+* fix bash in release.yaml [skip ci] ([8852458](https://github.com/syntasso/kratix-cli/commit/885245834249995ab630e248c91d0a8c0aa88289))
+* make it possible to trigger release manually ([d339bb8](https://github.com/syntasso/kratix-cli/commit/d339bb82814bcf5b741e9faff16472d3432d469e))
+* release fixes to cut 0.5.4 correctly ([573b575](https://github.com/syntasso/kratix-cli/commit/573b5759565817bb11e756f401e3cb7305dfede3))
+* upgrade kratix dependency ([#108](https://github.com/syntasso/kratix-cli/issues/108)) ([98b3fe6](https://github.com/syntasso/kratix-cli/commit/98b3fe6e308a495b4b0473c0d6a6f9df16c22374))
+
 ## [0.5.4](https://github.com/syntasso/kratix-cli/compare/v0.5.3...v0.5.4) (2025-05-13)
 
 
