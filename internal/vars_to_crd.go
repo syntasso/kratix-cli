@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -15,7 +16,6 @@ type TerraformVariable struct {
 	Default     any
 }
 
-// VariablesToCRDSpecSchema converts a list of Terraform variables to a CRD JSON schema and returns warnings for unsupported types
 func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProps, []string) {
 	varSchema := &v1.JSONSchemaProps{
 		Type:       "object",
@@ -42,6 +42,19 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 
 		if v.Description != "" {
 			prop.Description = v.Description
+		}
+
+		if v.Default != nil {
+			if strings.Contains(v.Type, "object") {
+				warnings = append(warnings, fmt.Sprintf("warning: default value for variable %s is set but type %s does not support defaults, skipping", v.Name, v.Type))
+			} else {
+				raw, err := json.Marshal(v.Default)
+				if err != nil {
+					warnings = append(warnings, fmt.Sprintf("warning: failed to marshal default value for variable %s: %v", v.Name, err))
+				} else {
+					prop.Default = &v1.JSON{Raw: raw}
+				}
+			}
 		}
 
 		varSchema.Properties[v.Name] = prop

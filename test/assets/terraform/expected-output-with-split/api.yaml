@@ -18,15 +18,18 @@ spec:
             spec:
               properties:
                 argument:
+                  default: null
                   description: Arguments passed to the ENTRYPOINT command, include these only if
                     image entrypoint needs arguments
                   items:
                     type: string
                   type: array
                 certificate_mode:
+                  default: NONE
                   description: The mode of the certificate (NONE or AUTOMATIC)
                   type: string
                 container_command:
+                  default: null
                   description: Leave blank to use the ENTRYPOINT command defined in the container
                     image, include these only if image entrypoint should be overwritten
                   items:
@@ -38,11 +41,13 @@ spec:
                 domain_map_annotations:
                   additionalProperties:
                     type: string
+                  default: {}
                   description: Annotations to the domain map
                   type: object
                 domain_map_labels:
                   additionalProperties:
                     type: string
+                  default: {}
                   description: A set of key/value label pairs to assign to the Domain mapping
                   type: object
                 encryption_key:
@@ -61,9 +66,11 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                   type: array
                 force_override:
+                  default: false
                   description: Option to force override existing mapping
                   type: boolean
                 generate_revision_name:
+                  default: true
                   description: Option to enable revision name generation
                   type: boolean
                 image:
@@ -84,6 +91,7 @@ spec:
                   description: Cloud Run service deployment location
                   type: string
                 members:
+                  default: null
                   description: Users/SAs to be given invoker access to the service
                   items:
                     type: string
@@ -98,19 +106,23 @@ spec:
                 requests:
                   additionalProperties:
                     type: string
+                  default: {}
                   description: Resource requests to the container
                   type: object
                 service_account_email:
+                  default: ""
                   description: Service Account email needed for the service
                   type: string
                 service_annotations:
                   additionalProperties:
                     type: string
+                  default: {}
                   description: Annotations to the service. Acceptable values all, internal, internal-and-cloud-load-balancing
                   type: object
                 service_labels:
                   additionalProperties:
                     type: string
+                  default: {}
                   description: A set of key/value label pairs to assign to the service
                   type: object
                 service_name:
@@ -127,15 +139,18 @@ spec:
                 template_annotations:
                   additionalProperties:
                     type: string
+                  default: {}
                   description: Annotations to the container metadata including VPC Connector and
                     SQL. See [more details](https://cloud.google.com/run/docs/reference/rpc/google.cloud.run.v1#revisiontemplate)
                   type: object
                 template_labels:
                   additionalProperties:
                     type: string
+                  default: {}
                   description: A set of key/value label pairs to assign to the container metadata
                   type: object
                 timeout_seconds:
+                  default: "120"
                   description: Timeout for each request
                   type: number
                 traffic_split:
@@ -145,6 +160,7 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                   type: array
                 verified_domain_name:
+                  default: null
                   description: List of Custom Domain Name
                   items:
                     type: string
