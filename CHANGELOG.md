@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/syntasso/kratix-cli/compare/v0.6.0...v0.6.1) (2025-06-23)
+
+
+### Bug Fixes
+
+* release v0.6.1 ([9fef9aa](https://github.com/syntasso/kratix-cli/commit/9fef9aa177fad0a8a38ca47c4bd33f6fda8b05fd))
+
 ## [0.6.0](https://github.com/syntasso/kratix-cli/compare/v0.5.4...v0.6.0) (2025-06-23)
 
 
