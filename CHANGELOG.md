@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.2](https://github.com/syntasso/kratix-cli/compare/v0.6.1...v0.6.2) (2025-06-24)
+
+
+### Chores
+
+* use the RELASE_CREATOR_TOKEN when creating release PRs ([3b25ff0](https://github.com/syntasso/kratix-cli/commit/3b25ff06816b3a9d055c32ff5e1825c1829105eb))
+* use the RELASE_CREATOR_TOKEN when creating release PRs ([62a2f80](https://github.com/syntasso/kratix-cli/commit/62a2f803bbd0b238ab192747e60026a94957703d))
+
 ## [0.6.1](https://github.com/syntasso/kratix-cli/compare/v0.6.0...v0.6.1) (2025-06-23)
 
 
