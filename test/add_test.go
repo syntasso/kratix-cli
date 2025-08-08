@@ -238,6 +238,72 @@ var _ = Describe("add", func() {
 				})
 			})
 
+			When("the --language flag is provided", func() {
+				It("raises an error if the specified language is not supported", func() {
+					r.exitCode = 1
+					sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir, "--language", "clojure")
+					Expect(sess.Err).To(gbytes.Say("invalid language: clojure is not supported by the kratix cli"))
+				})
+
+				Context("bash", func() {
+					It("generates the expected files and adds containers to promise workflows", func() {
+						sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir, "--language", "bash")
+
+						pipelines := getWorkflows(dir)
+						Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure]).To(HaveLen(0))
+						Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete]).To(HaveLen(0))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]).To(HaveLen(1))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete]).To(HaveLen(0))
+
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Name).To(Equal("pipeline0"))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers).To(HaveLen(1))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Image).To(Equal("image:latest"))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Name).To(Equal("image"))
+
+						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
+						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
+
+						script := getPipelineScript(dir, "promise", "configure", "pipeline0", "image")
+						Expect(script).To(ContainSubstring("#!/usr/bin/env sh"))
+						Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
+
+						dockerfile := getPipelineDockerfile(dir, "promise", "configure", "pipeline0", "image")
+						Expect(dockerfile).To(ContainSubstring("FROM \"alpine\""))
+
+						Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
+					})
+				})
+
+				Context("go", func() {
+					It("generates the expected files and adds containers to promise workflows", func() {
+						sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir, "--language", "go")
+
+						pipelines := getWorkflows(dir)
+						Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure]).To(HaveLen(0))
+						Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete]).To(HaveLen(0))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]).To(HaveLen(1))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete]).To(HaveLen(0))
+
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Name).To(Equal("pipeline0"))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers).To(HaveLen(1))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Image).To(Equal("image:latest"))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Name).To(Equal("image"))
+
+						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
+						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
+
+						script := getPipelineScript(dir, "promise", "configure", "pipeline0", "image")
+						Expect(script).To(ContainSubstring("github.com/syntasso/kratix-go"))
+						Expect(script).To(ContainSubstring(`fmt.Sprintf(\"Hello from %s %s\"), sdk.GetName() sdk.GetNamespace())")`))
+
+						dockerfile := getPipelineDockerfile(dir, "promise", "configure", "pipeline0", "image")
+						Expect(dockerfile).To(ContainSubstring("FROM golang"))
+
+						Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
+					})
+				})
+			})
+
 			When("the files were generated with the --split flag", func() {
 				var dir string
 
@@ -311,10 +377,17 @@ func getWorkflowsFromSplitFile(dir, workflowName, action string) []v1alpha1.Pipe
 }
 
 func getPipelineScript(dir, workflow, action, pipelineName, containerName string) string {
-	promiseYAML, err := os.ReadFile(filepath.Join(dir, "workflows", workflow, action, pipelineName, containerName, "scripts", "pipeline.sh"))
+	script, err := os.ReadFile(filepath.Join(dir, "workflows", workflow, action, pipelineName, containerName, "scripts", "pipeline.sh"))
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
-	return string(promiseYAML)
+	return string(script)
+}
+
+func getPipelineDockerfile(dir, workflow, action, pipelineName, containerName string) string {
+	dockerfile, err := os.ReadFile(filepath.Join(dir, "workflows", workflow, action, pipelineName, containerName, "Dockerfile"))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	return string(dockerfile)
 }
 
 func pipelineWorkflowPathExists(dir, workflow, action, pipelineName, containerName, filename string) bool {

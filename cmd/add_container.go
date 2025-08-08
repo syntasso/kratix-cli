@@ -22,6 +22,8 @@ import (
 //go:embed templates/workflows/*
 var workflowTemplates embed.FS
 
+var supportedLanguages = []string{"go", "bash"}
+
 var addContainerCmd = &cobra.Command{
 	Use:   "container LIFECYCLE/ACTION/PIPELINE-NAME --image CONTAINER-IMAGE",
 	Short: "Adds a container to the named workflow",
@@ -37,19 +39,24 @@ var addContainerCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 }
 
-var image, containerName string
+var image, containerName, language string
 
 func init() {
 	addCmd.AddCommand(addContainerCmd)
 	addContainerCmd.Flags().StringVarP(&image, "image", "i", "", "The image used by this container.")
 	addContainerCmd.Flags().StringVarP(&containerName, "name", "n", "", "The container name used for this container.")
 	addContainerCmd.Flags().StringVarP(&dir, "dir", "d", ".", "Directory to read promise.yaml from. Default to current working directory.")
+	addContainerCmd.Flags().StringVarP(&language, "language", "l", "bash", "Language to use for the scripting of the pipeline script.")
 	addContainerCmd.MarkFlagRequired("image")
 }
 
 func AddContainer(cmd *cobra.Command, args []string) error {
 	if containerName == "" {
 		containerName = generateContainerName(image)
+	}
+
+	if !supportedLanguage(language) {
+		return fmt.Errorf("invalid language: %s is not supported by the kratix cli", language)
 	}
 
 	pipelineInput := args[0]
@@ -331,4 +338,13 @@ func getContainerIdx(pipeline v1alpha1.Pipeline, containerName string) int {
 		}
 	}
 	return -1
+}
+
+func supportedLanguage(language string) bool {
+	for _, sl := range supportedLanguages {
+		if sl == language {
+			return true
+		}
+	}
+	return false
 }
