@@ -305,6 +305,38 @@ var _ = Describe("add", func() {
 						Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
 					})
 				})
+
+				Context("python", func() {
+					It("generates the expected files and adds containers to the promise workflows", func() {
+						sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir, "--language", "python")
+
+						pipelines := getWorkflows(dir)
+						Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure]).To(HaveLen(0))
+						Expect(pipelines[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionDelete]).To(HaveLen(0))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]).To(HaveLen(1))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete]).To(HaveLen(0))
+
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Name).To(Equal("pipeline0"))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers).To(HaveLen(1))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Image).To(Equal("image:latest"))
+						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Name).To(Equal("image"))
+
+						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
+						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.py"))
+
+						scriptFilename := getPipelineScriptFilename(dir, "promise", "configure", "pipeline0", "image")
+						Expect(scriptFilename).To(Equal("pipeline.py"))
+						script := getPipelineScriptContents(dir, "promise", "configure", "pipeline0", "image")
+						Expect(script).To(ContainSubstring("import kratix_sdk as ks"))
+						Expect(script).To(ContainSubstring(`f'Hello from {promise.get_name()}'`))
+
+						dockerfile := getPipelineDockerfile(dir, "promise", "configure", "pipeline0", "image")
+						Expect(dockerfile).To(ContainSubstring("FROM python:3.12-slim"))
+
+						Expect(sess.Out).To(gbytes.Say("For python containers, run 'go mod init' and 'go mod tidy' to manage your script's dependencies"))
+						Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
+					})
+				})
 			})
 
 			When("the files were generated with the --split flag", func() {
