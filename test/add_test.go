@@ -139,7 +139,7 @@ var _ = Describe("add", func() {
 				Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionDelete][0].Spec.Containers[0].Name).To(Equal("project-cleanup"))
 
 				Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
-				script := getPipelineScript(dir, "promise", "configure", "pipeline1", "a-good-container")
+				script := getPipelineScriptContents(dir, "promise", "configure", "pipeline1", "a-good-container")
 				Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
 				Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
 
@@ -171,11 +171,11 @@ var _ = Describe("add", func() {
 
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "a-great-container", "Dockerfile")).To(BeTrue())
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "a-great-container", "resources/")).To(BeTrue())
-					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "a-great-container")).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(getPipelineScriptContents(dir, "promise", "configure", "pipeline0", "a-great-container")).To(ContainSubstring("Hello from ${name} ${namespace}"))
 
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "an-even-greater-container", "Dockerfile")).To(BeTrue())
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "an-even-greater-container", "resources/")).To(BeTrue())
-					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "an-even-greater-container")).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(getPipelineScriptContents(dir, "promise", "configure", "pipeline0", "an-even-greater-container")).To(ContainSubstring("Hello from ${name} ${namespace}"))
 				})
 			})
 
@@ -263,7 +263,7 @@ var _ = Describe("add", func() {
 						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
 						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
 
-						script := getPipelineScript(dir, "promise", "configure", "pipeline0", "image")
+						script := getPipelineScriptContents(dir, "promise", "configure", "pipeline0", "image")
 						Expect(script).To(ContainSubstring("#!/usr/bin/env sh"))
 						Expect(script).To(ContainSubstring("Hello from ${name} ${namespace}"))
 
@@ -275,7 +275,7 @@ var _ = Describe("add", func() {
 				})
 
 				Context("go", func() {
-					It("generates the expected files and adds containers to promise workflows", func() {
+					It("generates the expected files and adds containers to the promise workflows", func() {
 						sess := r.run("add", "container", "promise/configure/pipeline0", "--image", "image:latest", "--dir", dir, "--language", "go")
 
 						pipelines := getWorkflows(dir)
@@ -290,15 +290,18 @@ var _ = Describe("add", func() {
 						Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Name).To(Equal("image"))
 
 						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
-						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
+						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.go"))
 
-						script := getPipelineScript(dir, "promise", "configure", "pipeline0", "image")
+						scriptFilename := getPipelineScriptFilename(dir, "promise", "configure", "pipeline0", "image")
+						Expect(scriptFilename).To(Equal("pipeline.go"))
+						script := getPipelineScriptContents(dir, "promise", "configure", "pipeline0", "image")
 						Expect(script).To(ContainSubstring("github.com/syntasso/kratix-go"))
-						Expect(script).To(ContainSubstring(`fmt.Sprintf(\"Hello from %s %s\"), sdk.GetName() sdk.GetNamespace())")`))
+						Expect(script).To(ContainSubstring(`fmt.Printf("Hello from %s", sdk.PromiseName())`))
 
 						dockerfile := getPipelineDockerfile(dir, "promise", "configure", "pipeline0", "image")
 						Expect(dockerfile).To(ContainSubstring("FROM golang"))
 
+						Expect(sess.Out).To(gbytes.Say("For go containers, run 'go mod init' and 'go mod tidy' to manage your script's dependencies"))
 						Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
 					})
 				})
@@ -340,11 +343,11 @@ var _ = Describe("add", func() {
 					Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
 					Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
 
-					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "image")).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(getPipelineScriptContents(dir, "promise", "configure", "pipeline0", "image")).To(ContainSubstring("Hello from ${name} ${namespace}"))
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "image", "Dockerfile")).To(BeTrue())
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "image", "resources/")).To(BeTrue())
 
-					Expect(getPipelineScript(dir, "promise", "configure", "pipeline0", "superb-image")).To(ContainSubstring("Hello from ${name} ${namespace}"))
+					Expect(getPipelineScriptContents(dir, "promise", "configure", "pipeline0", "superb-image")).To(ContainSubstring("Hello from ${name} ${namespace}"))
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "superb-image", "Dockerfile")).To(BeTrue())
 					Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline0", "superb-image", "resources/")).To(BeTrue())
 				})
@@ -376,11 +379,24 @@ func getWorkflowsFromSplitFile(dir, workflowName, action string) []v1alpha1.Pipe
 	return workflows
 }
 
-func getPipelineScript(dir, workflow, action, pipelineName, containerName string) string {
-	script, err := os.ReadFile(filepath.Join(dir, "workflows", workflow, action, pipelineName, containerName, "scripts", "pipeline.sh"))
+func getPipelineScriptContents(dir, workflow, action, pipelineName, containerName string) string {
+	filename := getPipelineScriptFilename(dir, workflow, action, pipelineName, containerName)
+	script, err := os.ReadFile(filepath.Join(dir, "workflows", workflow, action, pipelineName, containerName, "scripts", filename))
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 	return string(script)
+}
+
+func getPipelineScriptFilename(dir, workflow, action, pipelineName, containerName string) string {
+	var filename string
+	content, err := os.ReadDir(filepath.Join(dir, "workflows", workflow, action, pipelineName, containerName, "scripts"))
+	Expect(err).To(Not(HaveOccurred()), "error listing content in scripts directory")
+	for _, file := range content {
+		if strings.HasPrefix(file.Name(), "pipeline.") {
+			filename = file.Name()
+		}
+	}
+	return filename
 }
 
 func getPipelineDockerfile(dir, workflow, action, pipelineName, containerName string) string {

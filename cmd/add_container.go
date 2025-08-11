@@ -24,6 +24,18 @@ var workflowTemplates embed.FS
 
 var supportedLanguages = []string{"go", "bash"}
 
+var languageMatrix = map[string]interface{}{
+	"go": map[string]string{
+		"fileExtension":       "go",
+		"templateDir":         "go",
+		"confirmationMessage": "run 'go mod init' and 'go mod tidy' to manage your script's dependencies",
+	},
+	"bash": map[string]string{
+		"fileExtension": "sh",
+		"templateDir":   ".",
+	},
+}
+
 var addContainerCmd = &cobra.Command{
 	Use:   "container LIFECYCLE/ACTION/PIPELINE-NAME --image CONTAINER-IMAGE",
 	Short: "Adds a container to the named workflow",
@@ -69,10 +81,9 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	pipelineScriptFilename := "pipeline.sh"
+	pipelineScriptFilename := pipelineScriptFilename(language)
 	scriptsPath := filepath.Join("workflows", containerArgs.Lifecycle, containerArgs.Action, containerArgs.Pipeline, containerName, "scripts", pipelineScriptFilename)
-	fmt.Printf("Customise your container by editing %s \n", scriptsPath)
-	fmt.Println("Don't forget to build and push your image!")
+	logConfirmationMessages(scriptsPath, language)
 	return nil
 }
 
@@ -195,7 +206,7 @@ func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrit
 			return err
 		}
 	}
-	if err := generatePipelineDirFiles(dir, workflowPath, c.Pipeline, containerName); err != nil {
+	if err := generatePipelineDirFiles(dir, workflowPath, c.Pipeline, containerName, language); err != nil {
 		return err
 	}
 
@@ -283,15 +294,12 @@ func pipelinesToUnstructured(pipelines []v1alpha1.Pipeline) ([]unstructured.Unst
 	return pipelinesUnstructured, nil
 }
 
-func generatePipelineDirFiles(promiseDir, workflowDirectory, pipelineName, containerName string) error {
+func generatePipelineDirFiles(promiseDir, workflowDirectory, pipelineName, containerName, language string) error {
 	containerFileDirectory := filepath.Join(workflowDirectory, pipelineName, containerName)
 	containerScriptsDirectory := filepath.Join(containerFileDirectory, "scripts")
 	resourcesDir := filepath.Join(promiseDir, containerFileDirectory, "resources")
 
-	templates := map[string]string{
-		filepath.Join(containerScriptsDirectory, "pipeline.sh"): "templates/workflows/pipeline.sh.tpl",
-		filepath.Join(containerFileDirectory, "Dockerfile"):     "templates/workflows/Dockerfile.tpl",
-	}
+	templates := getTemplates(containerFileDirectory, containerScriptsDirectory, language)
 
 	if err := templateFiles(workflowTemplates, promiseDir, templates, nil); err != nil {
 		return err
@@ -300,6 +308,11 @@ func generatePipelineDirFiles(promiseDir, workflowDirectory, pipelineName, conta
 		return os.Mkdir(resourcesDir, os.ModePerm)
 	}
 	return nil
+}
+
+func pipelineScriptFilename(language string) string {
+	extension := languageMatrix[language].(map[string]string)["fileExtension"]
+	return fmt.Sprintf("pipeline.%s", extension)
 }
 
 func filesGeneratedWithSplit(dir string) bool {
@@ -347,4 +360,24 @@ func supportedLanguage(language string) bool {
 		}
 	}
 	return false
+}
+
+func getTemplates(containerFileDirectory, containerScriptsDirectory, language string) map[string]string {
+	pipelineScriptFilename := pipelineScriptFilename(language)
+	pipelineScriptTemplateFilepath := fmt.Sprintf("templates/workflows/%s/%s.tpl", language, pipelineScriptFilename)
+	dockerfileTemplateFilepath := fmt.Sprintf("templates/workflows/%s/Dockerfile.tpl", language)
+
+	templates := map[string]string{
+		filepath.Join(containerScriptsDirectory, pipelineScriptFilename): pipelineScriptTemplateFilepath,
+		filepath.Join(containerFileDirectory, "Dockerfile"):              dockerfileTemplateFilepath,
+	}
+	return templates
+}
+
+func logConfirmationMessages(scriptsPath, language string) {
+	fmt.Printf("Customise your container by editing %s \n", scriptsPath)
+	if language != "bash" {
+		fmt.Printf("For %s containers, %s\n", language, languageMatrix[language].(map[string]string)["confirmationMessage"])
+	}
+	fmt.Println("Don't forget to build and push your image!")
 }
