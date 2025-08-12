@@ -17,7 +17,7 @@ require (
 	github.com/syntasso/kratix v0.125.1-0.20250530092323-c28efaf623d5
 	github.com/zclconf/go-cty v1.13.0
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.17.3
+	helm.sh/helm/v3 v3.17.4
 	k8s.io/api v0.32.2
 	k8s.io/apiextensions-apiserver v0.32.2
 	k8s.io/apimachinery v0.32.2
