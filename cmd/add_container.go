@@ -381,7 +381,7 @@ func getTemplates(containerFileDirectory, containerScriptsDirectory, language st
 
 func logConfirmationMessages(scriptsPath, language string) {
 	fmt.Printf("Customise your container by editing %s \n", scriptsPath)
-	if language != "bash" {
+	if language == "go" {
 		fmt.Printf("For %s containers, %s\n", language, languageMatrix[language].(map[string]string)["confirmationMessage"])
 	}
 	fmt.Println("Don't forget to build and push your image!")
