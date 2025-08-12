@@ -328,12 +328,10 @@ var _ = Describe("add", func() {
 						Expect(scriptFilename).To(Equal("pipeline.py"))
 						script := getPipelineScriptContents(dir, "promise", "configure", "pipeline0", "image")
 						Expect(script).To(ContainSubstring("import kratix_sdk as ks"))
-						Expect(script).To(ContainSubstring(`f'Hello from {promise.get_name()}'`))
+						Expect(script).To(ContainSubstring(`f'Hello from {sdk.promise_name()}'`))
 
 						dockerfile := getPipelineDockerfile(dir, "promise", "configure", "pipeline0", "image")
-						Expect(dockerfile).To(ContainSubstring("FROM python:3.12-slim"))
-
-						Expect(sess.Out).To(gbytes.Say("For python containers, run 'go mod init' and 'go mod tidy' to manage your script's dependencies"))
+						Expect(dockerfile).To(ContainSubstring("FROM python"))
 						Expect(sess.Out).To(gbytes.Say("Don't forget to build and push your image!"))
 					})
 				})

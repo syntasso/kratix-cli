@@ -22,7 +22,7 @@ import (
 //go:embed templates/workflows/*
 var workflowTemplates embed.FS
 
-var supportedLanguages = []string{"go", "bash"}
+var supportedLanguages = []string{"go", "bash", "python"}
 
 var languageMatrix = map[string]interface{}{
 	"go": map[string]string{
@@ -33,6 +33,11 @@ var languageMatrix = map[string]interface{}{
 	"bash": map[string]string{
 		"fileExtension": "sh",
 		"templateDir":   ".",
+	},
+	"python": map[string]string{
+		"fileExtension":       "py",
+		"templateDir":         "python",
+		"confirmationMessage": "",
 	},
 }
 
