@@ -1,12 +1,15 @@
 FROM golang:latest
 
-COPY scripts/go.mod go.mod
-COPY scripts/go.sum go.sum
+WORKDIR /scripts
+
+COPY scripts/go.mod scripts/go.sum scripts/pipeline.go ./
 
 RUN go mod download
 
-ADD scripts/pipeline.go pipeline.go
 ADD resources resources
 
-CMD [ "go", "run", "./pipeline.go" ]
+RUN go build -a -o /usr/bin/pipeline.go pipeline.go
+
+CMD [ "sh", "-c", "pipeline.go" ]
+
 ENTRYPOINT []
