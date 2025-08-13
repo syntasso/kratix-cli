@@ -126,17 +126,17 @@ var _ = Describe("add", func() {
 
 				configurePipelines := configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)
 
-				ExpectPipeline(configurePipelines[0], "pipeline0", 1)
+				expectPipeline(configurePipelines[0], "pipeline0", 1)
 				Expect(configurePipelines[0].Spec.Containers).To(HaveLen(1))
-				ExpectContainerProperties(configurePipelines[0].Spec.Containers[0], "image:latest", "image")
+				expectContainerProperties(configurePipelines[0].Spec.Containers[0], "image:latest", "image")
 
 				Expect(configurePipelines[1].Name).To(Equal("pipeline1"))
 				Expect(configurePipelines[1].Spec.Containers).To(HaveLen(1))
-				ExpectContainerProperties(configurePipelines[1].Spec.Containers[0], "project/image1:latest", "a-good-container")
+				expectContainerProperties(configurePipelines[1].Spec.Containers[0], "project/image1:latest", "a-good-container")
 
 				Expect(deletePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Name).To(Equal("pipeline0"))
 				Expect(deletePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers).To(HaveLen(1))
-				ExpectContainerProperties(deletePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers[0], "project/cleanup:latest", "project-cleanup")
+				expectContainerProperties(deletePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers[0], "project/cleanup:latest", "project-cleanup")
 
 				Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
 				script := getPipelineScriptContents(dir, "promise", "configure", "pipeline1", "a-good-container")
@@ -164,12 +164,12 @@ var _ = Describe("add", func() {
 
 					Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Name).To(Equal("pipeline0"))
 					Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers).To(HaveLen(2))
-					ExpectContainerProperties(
+					expectContainerProperties(
 						configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers[0],
 						"project/image1:latest",
 						"a-great-container",
 					)
-					ExpectContainerProperties(
+					expectContainerProperties(
 						configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers[1],
 						"project/image2:latest",
 						"an-even-greater-container",
@@ -197,12 +197,12 @@ var _ = Describe("add", func() {
 				Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypeResource)).To(HaveLen(1))
 				Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypeResource)[0].Name).To(Equal("pipeline0"))
 				Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypeResource)[0].Spec.Containers).To(HaveLen(2))
-				ExpectContainerProperties(
+				expectContainerProperties(
 					configurePipelines(pipelines, v1alpha1.WorkflowTypeResource)[0].Spec.Containers[0],
 					"project/image1:latest",
 					"a-great-container",
 				)
-				ExpectContainerProperties(
+				expectContainerProperties(
 					configurePipelines(pipelines, v1alpha1.WorkflowTypeResource)[0].Spec.Containers[1],
 					"project/image2:latest",
 					"project-image2",
@@ -267,7 +267,7 @@ var _ = Describe("add", func() {
 						Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)).To(HaveLen(1))
 						Expect(deletePipelines(pipelines, v1alpha1.WorkflowTypePromise)).To(HaveLen(0))
 
-						ExpectConfigureWorkflowImage(pipelines, "pipeline0", "image:latest", "image")
+						expectConfigureWorkflowImage(pipelines, "pipeline0", "image:latest", "image")
 
 						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
 						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.sh"))
@@ -293,7 +293,7 @@ var _ = Describe("add", func() {
 						Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)).To(HaveLen(1))
 						Expect(deletePipelines(pipelines, v1alpha1.WorkflowTypePromise)).To(HaveLen(0))
 
-						ExpectConfigureWorkflowImage(pipelines, "pipeline0", "image:latest", "image")
+						expectConfigureWorkflowImage(pipelines, "pipeline0", "image:latest", "image")
 
 						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
 						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.go"))
@@ -322,7 +322,7 @@ var _ = Describe("add", func() {
 						Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)).To(HaveLen(1))
 						Expect(deletePipelines(pipelines, v1alpha1.WorkflowTypePromise)).To(HaveLen(0))
 
-						ExpectConfigureWorkflowImage(pipelines, "pipeline0", "image:latest", "image")
+						expectConfigureWorkflowImage(pipelines, "pipeline0", "image:latest", "image")
 
 						Expect(sess.Out).To(gbytes.Say(fmt.Sprintf("generated the promise/configure/pipeline0/image in %s/promise.yaml", dir)))
 						Expect(sess.Out).To(gbytes.Say("Customise your container by editing workflows/promise/configure/pipeline0/image/scripts/pipeline.py"))
@@ -461,29 +461,29 @@ func generateExpectedContainerName(image string) string {
 	return fmt.Sprintf("%s-%s", prefix, suffix)
 }
 
-func ExpectConfigureWorkflowImage(
+func expectConfigureWorkflowImage(
 	pipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline,
 	pipelineName string,
 	pipelineImage string,
 	containerName string,
 ) {
-	Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Name).To(Equal(pipelineName))
-	Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers).To(HaveLen(1))
-	Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers[0].Image).To(Equal(pipelineImage))
-	Expect(configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers[0].Name).To(Equal(containerName))
+	ExpectWithOffset(1, configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Name).To(Equal(pipelineName))
+	ExpectWithOffset(1, configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers).To(HaveLen(1))
+	ExpectWithOffset(1, configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers[0].Image).To(Equal(pipelineImage))
+	ExpectWithOffset(1, configurePipelines(pipelines, v1alpha1.WorkflowTypePromise)[0].Spec.Containers[0].Name).To(Equal(containerName))
 }
 
-func ExpectPipeline(pipeline v1alpha1.Pipeline,
+func expectPipeline(pipeline v1alpha1.Pipeline,
 	name string,
 	containerCount int,
 ) {
-	Expect(pipeline.Name).To(Equal("pipeline0"))
-	Expect(pipeline.Spec.Containers).To(HaveLen(1))
+	ExpectWithOffset(1, pipeline.Name).To(Equal("pipeline0"))
+	ExpectWithOffset(1, pipeline.Spec.Containers).To(HaveLen(1))
 }
 
-func ExpectContainerProperties(container v1alpha1.Container, image string, name string) {
-	Expect(container.Image).To(Equal(image))
-	Expect(container.Name).To(Equal(name))
+func expectContainerProperties(container v1alpha1.Container, image string, name string) {
+	ExpectWithOffset(1, container.Image).To(Equal(image))
+	ExpectWithOffset(1, container.Name).To(Equal(name))
 }
 
 func configurePipelines(pipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline, workflowType v1alpha1.Type) []v1alpha1.Pipeline {
