@@ -40,7 +40,7 @@ kratix update api --property PROPERTY-NAME:string -p PROPERTY-NAME:number [-p PR
 To add workflow containers, you can use the `kratix add container` command:
 
 ```
-kratix add container WORKFLOW/ACTION/PIPELINENAME --image CONTAINER-IMAGE [--name]
+kratix add container WORKFLOW/ACTION/PIPELINENAME --image CONTAINER-IMAGE [--name] [--language]
 ```
 
 ### Updating Dependencies
