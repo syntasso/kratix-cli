@@ -64,7 +64,7 @@ func init() {
 	addContainerCmd.Flags().StringVarP(&image, "image", "i", "", "The image used by this container.")
 	addContainerCmd.Flags().StringVarP(&containerName, "name", "n", "", "The container name used for this container.")
 	addContainerCmd.Flags().StringVarP(&dir, "dir", "d", ".", "Directory to read promise.yaml from. Default to current working directory.")
-	addContainerCmd.Flags().StringVarP(&language, "language", "l", "bash", "Language to use for the scripting of the pipeline script. Currently supports Bash, Go and Python.")
+	addContainerCmd.Flags().StringVarP(&language, "language", "l", "bash", "Language to use for the pipeline script. Currently supports Bash, Go and Python.")
 	addContainerCmd.MarkFlagRequired("image")
 }
 
