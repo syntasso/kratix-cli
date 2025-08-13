@@ -72,7 +72,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		containerName = generateContainerName(image)
 	}
 
-	if !supportedLanguage(language) {
+	if !slices.Contains(supportedLanguages, language) {
 		return fmt.Errorf("invalid language: %s is not supported by the kratix cli", language)
 	}
 
