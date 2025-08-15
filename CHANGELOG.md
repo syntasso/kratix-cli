@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.7.0](https://github.com/syntasso/kratix-cli/compare/v0.6.1...v0.7.0) (2025-08-15)
+
+
+### Features
+
+* introduce language flag for 'add container' command [#121](https://github.com/syntasso/kratix-cli/issues/121) ([3d9c9c2](https://github.com/syntasso/kratix-cli/commit/3d9c9c2ca85d576ea5762edf3dfa5cde21f567f3))
+
+
+### Bug Fixes
+
+* add container --python templates ([#124](https://github.com/syntasso/kratix-cli/issues/124)) ([1f30310](https://github.com/syntasso/kratix-cli/commit/1f303108682a7563dfc76a2fe42532687c21c4f2))
+
+
+### Chores
+
+* bump hardcoded cli version ([c738e90](https://github.com/syntasso/kratix-cli/commit/c738e90d0719aa66768b9daaa7fe0873f9c915d3))
+* use the RELASE_CREATOR_TOKEN when creating release PRs ([3b25ff0](https://github.com/syntasso/kratix-cli/commit/3b25ff06816b3a9d055c32ff5e1825c1829105eb))
+* use the RELASE_CREATOR_TOKEN when creating release PRs ([62a2f80](https://github.com/syntasso/kratix-cli/commit/62a2f803bbd0b238ab192747e60026a94957703d))
+
+
+### Build System
+
+* **deps:** bump golang.org/x/oauth2 from 0.24.0 to 0.27.0 ([a0320e2](https://github.com/syntasso/kratix-cli/commit/a0320e26e2dc179bd90b7bcc5fcdeb348178a74b))
+* **deps:** bump golang.org/x/oauth2 from 0.24.0 to 0.27.0 ([959c175](https://github.com/syntasso/kratix-cli/commit/959c1753caf43182375b7e764416064dce4eb341))
+* **deps:** bump helm.sh/helm/v3 from 3.17.3 to 3.17.4 ([e4347b8](https://github.com/syntasso/kratix-cli/commit/e4347b8cfccdae284932854feff52f607d140e96))
+* **deps:** bump helm.sh/helm/v3 from 3.17.3 to 3.17.4 ([e415576](https://github.com/syntasso/kratix-cli/commit/e4155768e05708092de5bee678ba851ad96b3cc7))
+* **deps:** bump helm.sh/helm/v3 from 3.17.4 to 3.18.5 ([#125](https://github.com/syntasso/kratix-cli/issues/125)) ([4a21ada](https://github.com/syntasso/kratix-cli/commit/4a21ada20aecb9a3ce8d42676e9ba662d18b0acf))
+
 ## [0.6.1](https://github.com/syntasso/kratix-cli/compare/v0.6.0...v0.6.1) (2025-06-23)
 
 
