@@ -4,8 +4,7 @@ RUN apt-get update && apt-get install -y git
 
 RUN python -m pip install git+https://github.com/syntasso/kratix-python.git
 
-COPY scripts/pipeline.py /usr/bin/pipeline.py
+WORKDIR /app
+COPY scripts/pipeline.py /app/pipeline.py
 
-CMD [ "sh", "-c", "pipeline.py" ]
-
-ENTRYPOINT []
+ENTRYPOINT ["python", "-u", "/app/pipeline.py"]
