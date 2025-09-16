@@ -104,6 +104,9 @@ build-terraform-module-promise-stage:
 		--file stages/terraform-module-promise/Dockerfile \
 		.
 
+build-and-load-operator-promise-stage: build-operator-promise-stage
+	kind load docker-image ${OPERATOR_STAGE_TAG}:${KRATIX_CLI_VERSION} --name platform
+
 build-and-push-terraform-module-promise-stage:
 	docker buildx build \
 		--builder kratix-cli-image-builder \
