@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM golang:1.22 AS builder
+FROM --platform=$TARGETPLATFORM golang:1.24 AS builder
 ARG TARGETARCH
 ARG TARGETOS
 WORKDIR /workspace
