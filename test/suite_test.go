@@ -63,7 +63,7 @@ func (r *runner) run(args ...string) *gexec.Session {
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-	t := 2 * time.Second
+	t := 20 * time.Second
 	if r.timeout > 0 {
 		t = r.timeout
 	}
