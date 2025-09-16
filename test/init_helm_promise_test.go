@@ -198,7 +198,7 @@ func getPipelines(dir string) []v1alpha1.Pipeline {
 func matchHelmResourceConfigurePipeline(pipeline v1alpha1.Pipeline, vars []corev1.EnvVar) {
 	ExpectWithOffset(1, pipeline.Spec.Containers).To(HaveLen(1))
 	ExpectWithOffset(1, pipeline.Spec.Containers[0].Name).To(Equal("instance-configure"))
-	ExpectWithOffset(1, pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/helm-resource-configure:v0.1.0"))
+	ExpectWithOffset(1, pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/helm-resource-configure:v0.2.0"))
 	ExpectWithOffset(1, pipeline.Spec.Containers[0].Env).To(ConsistOf(vars))
 }
 

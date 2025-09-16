@@ -2,7 +2,7 @@ OPERATOR_STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-operator"
 HELM_STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-resource-configure"
 CROSSPLANE_STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim"
 TERRAFORM_MODULE_TAG ?= "ghcr.io/syntasso/kratix-cli/terraform-generate"
-KRATIX_CLI_VERSION ?= "v0.1.0"
+KRATIX_CLI_VERSION ?= "v0.2.0"
 
 all: test build
 
