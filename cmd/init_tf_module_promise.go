@@ -29,7 +29,7 @@ var (
 func init() {
 	initCmd.AddCommand(terraformModuleCmd)
 	terraformModuleCmd.Flags().StringVarP(&moduleSource, "module-source", "s", "", "source of the terraform module")
-	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "module-version", "v", "", "version of the terraform module")
+	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "module-version", "m", "", "version of the terraform module")
 	terraformModuleCmd.Flags().StringVarP(&modulePath, "module-path", "p", "", "(Optional) Path within the repository to the terraform module, if the module is not in the root of the repository")
 	terraformModuleCmd.MarkFlagRequired("module-source")
 	terraformModuleCmd.MarkFlagRequired("module-version")
