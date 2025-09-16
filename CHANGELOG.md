@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.0](https://github.com/syntasso/kratix-cli/compare/v0.7.0...v0.8.0) (2025-09-16)
+
+
+### Features
+
+* Add support for modules in mono repos ([#130](https://github.com/syntasso/kratix-cli/issues/130)) ([0f10579](https://github.com/syntasso/kratix-cli/commit/0f10579eab2a22cc071f512c1d6136e91efb3571))
+
+
+### Chores
+
+* bump timeout to get around ghcr rate limiting ([a44f252](https://github.com/syntasso/kratix-cli/commit/a44f252a5ef934fa1296978182801437f1e0d92a))
+* remove references to bitnami ([#131](https://github.com/syntasso/kratix-cli/issues/131)) ([80488db](https://github.com/syntasso/kratix-cli/commit/80488db934c379b5b76d81c6b49d9694b9c9e0f7))
+
+
+### Build System
+
+* **deps:** bump github.com/hashicorp/go-getter from 1.7.8 to 1.7.9 ([#129](https://github.com/syntasso/kratix-cli/issues/129)) ([a36040b](https://github.com/syntasso/kratix-cli/commit/a36040b03c7d58b88732ed451fe9c40d698465df))
+
 ## [0.7.0](https://github.com/syntasso/kratix-cli/compare/v0.6.1...v0.7.0) (2025-08-15)
 
 
