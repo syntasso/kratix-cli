@@ -10,8 +10,6 @@
 
 ### Chores
 
-* bump timeout to get around ghcr rate limiting ([a44f252](https://github.com/syntasso/kratix-cli/commit/a44f252a5ef934fa1296978182801437f1e0d92a))
-* **main:** release 0.8.0 ([#132](https://github.com/syntasso/kratix-cli/issues/132)) ([2449a71](https://github.com/syntasso/kratix-cli/commit/2449a716a1674f568f4abd54046f69ad958d7492))
 * remove references to bitnami ([#131](https://github.com/syntasso/kratix-cli/issues/131)) ([80488db](https://github.com/syntasso/kratix-cli/commit/80488db934c379b5b76d81c6b49d9694b9c9e0f7))
 
 
