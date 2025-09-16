@@ -21779,6 +21779,6 @@ spec:
               value: v1
             - name: OPERATOR_KIND
               value: Cluster
-            image: ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0
+            image: ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.2.0
             name: from-api-to-operator
 status: {}

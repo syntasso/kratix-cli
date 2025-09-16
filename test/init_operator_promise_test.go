@@ -309,7 +309,7 @@ func expectPipelinesToMatchOperatorPipelines(pipelines []v1alpha1.Pipeline) {
 	pipeline := pipelines[0]
 	ExpectWithOffset(1, pipeline.Spec.Containers).To(HaveLen(1))
 	ExpectWithOffset(1, pipeline.Spec.Containers[0].Name).To(Equal("from-api-to-operator"))
-	ExpectWithOffset(1, pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0"))
+	ExpectWithOffset(1, pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.2.0"))
 
 	ExpectWithOffset(1, pipeline.Spec.Containers[0].Env).To(HaveLen(3))
 	ExpectWithOffset(1, pipeline.Spec.Containers[0].Env).To(ConsistOf([]corev1.EnvVar{

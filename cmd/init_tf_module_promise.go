@@ -18,18 +18,23 @@ var (
 		Short: "Initialize a Promise from a Terraform Module stored in Git",
 		Example: `  # Initialize a Promise from a Terraform Module in git
   kratix init tf-module-promise vpc --module-version v5.19.0 --module-source https://github.com/terraform-aws-modules/terraform-aws-vpc.git --group syntasso.io --kind VPC --version v1alpha1
+
+  # Initialize a Promise from a Terraform Module in git with a specific path
+	kratix init tf-module-promise gateway --module-version v44.1.0 --module-source https://github.com/GoogleCloudPlatform/cloud-foundation-fabric --group syntasso.io --kind Gateway --version v1alpha1 --module-path modules/api-gateway
+	
 		`,
 		RunE: InitFromTerraformModule,
 		Args: cobra.ExactArgs(1),
 	}
 
-	moduleSource, moduleVersion string
+	moduleSource, moduleVersion, modulePath string
 )
 
 func init() {
 	initCmd.AddCommand(terraformModuleCmd)
 	terraformModuleCmd.Flags().StringVarP(&moduleSource, "module-source", "s", "", "source of the terraform module")
 	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "module-version", "m", "", "version of the terraform module")
+	terraformModuleCmd.Flags().StringVarP(&modulePath, "module-path", "p", "", "(Optional) Path within the repository to the terraform module, if the module is not in the root of the repository")
 	terraformModuleCmd.MarkFlagRequired("module-source")
 	terraformModuleCmd.MarkFlagRequired("module-version")
 }
@@ -37,7 +42,7 @@ func init() {
 func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	fmt.Println("Fetching terraform module variables, this might take up to a minute...")
 	versionedModuleSourceURL := fmt.Sprintf("git::%s?ref=%s", moduleSource, moduleVersion)
-	variables, err := internal.GetVariablesFromModule(versionedModuleSourceURL)
+	variables, err := internal.GetVariablesFromModule(versionedModuleSourceURL, modulePath)
 	if err != nil {
 		return fmt.Errorf("failed to download and convert terraform module to CRD: %w", err)
 	}
@@ -86,6 +91,24 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 }
 
 func generateTerraformModuleResourceConfigurePipeline() (string, error) {
+	envs := []corev1.EnvVar{
+		{
+			Name:  "MODULE_SOURCE",
+			Value: moduleSource,
+		},
+		{
+			Name:  "MODULE_VERSION",
+			Value: moduleVersion,
+		},
+	}
+
+	if modulePath != "" {
+		envs = append(envs, corev1.EnvVar{
+			Name:  "MODULE_PATH",
+			Value: modulePath,
+		})
+	}
+
 	pipelines := []unstructured.Unstructured{
 		{
 			Object: map[string]any{
@@ -98,17 +121,8 @@ func generateTerraformModuleResourceConfigurePipeline() (string, error) {
 					"containers": []any{
 						v1alpha1.Container{
 							Name:  "terraform-generate",
-							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.1.0",
-							Env: []corev1.EnvVar{
-								{
-									Name:  "MODULE_SOURCE",
-									Value: moduleSource,
-								},
-								{
-									Name:  "MODULE_VERSION",
-									Value: moduleVersion,
-								},
-							},
+							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.2.0",
+							Env:   envs,
 						},
 					},
 				},

@@ -20,7 +20,7 @@ import (
 
 const (
 	operatorContainerName  = "from-api-to-operator"
-	operatorContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.1.0"
+	operatorContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.2.0"
 )
 
 var operatorPromiseCmd = &cobra.Command{

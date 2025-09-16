@@ -11,5 +11,5 @@
         value: v1alpha1
       - name: XRD_KIND
         value: ObjectStorage
-      image: ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.1.0
+      image: ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.2.0
       name: from-api-to-crossplane-claim
