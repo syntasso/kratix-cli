@@ -44,7 +44,7 @@ func main() {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	source := fmt.Sprintf("git::%s?ref=%s//%s", moduleSource, moduleVersion, modulePath)
+	source := fmt.Sprintf("git::%s//%s?ref=%s", moduleSource, modulePath, moduleVersion)
 	if modulePath == "" {
 		source = fmt.Sprintf("git::%s?ref=%s", moduleSource, moduleVersion)
 	}
