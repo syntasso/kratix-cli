@@ -21,7 +21,7 @@ spec:
   foo: bar
 EOF
 
-  CHART_URL=oci://registry-1.docker.io/bitnamicharts/redis CHART_VERSION=19.6.1 $ROOT/pipeline.sh 2>&1 | grep "template foo oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1 --values values.yaml"
+  CHART_URL=oci://ghcr.io/jenkinsci/helm-charts/jenkins CHART_VERSION=5.8.86 $ROOT/pipeline.sh 2>&1 | grep "template foo oci://ghcr.io/jenkinsci/helm-charts/jenkins --version 5.8.86 --values values.yaml"
   echo "  testing OCI helm chart passed"
   rm -rf $KRATIX_INPUT
   rm -rf $KRATIX_OUTPUT
@@ -67,7 +67,7 @@ spec:
   foo: bar
 EOF
 
-  CHART_URL=oci://registry-1.docker.io/bitnamicharts/redis CHART_VERSION=19.6.1 $ROOT/pipeline.sh 2>&1 | grep "template foo oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1 --namespace kratix-worker-system --values values.yaml"
+  CHART_URL=oci://ghcr.io/jenkinsci/helm-charts/jenkins CHART_VERSION=5.8.86 $ROOT/pipeline.sh 2>&1 | grep "template foo oci://ghcr.io/jenkinsci/helm-charts/jenkins --version 5.8.86 --namespace kratix-worker-system --values values.yaml"
   echo "  testing OCI helm chart with namespace passed"
   rm -rf $KRATIX_INPUT
   rm -rf $KRATIX_OUTPUT
