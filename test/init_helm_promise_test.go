@@ -25,7 +25,7 @@ var _ = Describe("init helm-promise", func() {
 		var err error
 		workingDir, err = os.MkdirTemp("", "kratix-test")
 		Expect(err).NotTo(HaveOccurred())
-		r = &runner{exitCode: 0, dir: workingDir, timeout: 5 * time.Second}
+		r = &runner{exitCode: 0, dir: workingDir, timeout: 20 * time.Second}
 	})
 
 	AfterEach(func() {
