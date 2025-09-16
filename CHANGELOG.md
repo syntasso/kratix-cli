@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/syntasso/kratix-cli/compare/v0.8.0...v0.8.1) (2025-09-16)
+
+
+### Chores
+
+* fix operator-promise dockerfile ([cbec6cf](https://github.com/syntasso/kratix-cli/commit/cbec6cf6896c2591d370d51428040af5ca2cda82))
+
 ## [0.8.0](https://github.com/syntasso/kratix-cli/compare/v0.7.0...v0.8.0) (2025-09-16)
 
 
