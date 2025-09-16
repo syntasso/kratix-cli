@@ -138,24 +138,24 @@ var _ = Describe("init helm-promise", func() {
 
 	Context("helm chart integration", func() {
 		It("works with OCI helm chart", func() {
-			session := r.run("init", "helm-promise", "--chart-url", "oci://registry-1.docker.io/bitnamicharts/redis", "--chart-version", "19.6.0", "redis", "--group", "syntasso.io", "--kind", "Database")
-			Expect(session.Out).To(gbytes.Say("redis promise bootstrapped in the current directory"))
+			session := r.run("init", "helm-promise", "--chart-url", "oci://ghcr.io/jenkinsci/helm-charts/jenkins", "--chart-version", "5.8.86", "jenkins", "--group", "syntasso.io", "--kind", "Jenkins")
+			Expect(session.Out).To(gbytes.Say("jenkins promise bootstrapped in the current directory"))
 
 			By("including correct env var", func() {
 				pipelines := getWorkflows(workingDir)["resource"]["configure"]
 				Expect(pipelines).To(HaveLen(1))
 				matchHelmResourceConfigurePipeline(pipelines[0], []corev1.EnvVar{
-					{Name: "CHART_URL", Value: "oci://registry-1.docker.io/bitnamicharts/redis"},
-					{Name: "CHART_VERSION", Value: "19.6.0"},
+					{Name: "CHART_URL", Value: "oci://ghcr.io/jenkinsci/helm-charts/jenkins"},
+					{Name: "CHART_VERSION", Value: "5.8.86"},
 				})
 			})
 
 			By("including CRD schema from chart values in promise.yaml", func() {
 				props := getCRDProperties(workingDir, false)
-				ExpectWithOffset(1, props).To(SatisfyAll(
-					HaveKey("kubeVersion"),
-					HaveKey("global"),
-					HaveKey("image")))
+				Expect(props).To(SatisfyAll(
+					HaveKey("credentialsId"),
+					HaveKey("controller"),
+					HaveKey("agent")))
 			})
 		})
 
@@ -181,7 +181,7 @@ var _ = Describe("init helm-promise", func() {
 		})
 
 		It("errors when it cannot locate the chart", func() {
-			session := withExitCode(1).run("init", "helm-promise", "--chart-url", "oci://registry-1.docker.io/bitnamicharts/vault", "--chart-version", "200", "redis", "--group", "syntasso.io", "--kind", "Database")
+			session := withExitCode(1).run("init", "helm-promise", "--chart-url", "oci://ghcr.io/jenkinsci/helm-charts/jenkins", "--chart-version", "200", "jenkins", "--group", "syntasso.io", "--kind", "Jenkins")
 			Expect(session.Err).To(gbytes.Say("failed to fetch helm chart"))
 		})
 	})

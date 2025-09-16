@@ -19,7 +19,7 @@ var intHelmPromiseCmd = &cobra.Command{
 	Short: "Initialize a new Promise from a Helm chart",
 	Long:  "Initialize a new Promise from a Helm Chart",
 	Example: `  # initialize a new promise from an OCI Helm Chart
-  kratix init helm-promise postgresql --chart-url oci://registry-1.docker.io/bitnamicharts/postgresql [--chart-version] --group syntasso.io --kind database
+  kratix init helm-promise jenkins --chart-url oci://ghcr.io/jenkinsci/helm-charts/jenkins [--chart-version] --group syntasso.io --kind cicd
 
   # initialize a new promise from a Helm Chart repository
   kratix init helm-promise postgresql --chart-url https://fluxcd-community.github.io/helm-charts --chart-name flux2 [--chart-version] --group syntasso.io --kind database
