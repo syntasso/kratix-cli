@@ -14,7 +14,7 @@ import (
 )
 
 var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
-var dst, src, tempDir, variablesPath string
+	var dst, src, tempDir, variablesPath string
 
 	BeforeEach(func() {
 		var err error
@@ -61,7 +61,62 @@ var dst, src, tempDir, variablesPath string
 		})
 
 		It("returns a list of variables with correct types and descriptions", func() {
-			variables, err := internal.GetVariablesFromModule("mock-source")
+			variables, err := internal.GetVariablesFromModule("mock-source", "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(src).To(Equal("mock-source"))
+			Expect(dst).To(Equal(tempDir))
+			Expect(variables).To(HaveLen(4))
+
+			Expect(variables[0].Name).To(Equal("example_var"))
+			Expect(variables[0].Type).To(Equal("string"))
+			Expect(variables[0].Description).To(Equal("An example variable"))
+
+			Expect(variables[1].Name).To(Equal("complex_var"))
+			Expect(variables[1].Type).To(Equal("list(map(string))"))
+			Expect(variables[1].Description).To(Equal("A complex variable"))
+
+			Expect(variables[2].Name).To(Equal("number_var"))
+			Expect(variables[2].Type).To(Equal("number"))
+			Expect(variables[2].Description).To(BeEmpty())
+
+			Expect(variables[3].Name).To(Equal("bool_var"))
+			Expect(variables[3].Type).To(Equal("bool"))
+			Expect(variables[3].Description).To(BeEmpty())
+		})
+	})
+
+	Context("when the variables.tf file is not at the root of the module", func() {
+		BeforeEach(func() {
+			Expect(os.MkdirAll(filepath.Join(tempDir, "subdir"), 0755)).To(Succeed())
+			variablesPath = filepath.Join(tempDir, "subdir", "variables.tf")
+			// Mock getter function to simulate a successful download
+			internal.SetGetModuleFunc(func(givenDst, givenSrc string, opts ...getter.ClientOption) error {
+				dst = givenDst
+				src = givenSrc
+				return os.WriteFile(variablesPath, []byte(`
+					variable "example_var" {
+					  type        = string
+					  description = "An example variable"
+					}
+
+					variable "complex_var" {
+					  type        = list(map(string))
+					  description = "A complex variable"
+					}
+
+					variable "number_var" {
+					  type        = number
+					}
+
+					variable "bool_var" {
+					  type        = bool
+					}
+				`), 0644)
+			})
+		})
+
+		It("returns a list of variables with correct types and descriptions", func() {
+			variables, err := internal.GetVariablesFromModule("mock-source", "subdir")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(src).To(Equal("mock-source"))
 			Expect(dst).To(Equal(tempDir))
@@ -91,7 +146,7 @@ var dst, src, tempDir, variablesPath string
 				return errors.New("mock download failure")
 			})
 
-			_, err := internal.GetVariablesFromModule("mock-source")
+			_, err := internal.GetVariablesFromModule("mock-source", "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to download module"))
 		})
@@ -103,7 +158,7 @@ var dst, src, tempDir, variablesPath string
 				return os.WriteFile(variablesPath, []byte(`invalid hcl`), 0644)
 			})
 
-			_, err := internal.GetVariablesFromModule("mock-source")
+			_, err := internal.GetVariablesFromModule("mock-source", "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to parse variables"))
 		})

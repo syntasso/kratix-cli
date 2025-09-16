@@ -107,6 +107,49 @@ var _ = Describe("InitterraformPromise", func() {
 				))
 			})
 		})
+
+		Describe("with module-path on Cloud Foundation Fabric", func() {
+			var vpcCmd []string
+			BeforeEach(func() {
+				// ./bin/kratix init tf-module-promise vpc --module-version v44.1.0 \
+				// --module-source https://github.com/GoogleCloudPlatform/cloud-foundation-fabric \
+				// --group syntasso.io --kind VPC --version v1alpha1 --module-path modules/api-gateway
+				r.flags = map[string]string{
+					"--group":          "syntasso.io",
+					"--kind":           "VPC",
+					"--version":        "v1alpha1",
+					"--dir":            workingDir,
+					"--module-version": "v44.1.0",
+					"--module-source":  "https://github.com/GoogleCloudPlatform/cloud-foundation-fabric",
+					"--module-path":    "modules/api-gateway",
+				}
+				vpcCmd = []string{"init", "tf-module-promise", "vpc"}
+				r.timeout = time.Minute
+				session = r.run(vpcCmd...)
+			})
+
+			It("generates the expected files for the module-path scenario", func() {
+				fileEntries, err := os.ReadDir(workingDir)
+				Expect(err).ToNot(HaveOccurred())
+				generatedFiles = []string{}
+				for _, fileEntry := range fileEntries {
+					generatedFiles = append(generatedFiles, fileEntry.Name())
+				}
+
+				// Adjust if your fixture has different files
+				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
+				Expect(generatedFiles).To(ConsistOf(files))
+
+				// Compare to prepared fixtures for this scenario
+				Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/terraform/expected-output-vpc/promise.yaml")))
+				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/terraform/expected-output-vpc/example-resource.yaml")))
+				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output-vpc/README.md")))
+
+				Expect(session.Out).To(SatisfyAll(
+					gbytes.Say(`Promise generated successfully.`),
+				))
+			})
+		})
 	})
 })
 

@@ -23,13 +23,14 @@ var (
 		Args: cobra.ExactArgs(1),
 	}
 
-	moduleSource, moduleVersion string
+	moduleSource, moduleVersion, modulePath string
 )
 
 func init() {
 	initCmd.AddCommand(terraformModuleCmd)
 	terraformModuleCmd.Flags().StringVarP(&moduleSource, "module-source", "s", "", "source of the terraform module")
 	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "module-version", "m", "", "version of the terraform module")
+	terraformModuleCmd.Flags().StringVarP(&modulePath, "module-path", "p", "", "(Optional) subdirectory path within the module source, if the variables.tf for the module is not in the root")
 	terraformModuleCmd.MarkFlagRequired("module-source")
 	terraformModuleCmd.MarkFlagRequired("module-version")
 }
@@ -37,7 +38,7 @@ func init() {
 func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	fmt.Println("Fetching terraform module variables, this might take up to a minute...")
 	versionedModuleSourceURL := fmt.Sprintf("git::%s?ref=%s", moduleSource, moduleVersion)
-	variables, err := internal.GetVariablesFromModule(versionedModuleSourceURL)
+	variables, err := internal.GetVariablesFromModule(versionedModuleSourceURL, modulePath)
 	if err != nil {
 		return fmt.Errorf("failed to download and convert terraform module to CRD: %w", err)
 	}

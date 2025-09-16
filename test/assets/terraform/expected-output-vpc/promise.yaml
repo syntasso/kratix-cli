@@ -1,0 +1,85 @@
+apiVersion: platform.kratix.io/v1alpha1
+kind: Promise
+metadata:
+  name: vpc
+  labels:
+    kratix.io/promise-version: v0.0.1
+spec:
+  api:
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: vpcs.syntasso.io
+    spec:
+      group: syntasso.io
+      names:
+        kind: VPC
+        plural: vpcs
+        singular: vpc
+      scope: Namespaced
+      versions:
+        - name: v1alpha1
+          schema:
+            openAPIV3Schema:
+              type: object
+              properties:
+                spec:
+                  properties:
+                    api_id:
+                      description: API identifier.
+                      type: string
+                    iam:
+                      additionalProperties:
+                        items:
+                          type: string
+                        type: array
+                      description: IAM bindings for the API in {ROLE => [MEMBERS]} format.
+                      type: object
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: Map of labels.
+                      type: object
+                    project_id:
+                      description: Project identifier.
+                      type: string
+                    region:
+                      description: Region.
+                      type: string
+                    service_account_create:
+                      default: false
+                      description: Flag indicating whether a service account needs to be created.
+                      type: boolean
+                    service_account_email:
+                      description: Service account for creating API configs.
+                      type: string
+                    spec:
+                      description: String with the contents of the OpenAPI spec.
+                      type: string
+                  type: object
+                  
+          served: true
+          storage: true
+  destinationSelectors:
+    - matchLabels:
+        environment: terraform
+  workflows:
+    promise:
+      configure:
+        []
+    resource:
+      configure:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: instance-configure
+          spec:
+            containers:
+            - env:
+              - name: MODULE_SOURCE
+                value: https://github.com/GoogleCloudPlatform/cloud-foundation-fabric
+              - name: MODULE_VERSION
+                value: v44.1.0
+              image: ghcr.io/syntasso/kratix-cli/terraform-generate:v0.1.0
+              name: terraform-generate
+        

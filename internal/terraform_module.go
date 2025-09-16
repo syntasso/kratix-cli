@@ -19,7 +19,7 @@ var (
 	mkdirTemp func(dir, pattern string) (string, error)                = os.MkdirTemp
 )
 
-func GetVariablesFromModule(moduleSource string) ([]TerraformVariable, error) {
+func GetVariablesFromModule(moduleSource, modulePath string) ([]TerraformVariable, error) {
 	tempDir, err := mkdirTemp("", "terraform-module")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
@@ -30,9 +30,7 @@ func GetVariablesFromModule(moduleSource string) ([]TerraformVariable, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to download module: %w", err)
 	}
-
-	absPath := filepath.Join(tempDir, "variables.tf")
-
+	absPath := filepath.Join(tempDir, modulePath, "variables.tf")
 	variables, err := extractVariablesFromVarsFile(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse variables: %w", err)
