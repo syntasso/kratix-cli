@@ -18,6 +18,10 @@ var (
 		Short: "Initialize a Promise from a Terraform Module stored in Git",
 		Example: `  # Initialize a Promise from a Terraform Module in git
   kratix init tf-module-promise vpc --module-version v5.19.0 --module-source https://github.com/terraform-aws-modules/terraform-aws-vpc.git --group syntasso.io --kind VPC --version v1alpha1
+
+  # Initialize a Promise from a Terraform Module in git with a specific path
+	kratix init tf-module-promise gateway --module-version v44.1.0 --module-source https://github.com/GoogleCloudPlatform/cloud-foundation-fabric --group syntasso.io --kind Gateway --version v1alpha1 --module-path modules/api-gateway
+	
 		`,
 		RunE: InitFromTerraformModule,
 		Args: cobra.ExactArgs(1),
