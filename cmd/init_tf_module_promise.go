@@ -87,6 +87,24 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 }
 
 func generateTerraformModuleResourceConfigurePipeline() (string, error) {
+	envs := []corev1.EnvVar{
+		{
+			Name:  "MODULE_SOURCE",
+			Value: moduleSource,
+		},
+		{
+			Name:  "MODULE_VERSION",
+			Value: moduleVersion,
+		},
+	}
+
+	if modulePath != "" {
+		envs = append(envs, corev1.EnvVar{
+			Name:  "MODULE_PATH",
+			Value: modulePath,
+		})
+	}
+
 	pipelines := []unstructured.Unstructured{
 		{
 			Object: map[string]any{
@@ -100,16 +118,7 @@ func generateTerraformModuleResourceConfigurePipeline() (string, error) {
 						v1alpha1.Container{
 							Name:  "terraform-generate",
 							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.1.0",
-							Env: []corev1.EnvVar{
-								{
-									Name:  "MODULE_SOURCE",
-									Value: moduleSource,
-								},
-								{
-									Name:  "MODULE_VERSION",
-									Value: moduleVersion,
-								},
-							},
+							Env:   envs,
 						},
 					},
 				},

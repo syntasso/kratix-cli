@@ -80,6 +80,8 @@ spec:
                 value: https://github.com/GoogleCloudPlatform/cloud-foundation-fabric
               - name: MODULE_VERSION
                 value: v44.1.0
+              - name: MODULE_PATH
+                value: modules/api-gateway
               image: ghcr.io/syntasso/kratix-cli/terraform-generate:v0.1.0
               name: terraform-generate
         
