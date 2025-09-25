@@ -1,0 +1,7 @@
+apiVersion: marketplace.kratix.io/v1
+kind: app
+metadata:
+  name: my-app
+  namespace: default
+spec:
+  image: nginx

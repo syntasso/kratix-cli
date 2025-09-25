@@ -98,7 +98,7 @@ func renderTree(compoundResource string) error {
 		return fmt.Errorf("list %q requests: %w", compoundResource, err)
 	}
 	if len(parents.Items) == 0 {
-		fmt.Printf("No requests found for compound promise %q.\n", compoundResource)
+		fmt.Printf("No requests found for promise %q\n", compoundResource)
 		return nil
 	}
 	sort.Slice(parents.Items, func(i, j int) bool {
@@ -166,11 +166,12 @@ func renderTree(compoundResource string) error {
 	return nil
 }
 
-// kratix platform get resources <compound-resource>
+// kratix platform get resources <promise-name>
 // e.g. `./bin/kratix platform get resources paved-path-demo`
 var platformGetResourcesCmd = &cobra.Command{
-	Use:   "resources <compound-resource>",
-	Short: "Show requests for a compound Promise and its labeled sub-requests",
+	Use:   "resources PROMISE-NAME",
+	Short: "Show requests for a Promise and its labeled sub-requests",
+	Long:  "Show requests for a Promise and for a Compound Promises, its sub-requests",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return renderTree(args[0])

@@ -1,0 +1,108 @@
+apiVersion: platform.kratix.io/v1alpha1
+kind: Promise
+metadata:
+  creationTimestamp: null
+  name: app
+spec:
+  destinationSelectors:
+    - matchLabels:
+        environment: platform
+  api:
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: apps.marketplace.kratix.io
+    spec:
+      group: marketplace.kratix.io
+      names:
+        kind: app
+        plural: apps
+        singular: app
+      scope: Namespaced
+      versions:
+        - name: v1
+          schema:
+            openAPIV3Schema:
+              properties:
+                spec:
+                  properties:
+                    image:
+                      description: container image for application that will be deployed
+                      example: gcr.io/syntasso/great-app
+                      type: string
+                    name:
+                      type: string
+                      description: Name for application. Lowercase letters, numbers, and hyphens; must start and end with a letter or number.
+                      regex: ^(?![0-9]+$)(?!-)[a-zA-Z0-9-]{,63}(?<!-)$
+                    service:
+                      type: object
+                      default: {}
+                      properties:
+                        port:
+                          type: integer
+                          description: port the application service will be exposed on
+                          default: 8080
+                  required:
+                    - image
+                  type: object
+              type: object
+          served: true
+          storage: true
+  requiredPromises:
+    - name: servicepromise
+      version: v1.0.0-beta.1
+    - name: configmappromise
+      version: v1.0.0-beta.1
+  workflows:
+    resource:
+      configure:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: resource-configure
+          spec:
+            containers:
+              - name: resource-configure
+                image: ghcr.io/syntasso/kratix-pipeline-utility:v0.0.1
+                command: ["sh"]
+                args:
+                  - -c
+                  - |
+                    set -eux
+                    name=$(yq '.metadata.name' /kratix/input/object.yaml)
+                    image=$(yq '.spec.image' /kratix/input/object.yaml)
+
+                    kubectl create deployment ${name} --image=${image} --namespace=default --dry-run=client --output=yaml > /kratix/output/configmap.yaml
+                    
+                    mkdir /kratix/output/platform
+
+                    cat <<EOF > /kratix/output/platform/configmap-resource.yaml
+                    apiVersion: marketplace.kratix.io/v1
+                    kind: configmappromise
+                    metadata:
+                      name: ${name}-configmap
+                      namespace: default
+                      labels:
+                        kratix.io/component-of-promise-name: app
+                        kratix.io/component-of-resource-name: ${name}
+                        kratix.io/component-of-resource-namespace: default
+                    EOF
+
+                    cat <<EOF > /kratix/output/platform/service-resource.yaml
+                    apiVersion: marketplace.kratix.io/v1
+                    kind: servicepromise
+                    metadata:
+                      name: ${name}-service
+                      namespace: default
+                    labels:
+                      kratix.io/component-of-promise-name: app
+                      kratix.io/component-of-resource-name: ${name}
+                      kratix.io/component-of-resource-namespace: default
+                    EOF
+
+                    echo """
+                    - directory : platform
+                      matchLabels:
+                        environment: platform
+                    """ >> /kratix/metadata/destination-selectors.yaml
+status: {}
