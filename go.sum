@@ -1167,6 +1167,8 @@ github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOf
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/syntasso/kratix v0.125.1-0.20250530092323-c28efaf623d5 h1:Z3B9Isnrb6jhGMnmg60pikUJBH2vVx02dbso74C4JA8=
 github.com/syntasso/kratix v0.125.1-0.20250530092323-c28efaf623d5/go.mod h1:mmgbe7ZBrWPZV+lgyUQp4s6xfHtyNBo8WBllVfk8waQ=
+github.com/syntasso/kratix v0.125.1-0.20250923144917-71691d914142 h1:cGUkrqv++BTUTv31bQOySDWc5JBsv/nynrQ2erlgq3c=
+github.com/syntasso/kratix v0.125.1-0.20250923144917-71691d914142/go.mod h1:O4eD0l8ESDhbdqySlZ2VMfrRdS8B/T8ZXUKbb1sEpAo=
 github.com/ulikunitz/xz v0.5.10 h1:t92gobL9l3HE202wg3rlk19F6X+JOxl9BBrCCMYEYd8=
 github.com/ulikunitz/xz v0.5.10/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=

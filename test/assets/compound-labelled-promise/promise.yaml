@@ -94,14 +94,14 @@ spec:
                     metadata:
                       name: ${name}-service
                       namespace: default
-                    labels:
-                      kratix.io/component-of-promise-name: app
-                      kratix.io/component-of-resource-name: ${name}
-                      kratix.io/component-of-resource-namespace: default
+                      labels:
+                        kratix.io/component-of-promise-name: app
+                        kratix.io/component-of-resource-name: ${name}
+                        kratix.io/component-of-resource-namespace: default
                     EOF
 
                     echo """
-                    - directory : platform
+                    - directory: platform
                       matchLabels:
                         environment: platform
                     """ >> /kratix/metadata/destination-selectors.yaml

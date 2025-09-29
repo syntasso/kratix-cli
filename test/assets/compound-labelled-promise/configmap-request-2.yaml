@@ -1,0 +1,5 @@
+apiVersion: marketplace.kratix.io/v1
+kind: configmappromise
+metadata:
+  name: configmap-2
+  namespace: default

@@ -2,19 +2,19 @@ package integration_test
 
 import (
 	"os"
-	"os/exec"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
+	"github.com/syntasso/kratix/test/kubeutils"
 )
 
 var _ = FDescribe("kratix platform get resources", func() {
 	var r *runner
 	var workingDir string
 	var dir string
+	var platform kubeutils.Cluster
 
 	BeforeEach(func() {
 		var err error
@@ -24,6 +24,13 @@ var _ = FDescribe("kratix platform get resources", func() {
 		dir, err = os.MkdirTemp("", "kratix-dir")
 		Expect(err).NotTo(HaveOccurred())
 		r = &runner{exitCode: 0, dir: workingDir}
+
+		platform = kubeutils.Cluster{
+			Context: "kind-platform",
+			Name:    "platform-cluster",
+		}
+
+		kubeutils.SetTimeoutAndInterval(1*time.Minute, 2*time.Second)
 	})
 
 	AfterEach(func() {
@@ -46,19 +53,15 @@ var _ = FDescribe("kratix platform get resources", func() {
 
 	FWhen("the request is a compound requests", func() {
 		BeforeEach(func() {
-			cmd := exec.Command("kubectl", "apply", "--filename", "assets/compound-labelled-promise/configmap-promise.yaml")
-			_, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
+			platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/configmap-promise.yaml")
+			platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/service-promise.yaml")
+			platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/promise.yaml")
+		})
 
-			cmd = exec.Command("kubectl", "apply", "--filename", "assets/compound-labelled-promise/service-promise.yaml")
-			_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-
-			cmd = exec.Command("kubectl", "apply", "--filename", "assets/compound-labelled-promise/promise.yaml")
-			_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-
-			//ensure app is available
+		AfterEach(func() {
+			platform.Kubectl("delete", "--filename", "assets/compound-labelled-promise/configmap-promise.yaml")
+			platform.Kubectl("delete", "--filename", "assets/compound-labelled-promise/service-promise.yaml")
+			platform.Kubectl("delete", "--filename", "assets/compound-labelled-promise/promise.yaml")
 		})
 
 		When("there are no resource requests", func() {
@@ -70,22 +73,36 @@ var _ = FDescribe("kratix platform get resources", func() {
 
 		When("there are resource requests", func() {
 			BeforeEach(func() {
-				cmd := exec.Command("kubectl", "apply", "--filename", "assets/compound-labelled-promise/resource-request.yaml")
-				_, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
+				platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/resource-request.yaml")
+				Eventually(func() string {
+					return platform.Kubectl("get", "app", "my-app")
+				}, 2*time.Minute).Should(ContainSubstring("Reconciled"))
 			})
+
 			It("details the tree of requests and sub-requests", func() {
 				sess := r.run("platform", "get", "resources", "app")
-				Eventually(func() *gbytes.Buffer {
-					return sess.Out
-				}, 30*time.Second).Should(gbytes.Say("lkjbl \"app\""))
+				Expect(sess.Buffer()).To(SatisfyAll(
+					gbytes.Say(`- my-app`),
+					gbytes.Say(`|--my-app-configmap`),
+					gbytes.Say(`|--my-app-service`),
+				))
 			})
 		})
 	})
 
-	When("the request is a not compound requests", func() {
-		It("displays the requests in a list", func() {
+	When("the request is a not a compound requests", func() {
+		BeforeEach(func() {
+			platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/configmap-promise.yaml")
+			platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/configmap-request-1.yaml")
+			platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/configmap-request-2.yaml")
+		})
 
+		It("displays the requests in a list", func() {
+			sess := r.run("platform", "get", "resources", "app")
+			Expect(sess.Buffer()).To(SatisfyAll(
+				gbytes.Say(`- configmap-1`),
+				gbytes.Say(`- configmap-2`),
+			))
 		})
 	})
 })
