@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/restmapper"
 )
 
@@ -49,13 +50,15 @@ func clientsFromFlags(cf *genericclioptions.ConfigFlags) (dynamic.Interface, dis
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("load REST config: %w", err)
 	}
+
+	k8sClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("error generating client: %w", err)
+	}
+
 	dynamicClient, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("dynamic client: %w", err)
-	}
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("discovery client: %w", err)
 	}
 
 	crdClient, err := apiextensionsclient.NewForConfig(cfg)
@@ -102,14 +105,17 @@ func listAllKratixGVRs(crdClient apiextensionsclient.Interface) ([]schema.GroupV
 	return out, nil
 }
 
-func renderTree(kind string) error {
+func renderTree(promiseName string) error {
 	ctx := context.Background()
 	dynamicClient, _, crdClient, mapper, err := clientsFromFlags(configFlags)
 	if err != nil {
 		return err
 	}
 
-	gvr, err := gvrFor(mapper, kind)
+	promise := 
+
+
+	gvr, err := gvrFor(mapper, promiseName)
 	if err != nil {
 		return fmt.Errorf("error generating GroupVersionResource for %q, is the specified kind correct? %s", err)
 	}
