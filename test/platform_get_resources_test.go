@@ -10,7 +10,7 @@ import (
 	"github.com/syntasso/kratix/test/kubeutils"
 )
 
-var _ = FDescribe("kratix platform get resources", func() {
+var _ = Describe("kratix platform get resources", func() {
 	var r *runner
 	var workingDir string
 	var dir string
@@ -51,7 +51,7 @@ var _ = FDescribe("kratix platform get resources", func() {
 		})
 	})
 
-	FWhen("the request is a compound requests", func() {
+	When("the request is a compound requests", func() {
 		BeforeEach(func() {
 			platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/configmap-promise.yaml")
 			platform.Kubectl("apply", "--filename", "assets/compound-labelled-promise/service-promise.yaml")
@@ -98,7 +98,7 @@ var _ = FDescribe("kratix platform get resources", func() {
 		})
 
 		It("displays the requests in a list", func() {
-			sess := r.run("platform", "get", "resources", "app")
+			sess := r.run("platform", "get", "resources", "configmappromise")
 			Expect(sess.Buffer()).To(SatisfyAll(
 				gbytes.Say(`- configmap-1`),
 				gbytes.Say(`- configmap-2`),

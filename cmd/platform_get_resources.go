@@ -126,10 +126,10 @@ func renderTree(promiseName string) error {
 
 	promiseRequests, err := dynamicClient.Resource(*gvr).Namespace(v1.NamespaceAll).List(ctx, v1.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("list %q : %w", kind, err)
+		return fmt.Errorf("list %q : %w", promiseName, err)
 	}
 	if len(promiseRequests.Items) == 0 {
-		fmt.Printf("No requests found for promise %q\n", kind)
+		fmt.Printf("No requests found for promise %q\n", promiseName)
 		return nil
 	}
 
@@ -166,7 +166,7 @@ func renderTree(promiseName string) error {
 		for _, gvr := range kratixGVRs {
 			list, err := dynamicClient.Resource(gvr).Namespace(v1.NamespaceAll).List(ctx, v1.ListOptions{LabelSelector: selector})
 			if err != nil {
-				return fmt.Errorf("error listing resources %s %s: %s", gvr.Resource, err)
+				return fmt.Errorf("error listing resources %s: %s", gvr.Resource, err)
 			}
 			for i := range list.Items {
 				subRequests = append(subRequests, subRequest{Kind: gvr.Resource, Name: list.Items[i].GetName()})
