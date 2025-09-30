@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -42,43 +43,134 @@ var platformGetResourcesCmd = &cobra.Command{
 	Long:  "Show requests for a Promise and for a Compound Promises, its sub-requests",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return renderTree(args[0])
+		return RenderTree(args[0])
 	},
 }
+
+var k8sQuerier Fetcher
 
 func init() {
 	platformGetCmd.AddCommand(platformGetResourcesCmd)
 }
 
-func clientsFromFlags(cf *genericclioptions.ConfigFlags) (dynamic.Interface, client.Client, *apiextensionsclient.Clientset, meta.RESTMapper, error) {
+type Fetcher interface {
+	GVRForPromise(ctx context.Context, promiseName string) (gvr *schema.GroupVersionResource, err error)
+	GetRequests(ctx context.Context, gvr *schema.GroupVersionResource, promiseName string, selector string) (request *unstructured.UnstructuredList, err error)
+	GetKratixGVRs(ctx context.Context) ([]schema.GroupVersionResource, error)
+}
+
+type K8sQuerier struct {
+	dynamicClient *dynamic.DynamicClient
+	crdClient     *apiextensionsclient.Clientset
+	k8sClient     client.Client
+	mapper        meta.RESTMapper
+}
+
+func (q K8sQuerier) GVRForPromise(ctx context.Context, promiseName string) (*schema.GroupVersionResource, error) {
+	promise := &v1alpha1.Promise{}
+	err := q.k8sClient.Get(ctx, types.NamespacedName{Name: promiseName}, promise)
+
+	if errors.IsNotFound(err) {
+		return nil, fmt.Errorf("promise: %s not found", promiseName)
+	}
+	if client.IgnoreNotFound(err) != nil {
+		return nil, fmt.Errorf("error getting promise: %s with error %q", promiseName, err)
+	}
+
+	if !promise.ContainsAPI() {
+		return nil, fmt.Errorf("promise: %s contains no API", promiseName)
+	}
+
+	gvk, _, apiErr := promise.GetAPI()
+	if apiErr != nil {
+		return nil, fmt.Errorf("error generating GVK from promise: %s with error %q", promiseName, apiErr)
+	}
+
+	gvr, err := buildGVR(q.mapper, gvk.Group, gvk.Version, gvk.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("error generating GroupVersionResource: %q", err)
+	}
+	return &gvr, nil
+}
+
+func (q K8sQuerier) GetRequests(ctx context.Context, gvr *schema.GroupVersionResource, promiseName string, selector string) (*unstructured.UnstructuredList, error) {
+	var listOptions v1.ListOptions
+	if selector != "" {
+		listOptions.LabelSelector = selector
+	}
+	promiseRequests, err := q.dynamicClient.Resource(*gvr).Namespace(v1.NamespaceAll).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error listing requests for %q: %w", promiseName, err)
+	}
+
+	return promiseRequests, nil
+}
+
+func (q K8sQuerier) GetKratixGVRs(ctx context.Context) ([]schema.GroupVersionResource, error) {
+	crds, err := q.crdClient.
+		ApiextensionsV1().
+		CustomResourceDefinitions().
+		List(ctx, v1.ListOptions{LabelSelector: v1alpha1.PromiseNameLabel})
+	if err != nil {
+		return nil, fmt.Errorf("error listing promise CRDs: %w", err)
+	}
+
+	var out []schema.GroupVersionResource
+	for _, crd := range crds.Items {
+		var storageVersion string
+		for _, v := range crd.Spec.Versions {
+			if v.Storage {
+				storageVersion = v.Name
+				break
+			}
+		}
+		if storageVersion == "" {
+			continue
+		}
+		out = append(out, schema.GroupVersionResource{
+			Group:    crd.Spec.Group,
+			Version:  storageVersion,
+			Resource: crd.Spec.Names.Plural,
+		})
+	}
+	return out, nil
+}
+
+func clientsFromFlags(cf *genericclioptions.ConfigFlags) (K8sQuerier, error) {
 	cfg, err := cf.ToRESTConfig()
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("error generating loading REST config: %w", err)
+		return K8sQuerier{}, fmt.Errorf("error generating loading REST config: %w", err)
 	}
 
 	utilruntime.Must(kratixv1alpha1.AddToScheme(scheme.Scheme))
 	k8sClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("error generating controller-runtime client: %w", err)
+		return K8sQuerier{}, fmt.Errorf("error generating controller-runtime client: %w", err)
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(cfg)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("error generating dynamic client: %w", err)
+		return K8sQuerier{}, fmt.Errorf("error generating dynamic client: %w", err)
 	}
 
 	crdClient, err := apiextensionsclient.NewForConfig(cfg)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("error generating CRD client: %w", err)
+		return K8sQuerier{}, fmt.Errorf("error generating CRD client: %w", err)
 	}
 
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("error generating discovery client: %w", err)
+		return K8sQuerier{}, fmt.Errorf("error generating discovery client: %w", err)
 	}
 
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
-	return dynamicClient, k8sClient, crdClient, mapper, nil
+
+	return K8sQuerier{
+		k8sClient:     k8sClient,
+		crdClient:     crdClient,
+		dynamicClient: dynamicClient,
+		mapper:        mapper,
+	}, nil
 }
 
 func listAllKratixGVRs(crdClient apiextensionsclient.Interface) ([]schema.GroupVersionResource, error) {
@@ -112,29 +204,43 @@ func listAllKratixGVRs(crdClient apiextensionsclient.Interface) ([]schema.GroupV
 	return out, nil
 }
 
-func renderTree(promiseName string) error {
+func initialiseQuerier(args []Fetcher) (Fetcher, error) {
+	if len(args) == 0 {
+		k8sQuerier, err := clientsFromFlags(configFlags)
+		if err != nil {
+			return k8sQuerier, err
+		}
+		return k8sQuerier, nil
+	}
+	return args[0], nil
+}
+
+func RenderTree(promiseName string, fetcher ...Fetcher) error {
 	ctx := context.Background()
-	dynamicClient, k8sClient, crdClient, mapper, err := clientsFromFlags(configFlags)
+	var err error
+
+	k8sQuerier, err := initialiseQuerier(fetcher)
 	if err != nil {
 		return err
 	}
 
-	gvr, gvrErr := gvrForPromise(ctx, k8sClient, mapper, promiseName)
+	gvr, gvrErr := k8sQuerier.GVRForPromise(ctx, promiseName)
 	if gvrErr != nil {
 		return gvrErr
 	}
 
-	promiseRequests, err := dynamicClient.Resource(*gvr).Namespace(v1.NamespaceAll).List(ctx, v1.ListOptions{})
+	promiseRequests, err := k8sQuerier.GetRequests(ctx, gvr, promiseName, "")
 	if err != nil {
-		return fmt.Errorf("list %q : %w", promiseName, err)
+		return err
 	}
+
 	if len(promiseRequests.Items) == 0 {
 		fmt.Printf("No requests found for promise %q\n", promiseName)
 		return nil
 	}
 
 	// fetch all available CRDs installed by promises
-	kratixGVRs, err := listAllKratixGVRs(crdClient)
+	kratixGVRs, err := k8sQuerier.GetKratixGVRs(ctx)
 	if err != nil {
 		return fmt.Errorf("discover namespaced resources: %w", err)
 	}
@@ -164,7 +270,7 @@ func renderTree(promiseName string) error {
 
 		// scan every namespaced resource and collect items with the matching labels
 		for _, gvr := range kratixGVRs {
-			list, err := dynamicClient.Resource(gvr).Namespace(v1.NamespaceAll).List(ctx, v1.ListOptions{LabelSelector: selector})
+			list, err := k8sQuerier.GetRequests(ctx, &gvr, gvr.Resource, selector)
 			if err != nil {
 				return fmt.Errorf("error listing resources %s: %s", gvr.Resource, err)
 			}

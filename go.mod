@@ -14,6 +14,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/syntasso/kratix v0.125.1-0.20250923144917-71691d914142
 	github.com/zclconf/go-cty v1.13.0
+	go.uber.org/mock v0.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.18.5
 	k8s.io/api v0.33.3

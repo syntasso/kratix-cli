@@ -19,6 +19,11 @@ jobs:
         with:
           go-version: 1.24
           check-latest: true
+      - name: Set up Kind
+        uses: helm/kind-action@v1
+        with:
+          version: 'v0.29.0'
+          cluster_name: "platform"
       - name: Run make test
         run: make test
       - name: Run govulncheck
