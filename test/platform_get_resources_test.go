@@ -20,7 +20,6 @@ var _ = Describe("kratix platform get resources", func() {
 	var r *runner
 	var workingDir string
 	var dir string
-	var platform kubeutils.Cluster
 	var mockFetcher *mock_fetcher.MockFetcher
 
 	BeforeEach(func() {
@@ -31,11 +30,6 @@ var _ = Describe("kratix platform get resources", func() {
 		dir, err = os.MkdirTemp("", "kratix-dir")
 		Expect(err).NotTo(HaveOccurred())
 		r = &runner{exitCode: 0, dir: workingDir}
-
-		platform = kubeutils.Cluster{
-			Context: "kind-platform",
-			Name:    "platform-cluster",
-		}
 
 		kubeutils.SetTimeoutAndInterval(1*time.Minute, 2*time.Second)
 	})
