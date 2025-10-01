@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/syntasso/kratix-cli/compare/v0.8.0...v0.9.0) (2025-09-30)
+
+
+### Features
+
+* **#119:** introduce 'platform get resources' command to detail resource request ([6eaeeff](https://github.com/syntasso/kratix-cli/commit/6eaeeff11f22069d1cbf6f9d7d657a4e0cb3e1c1))
+
+
+### Chores
+
+* fix operator-promise dockerfile ([cbec6cf](https://github.com/syntasso/kratix-cli/commit/cbec6cf6896c2591d370d51428040af5ca2cda82))
+
 ## [0.8.0](https://github.com/syntasso/kratix-cli/compare/v0.7.0...v0.8.0) (2025-09-16)
 
 
