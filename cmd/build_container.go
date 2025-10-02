@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	containerutils "github.com/syntasso/kratix-cli/cmd/container_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,17 +21,6 @@ type ContainerCmdArgs struct {
 	Lifecycle string
 	Action    string
 	Pipeline  string
-}
-
-type BuildContainerOptions struct {
-	Name               string
-	Dir                string
-	BuildAllContainers bool
-
-	Engine    string
-	Buildx    bool
-	Push      bool
-	BuildArgs string
 }
 
 // containerCmd represents the container command
@@ -58,7 +48,7 @@ var buildContainerCmd = &cobra.Command{
 	RunE: BuildContainer,
 }
 
-var buildContainerOpts = &BuildContainerOptions{}
+var buildContainerOpts = &containerutils.BuildContainerOptions{}
 
 func init() {
 	buildCmd.AddCommand(buildContainerCmd)
@@ -140,7 +130,7 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 		containerName := pipeline.Spec.Containers[containerIndex].Name
 
 		fmt.Printf("Building container with tag %s...\n", containerImage)
-		if err := forkBuilderCommand(buildContainerOpts, containerImage, pipelineDir, containerName); err != nil {
+		if err := containerutils.ForkBuilderCommand(buildContainerOpts, containerImage, pipelineDir, containerName); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 
@@ -258,7 +248,7 @@ func validateEngine(engine string) error {
 	return nil
 }
 
-func forkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir, containerName string) error {
+func ForkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir, containerName string) error {
 	buildCommand := "build"
 
 	buildArgs := []string{"--tag", containerImage, filepath.Join(pipelineDir, containerName)}
