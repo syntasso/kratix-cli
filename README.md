@@ -6,7 +6,7 @@ The best tool you'll ever find to build your Promises!
 To install the CLI, run:
 
 ```bash
-go install github.com/syntasso/kratix-cli/cmd/kratix@latest
+go install github.com/syntasso/kratix-cli-plugin-investigation/cmd/kratix@latest
 ```
 
 ## Build
@@ -84,7 +84,7 @@ make test
 # Releasing
 
 To release merge the auto-created Release PR
-([example](https://github.com/syntasso/kratix-cli/pull/48)). This PR is auto
+([example](https://github.com/syntasso/kratix-cli-plugin-investigation/pull/48)). This PR is auto
 created by the [Release Please](https://github.com/googleapis/release-please)
 Github Action we have in our `.github/workflows/release.yml` file. When this PR
 is merged the following happens:

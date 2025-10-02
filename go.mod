@@ -1,4 +1,4 @@
-module github.com/syntasso/kratix-cli
+module github.com/syntasso/kratix-cli-plugin-investigation
 
 go 1.24.6
 
@@ -13,6 +13,7 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/spf13/cobra v1.9.1
 	github.com/syntasso/kratix v0.125.1-0.20250923144917-71691d914142
+	github.com/syntasso/kratix-cli v0.9.0
 	github.com/zclconf/go-cty v1.13.0
 	go.uber.org/mock v0.4.0
 	gopkg.in/yaml.v3 v3.0.1

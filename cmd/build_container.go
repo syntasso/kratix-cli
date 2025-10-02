@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	containerutils "github.com/syntasso/kratix-cli/cmd/container_utils"
+	containerutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/container_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"

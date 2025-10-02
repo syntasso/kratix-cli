@@ -17,7 +17,7 @@ var binaryPath string
 
 var _ = BeforeSuite(func() {
 	var err error
-	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/crossplane-promise")
+	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli-plugin-investigation/stages/crossplane-promise")
 	Expect(err).NotTo(HaveOccurred())
 })
 
