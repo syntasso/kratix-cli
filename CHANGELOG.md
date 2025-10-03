@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.1](https://github.com/syntasso/kratix-cli/compare/v0.9.0...v0.9.1) (2025-10-03)
+
+
+### Chores
+
+* bumping main.go version ([4522421](https://github.com/syntasso/kratix-cli/commit/452242109345146dff5ca419f4eac45f8a9f7db3))
+* **main:** release 0.9.0 ([11e2642](https://github.com/syntasso/kratix-cli/commit/11e2642fd0b80fac65bf9e9f1bfe8e9a81fd0a2d))
+* **main:** release 0.9.0 ([6ac6f2f](https://github.com/syntasso/kratix-cli/commit/6ac6f2fe24a3f1af8e088ee48b17f93ad3cbdec5))
+
 ## [0.9.0](https://github.com/syntasso/kratix-cli/compare/v0.8.0...v0.9.0) (2025-10-03)
 
 
