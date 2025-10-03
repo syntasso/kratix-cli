@@ -1,6 +1,7 @@
 package containerutils
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,7 +44,7 @@ func ForkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir
 func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, outputVolume, metadataVolume, command string) error {
 	runCommand := "run"
 
-	buildArgs := []string{"--volume", inputVolume, "--volume", outputVolume, "--volume", metadataVolume, containerImage}
+	buildArgs := []string{"--volume", fmt.Sprintf("%s:%s", inputVolume, "/kratix/input/"), "--volume", fmt.Sprintf("%s:%s", outputVolume, "/kratix/output/"), "--volume", fmt.Sprintf("%s:%s", metadataVolume, "/kratix/metadata/"), containerImage}
 
 	buildArgs = append(buildArgs, strings.Fields(opts.BuildArgs)...)
 	buildArgs = append(strings.Fields(runCommand), buildArgs...)

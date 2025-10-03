@@ -248,7 +248,7 @@ func validateEngine(engine string) error {
 	return nil
 }
 
-func ForkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir, containerName string) error {
+func ForkBuilderCommand(opts *containerutils.BuildContainerOptions, containerImage, pipelineDir, containerName string) error {
 	buildCommand := "build"
 
 	buildArgs := []string{"--tag", containerImage, filepath.Join(pipelineDir, containerName)}
