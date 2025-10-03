@@ -39,3 +39,20 @@ func ForkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir
 	}
 	return nil
 }
+
+func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, outputVolume, metadataVolume, command string) error {
+	runCommand := "run"
+
+	buildArgs := []string{"--volume", inputVolume, "--volume", outputVolume, "--volume", metadataVolume, containerImage}
+
+	buildArgs = append(buildArgs, strings.Fields(opts.BuildArgs)...)
+	buildArgs = append(strings.Fields(runCommand), buildArgs...)
+
+	builder := exec.Command(opts.Engine, buildArgs...)
+	builder.Stdout = os.Stdout
+	builder.Stderr = os.Stderr
+	if err := builder.Run(); err != nil {
+		return err
+	}
+	return nil
+}
