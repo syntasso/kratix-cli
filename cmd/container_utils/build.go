@@ -51,6 +51,8 @@ func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, ou
 
 	builder := exec.Command(opts.Engine, buildArgs...)
 	fmt.Println(buildArgs)
+	fmt.Println(builder.Path)
+
 	builder.Stdout = os.Stdout
 	builder.Stderr = os.Stderr
 	if err := builder.Run(); err != nil {
