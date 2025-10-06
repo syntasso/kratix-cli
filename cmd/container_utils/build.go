@@ -50,8 +50,8 @@ func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, ou
 	buildArgs = append(strings.Fields(runCommand), buildArgs...)
 
 	builder := exec.Command(opts.Engine, buildArgs...)
-	fmt.Printf("BUILD ARGS: %s", buildArgs)
-	fmt.Printf("BUILD PATH: %s", builder.Path)
+	fmt.Println(buildArgs)
+	fmt.Println(builder.Path)
 
 	builder.Stdout = os.Stdout
 	builder.Stderr = os.Stderr
