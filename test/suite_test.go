@@ -35,6 +35,7 @@ type runner struct {
 	flags    map[string]string
 	timeout  time.Duration
 	noPath   bool
+	Path     string
 }
 
 func withExitCode(exitCode int) *runner {
@@ -55,10 +56,15 @@ func (r *runner) run(args ...string) *gexec.Session {
 
 	testBin, err := filepath.Abs("assets/binaries")
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-	cmdPath := testBin + ":" + os.Getenv("PATH")
-	if r.noPath {
-		cmdPath = ""
+
+	cmdPath := r.Path
+	if r.Path == "" {
+		cmdPath = testBin + ":" + os.Getenv("PATH")
+		if r.noPath {
+			cmdPath = ""
+		}
 	}
+
 	cmd.Env = append(cmd.Env, "PATH="+cmdPath)
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
