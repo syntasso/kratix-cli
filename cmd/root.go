@@ -3,10 +3,8 @@ package cmd
 import (
 	"bytes"
 	"embed"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -62,17 +60,4 @@ func templateFiles(templates embed.FS, outputDir string, filesToTemplate map[str
 		}
 	}
 	return nil
-}
-
-func ParseContainerCmdArgs(containerPath string) (*ContainerCmdArgs, error) {
-	parts := strings.Split(containerPath, "/")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid pipeline format: %s, expected format: LIFECYCLE/ACTION/PIPELINE-NAME", containerPath)
-	}
-
-	return &ContainerCmdArgs{
-		Lifecycle: parts[0],
-		Action:    parts[1],
-		Pipeline:  parts[2],
-	}, nil
 }

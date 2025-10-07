@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	promiseutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/promise_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,7 @@ func init() {
 
 func BuildPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
-	promise, err := LoadPromiseWithWorkflows(inputDir)
+	promise, err := promiseutils.LoadPromiseWithWorkflows(inputDir)
 	if err != nil {
 		return err
 	}
@@ -107,11 +108,4 @@ func newPromise(promiseName string) v1alpha1.Promise {
 			},
 		},
 	}
-}
-
-func fileExists(filePath string) bool {
-	if _, err := os.Stat(filePath); err != nil {
-		return false
-	}
-	return true
 }

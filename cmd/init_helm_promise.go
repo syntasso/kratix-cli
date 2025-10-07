@@ -5,7 +5,7 @@ import (
 
 	helmclient "github.com/mittwald/go-helm-client"
 	"github.com/spf13/cobra"
-	"github.com/syntasso/kratix-cli/internal"
+	"github.com/syntasso/kratix-cli-plugin-investigation/internal"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/registry"

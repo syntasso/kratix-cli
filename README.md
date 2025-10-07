@@ -6,7 +6,7 @@ The best tool you'll ever find to build your Promises!
 To install the CLI, run:
 
 ```bash
-go install github.com/syntasso/kratix-cli/cmd/kratix@latest
+go install github.com/syntasso/kratix-cli-plugin-investigation/cmd/kratix@latest
 ```
 
 ## Build

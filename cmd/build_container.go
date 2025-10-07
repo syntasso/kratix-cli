@@ -1,27 +1,16 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
-	containerutils "github.com/syntasso/kratix-cli/cmd/container_utils"
-	"github.com/syntasso/kratix/api/v1alpha1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/yaml"
+	containerutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/container_utils"
+	pipelineutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/pipeline_utils"
+	promiseutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/promise_utils"
 )
-
-type ContainerCmdArgs struct {
-	Lifecycle string
-	Action    string
-	Pipeline  string
-}
 
 // containerCmd represents the container command
 var buildContainerCmd = &cobra.Command{
@@ -67,10 +56,12 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
-	promise, err := LoadPromiseWithWorkflows(buildContainerOpts.Dir)
+	promise, err := promiseutils.LoadPromiseWithWorkflows(buildContainerOpts.Dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("error LoadPromiseWithWorkflows: %s", err)
 	}
+
+	fmt.Println("")
 
 	if len(promise.Spec.Workflows.Resource.Configure) == 0 && len(promise.Spec.Workflows.Resource.Delete) == 0 &&
 		len(promise.Spec.Workflows.Promise.Configure) == 0 && len(promise.Spec.Workflows.Promise.Delete) == 0 {
@@ -105,27 +96,28 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, container := range containersToBuild {
-		containerArgs, err := ParseContainerCmdArgs(container)
+		containerArgs, err := pipelineutils.ParsePipelineCmdArgs(container)
 		if err != nil {
-			return err
+			return fmt.Errorf("error ParsePipelineCmdArgs: %s", err)
 		}
 
-		pipeline, err := RetrievePipeline(promise, containerArgs)
+		pipeline, err := pipelineutils.RetrievePipeline(promise, containerArgs)
 		if err != nil {
-			return err
+			return fmt.Errorf("error RetrievePipeline: %s", err)
 		}
 
 		pipelineDir := filepath.Join(buildContainerOpts.Dir, "workflows", containerArgs.Lifecycle, containerArgs.Action, containerArgs.Pipeline)
 		dirEntries, err := os.ReadDir(pipelineDir)
 		if err != nil {
-			return err
+			return fmt.Errorf("error reading dir: %s", err)
 		}
 
-		containerIndex, err := FindContainer(dirEntries, pipeline.Spec.Containers, buildContainerOpts.Name)
+		containerIndex, err := pipelineutils.FindContainerIndex(dirEntries, pipeline.Spec.Containers, buildContainerOpts.Name)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+
 		containerImage := pipeline.Spec.Containers[containerIndex].Image
 		containerName := pipeline.Spec.Containers[containerIndex].Name
 
@@ -138,7 +130,7 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 
 		if buildContainerOpts.Push && !buildContainerOpts.Buildx {
 			fmt.Printf("Pushing container with tag %s...\n", containerImage)
-			if err := forkPushCommand(buildContainerOpts.Engine, containerImage); err != nil {
+			if err := containerutils.ForkPushCommand(buildContainerOpts.Engine, containerImage); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
@@ -146,95 +138,6 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-func LoadWorkflows(dir string) (v1alpha1.Workflows, error) {
-	pipelineMap := map[string]map[string][]unstructured.Unstructured{}
-	var workflows v1alpha1.Workflows
-
-	missingWorkflows := 0
-	for _, lifecycle := range []string{"promise", "resource"} {
-		for _, action := range []string{"configure", "delete"} {
-			if fileExists(filepath.Join(dir, "workflows", lifecycle, action, "workflow.yaml")) {
-				workflowBytes, err := os.ReadFile(filepath.Join(dir, "workflows", lifecycle, action, "workflow.yaml"))
-				if err != nil {
-					return workflows, err
-				}
-
-				var workflow []v1alpha1.Pipeline
-				err = yaml.Unmarshal(workflowBytes, &workflow)
-				if err != nil {
-					return workflows, fmt.Errorf("failed to get %s %s workflow: %s", lifecycle, action, err)
-				}
-
-				uPipelines, err := pipelinesToUnstructured(workflow)
-				if err != nil {
-					return workflows, err
-				}
-
-				if _, ok := pipelineMap[lifecycle]; !ok {
-					pipelineMap[lifecycle] = make(map[string][]unstructured.Unstructured)
-				}
-				pipelineMap[lifecycle][action] = uPipelines
-			} else {
-				missingWorkflows++
-			}
-		}
-	}
-
-	if _, ok := pipelineMap["promise"]; ok {
-		workflows.Promise.Configure = pipelineMap["promise"]["configure"]
-		workflows.Promise.Delete = pipelineMap["promise"]["delete"]
-	}
-	if _, ok := pipelineMap["resource"]; ok {
-		workflows.Resource.Configure = pipelineMap["resource"]["configure"]
-		workflows.Resource.Delete = pipelineMap["resource"]["delete"]
-	}
-
-	return workflows, nil
-}
-
-func LoadPromiseWithWorkflows(dir string) (*v1alpha1.Promise, error) {
-	var promise v1alpha1.Promise
-
-	if _, err := os.Stat(filepath.Join(dir, "promise.yaml")); err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println("No promise.yaml found, assuming --split was used to initialise the Promise")
-			workflows, err := LoadWorkflows(dir)
-			if err != nil {
-				return nil, err
-			}
-			promise.Spec.Workflows = workflows
-			return &promise, nil
-		}
-		return nil, err
-	}
-
-	fileBytes, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
-	if err != nil {
-		return nil, err
-	}
-
-	err = yaml.Unmarshal(fileBytes, &promise)
-	if err != nil {
-		return nil, err
-	}
-
-	return &promise, nil
-}
-
-func RetrievePipeline(promise *v1alpha1.Promise, c *ContainerCmdArgs) (*v1alpha1.Pipeline, error) {
-	allPipelines, err := v1alpha1.NewPipelinesMap(promise, ctrl.LoggerFrom(context.Background()))
-	if err != nil {
-		return nil, err
-	}
-
-	pipelines, pipelineIdx, err := findPipelinesForLifecycleAction(c, allPipelines)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pipelines[pipelineIdx], nil
 }
 
 func validateEngine(engine string) error {
@@ -246,72 +149,4 @@ func validateEngine(engine string) error {
 		return fmt.Errorf("%s CLI not found in PATH", engine)
 	}
 	return nil
-}
-
-func ForkBuilderCommand(opts *containerutils.BuildContainerOptions, containerImage, pipelineDir, containerName string) error {
-	buildCommand := "build"
-
-	buildArgs := []string{"--tag", containerImage, filepath.Join(pipelineDir, containerName)}
-	if opts.Buildx {
-		buildCommand = "buildx build"
-		if opts.Push {
-			buildArgs = append(buildArgs, "--push")
-		}
-	}
-	buildArgs = append(buildArgs, strings.Fields(opts.BuildArgs)...)
-	buildArgs = append(strings.Fields(buildCommand), buildArgs...)
-
-	builder := exec.Command(opts.Engine, buildArgs...)
-	builder.Stdout = os.Stdout
-	builder.Stderr = os.Stderr
-	if err := builder.Run(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func forkPushCommand(engine, containerImage string) error {
-	builder := exec.Command(engine, "push", containerImage)
-	builder.Stdout = os.Stdout
-	builder.Stderr = os.Stderr
-	if err := builder.Run(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func FindContainer(dirEntries []fs.DirEntry, containers []v1alpha1.Container, name string) (int, error) {
-	if len(dirEntries) == 0 {
-		return -1, fmt.Errorf("no container found in path")
-	}
-
-	if len(dirEntries) == 1 {
-		if name != "" && name != dirEntries[0].Name() {
-			return -1, fmt.Errorf("container %s not found in pipeline", name)
-		}
-		name = dirEntries[0].Name()
-	}
-
-	if name == "" {
-		return -1, fmt.Errorf("more than one container exists for this pipeline, please provide a name with --name")
-	}
-
-	containerIndex := -1
-	for i, container := range containers {
-		if container.Name == name {
-			containerIndex = i
-			break
-		}
-	}
-	if containerIndex == -1 {
-		return -1, fmt.Errorf("container %s not found in pipeline", name)
-	}
-
-	for _, dirEntry := range dirEntries {
-		if dirEntry.Name() == name {
-			return containerIndex, nil
-		}
-	}
-
-	return -1, fmt.Errorf("directory entry not found for container %s", name)
 }

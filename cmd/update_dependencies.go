@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	pipelineutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/pipeline_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -183,7 +184,7 @@ func updatePromiseDependencies(dependencies []v1alpha1.Dependency) error {
 
 func addDepsAsWorkflow(dependenciesDir string) error {
 	containerName = "configure-deps"
-	c := &ContainerCmdArgs{
+	c := &pipelineutils.PipelineCmdArgs{
 		Lifecycle: "promise",
 		Action:    "configure",
 		Pipeline:  "dependencies",

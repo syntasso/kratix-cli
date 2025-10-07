@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/syntasso/kratix-cli/cmd"
+	"github.com/syntasso/kratix-cli-plugin-investigation/cmd"
 	"github.com/syntasso/kratix-cli/stages/helm-promise/lib"
 )
 
