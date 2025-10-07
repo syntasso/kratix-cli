@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"github.com/syntasso/kratix-cli-plugin-investigation/cmd"
+	"github.com/syntasso/kratix-cli/cmd"
 )
 
 // needs to be updated before cutting a new release to desired version and should match the next version in .release-please-manifest.json
