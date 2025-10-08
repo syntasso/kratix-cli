@@ -21,7 +21,7 @@ func TestIntegration(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	var err error
-	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli-plugin-investigation/cmd/kratix")
+	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/cmd/kratix")
 	Expect(err).NotTo(HaveOccurred())
 })
 

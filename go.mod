@@ -1,4 +1,4 @@
-module github.com/syntasso/kratix-cli-plugin-investigation
+module github.com/syntasso/kratix-cli
 
 go 1.24.6
 

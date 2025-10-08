@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	pipelineutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/pipeline_utils"
-	"github.com/syntasso/kratix-cli-plugin-investigation/cmd/utils"
+	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
+	"github.com/syntasso/kratix-cli/cmd/utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"

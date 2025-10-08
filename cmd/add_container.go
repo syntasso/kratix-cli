@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	pipelineutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/pipeline_utils"
+	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"

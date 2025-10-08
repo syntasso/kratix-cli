@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	pipelineutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/pipeline_utils"
+	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 )
 

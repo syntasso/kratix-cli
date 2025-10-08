@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	promiseutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/promise_utils"
+	promiseutils "github.com/syntasso/kratix-cli/cmd/promise_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

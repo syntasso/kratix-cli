@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/syntasso/kratix-cli-plugin-investigation/internal"
+	"github.com/syntasso/kratix-cli/internal"
 )
 
 var _ = Describe("VariablesToCRDSpecSchema", func() {

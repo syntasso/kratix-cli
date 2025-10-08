@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	containerutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/container_utils"
-	pipelineutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/pipeline_utils"
-	promiseutils "github.com/syntasso/kratix-cli-plugin-investigation/cmd/promise_utils"
+	containerutils "github.com/syntasso/kratix-cli/cmd/container_utils"
+	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
+	promiseutils "github.com/syntasso/kratix-cli/cmd/promise_utils"
 )
 
 // containerCmd represents the container command
