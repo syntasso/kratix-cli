@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.9.0](https://github.com/syntasso/kratix-cli/compare/v0.8.0...v0.9.0) (2025-10-08)
+
+
+### Features
+
+* **#119:** introduce 'platform get resources' command to detail resource request ([6eaeeff](https://github.com/syntasso/kratix-cli/commit/6eaeeff11f22069d1cbf6f9d7d657a4e0cb3e1c1))
+* kratix cli supports plugins ([#148](https://github.com/syntasso/kratix-cli/issues/148)) ([4106791](https://github.com/syntasso/kratix-cli/commit/4106791af19fb332d6d056e39ed2adce6b75f189))
+
+
+### Chores
+
+* bumping main.go version ([4522421](https://github.com/syntasso/kratix-cli/commit/452242109345146dff5ca419f4eac45f8a9f7db3))
+* bumping main.go version to 0.9.0 ([40d1529](https://github.com/syntasso/kratix-cli/commit/40d15292093e07eabb1619436d5964fb4eb3fe54))
+* fix operator-promise dockerfile ([cbec6cf](https://github.com/syntasso/kratix-cli/commit/cbec6cf6896c2591d370d51428040af5ca2cda82))
+* Introduce utils packages ([#147](https://github.com/syntasso/kratix-cli/issues/147)) ([e1cebb8](https://github.com/syntasso/kratix-cli/commit/e1cebb8431ef702fee9838dfb8c6a87eb048442d))
+* **main:** release 0.9.0 ([11e2642](https://github.com/syntasso/kratix-cli/commit/11e2642fd0b80fac65bf9e9f1bfe8e9a81fd0a2d))
+* **main:** release 0.9.0 ([6ac6f2f](https://github.com/syntasso/kratix-cli/commit/6ac6f2fe24a3f1af8e088ee48b17f93ad3cbdec5))
+* **main:** release 0.9.0 ([6313167](https://github.com/syntasso/kratix-cli/commit/63131676c80976a8de6712a36de3bfee616f166f))
+* **main:** release 0.9.0 ([17a0ca4](https://github.com/syntasso/kratix-cli/commit/17a0ca4445a24c048b8ccb3ac60d15ba8f83a8f3))
+
 ## [0.8.0](https://github.com/syntasso/kratix-cli/compare/v0.7.0...v0.8.0) (2025-09-16)
 
 
