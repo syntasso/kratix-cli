@@ -66,8 +66,5 @@ func ForkPushCommand(engine, containerImage string) error {
 	builder := exec.Command(engine, "push", containerImage)
 	builder.Stdout = os.Stdout
 	builder.Stderr = os.Stderr
-	if err := builder.Run(); err != nil {
-		return err
-	}
-	return nil
+	return builder.Run()
 }
