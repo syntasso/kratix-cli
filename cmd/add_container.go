@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
 )
@@ -78,7 +78,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	}
 
 	pipelineInput := args[0]
-	containerArgs, err := ParseContainerCmdArgs(pipelineInput)
+	containerArgs, err := pipelineutils.ParsePipelineCmdArgs(pipelineInput)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrite bool) error {
+func generateWorkflow(c *pipelineutils.PipelineCmdArgs, containerName, image string, overwrite bool) error {
 	if c.Lifecycle != "promise" && c.Lifecycle != "resource" {
 		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", c.Lifecycle)
 	}
@@ -174,7 +174,7 @@ func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrit
 			pipelines[pipelineIdx].Spec.Containers[containerIdx] = container
 		}
 
-		pipelinesUnstructured, err = pipelinesToUnstructured(pipelines)
+		pipelinesUnstructured, err = pipelineutils.PipelinesToUnstructured(pipelines)
 		if err != nil {
 			return err
 		}
@@ -191,7 +191,7 @@ func generateWorkflow(c *ContainerCmdArgs, containerName, image string, overwrit
 				},
 			},
 		}
-		pipelinesUnstructured, err = pipelinesToUnstructured(pipelines)
+		pipelinesUnstructured, err = pipelineutils.PipelinesToUnstructured(pipelines)
 		if err != nil {
 			return err
 		}
@@ -239,7 +239,7 @@ func generateContainerName(image string) string {
 	return fmt.Sprintf("%s-%s", prefix, suffix)
 }
 
-func findPipelinesForLifecycleAction(c *ContainerCmdArgs, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
+func findPipelinesForLifecycleAction(c *pipelineutils.PipelineCmdArgs, allPipelines map[v1alpha1.Type]map[v1alpha1.Action][]v1alpha1.Pipeline) ([]v1alpha1.Pipeline, int, error) {
 	var pipelines []v1alpha1.Pipeline
 	switch c.Lifecycle {
 	case "promise":
@@ -283,21 +283,6 @@ func updatePipeline(lifecycle, action string, pipelines []unstructured.Unstructu
 			promise.Spec.Workflows.Resource.Delete = pipelines
 		}
 	}
-}
-
-func pipelinesToUnstructured(pipelines []v1alpha1.Pipeline) ([]unstructured.Unstructured, error) {
-	var pipelinesUnstructured []unstructured.Unstructured
-	for _, p := range pipelines {
-		pMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&p)
-		if err != nil {
-			return nil, err
-		}
-		pMap["kind"] = "Pipeline"
-		pMap["apiVersion"] = "platform.kratix.io/v1alpha1"
-		pUnstructured := unstructured.Unstructured{Object: pMap}
-		pipelinesUnstructured = append(pipelinesUnstructured, pUnstructured)
-	}
-	return pipelinesUnstructured, nil
 }
 
 func generatePipelineDirFiles(promiseDir, workflowDirectory, pipelineName, containerName, language string) error {

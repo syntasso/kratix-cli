@@ -1,16 +1,16 @@
-package cmd_test
+package pipelineutils_test
 
 import (
 	"io/fs"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/syntasso/kratix-cli/cmd"
+	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 )
 
-var _ = Describe("BuildContainer", func() {
-	Describe("FindContainer", func() {
+var _ = Describe("FindContainerIndex", func() {
+	Describe("pipelineutils.FindContainerIndex", func() {
 		var dirEntries []fs.DirEntry
 		var containers []v1alpha1.Container
 		BeforeEach(func() {
@@ -29,7 +29,7 @@ var _ = Describe("BuildContainer", func() {
 
 		When("the provided dirEntry is empty", func() {
 			It("returns an error", func() {
-				_, err := FindContainer(nil, containers, "")
+				_, err := pipelineutils.FindContainerIndex(nil, containers, "")
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("no container found in path"))
 			})
@@ -44,14 +44,14 @@ var _ = Describe("BuildContainer", func() {
 				})
 
 				It("returns the index of the container", func() {
-					index, err := FindContainer(dirEntries, containers, "")
+					index, err := pipelineutils.FindContainerIndex(dirEntries, containers, "")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(index).To(Equal(2))
 				})
 
 				It("returns an error if the container is not found", func() {
 					containers = containers[:2]
-					_, err := FindContainer(dirEntries, containers, "")
+					_, err := pipelineutils.FindContainerIndex(dirEntries, containers, "")
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("container mango not found in pipeline"))
 				})
@@ -59,7 +59,7 @@ var _ = Describe("BuildContainer", func() {
 
 			Context("and there's more than one directory", func() {
 				It("returns an error", func() {
-					_, err := FindContainer(dirEntries, containers, "")
+					_, err := pipelineutils.FindContainerIndex(dirEntries, containers, "")
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("more than one container exists for this pipeline, please provide a name with --name"))
 				})
@@ -68,19 +68,19 @@ var _ = Describe("BuildContainer", func() {
 
 		When("a name is provided", func() {
 			It("returns the index of the container", func() {
-				index, err := FindContainer(dirEntries, containers, "mango")
+				index, err := pipelineutils.FindContainerIndex(dirEntries, containers, "mango")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(index).To(Equal(2))
 			})
 
 			It("returns an error if the container is not found", func() {
-				_, err := FindContainer(dirEntries, containers, "lettuce")
+				_, err := pipelineutils.FindContainerIndex(dirEntries, containers, "lettuce")
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("container lettuce not found in pipeline"))
 			})
 
 			It("returns an error if the named container is not in the directory entries", func() {
-				_, err := FindContainer(dirEntries, containers, "banana")
+				_, err := pipelineutils.FindContainerIndex(dirEntries, containers, "banana")
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("directory entry not found for container banana"))
 			})
