@@ -45,7 +45,7 @@ func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, ou
 	runCommand := "run"
 
 	buildArgs := []string{"--volume", fmt.Sprintf("%s:%s", inputVolume, "/kratix/input/"), "--volume", fmt.Sprintf("%s:%s", outputVolume, "/kratix/output/"), "--volume", fmt.Sprintf("%s:%s", metadataVolume, "/kratix/metadata/"), containerImage}
-	commandArgs := []string{"-c", command}
+	commandArgs := []string{"sh", "-c", command}
 
 	if command != "" {
 		buildArgs = append(buildArgs, commandArgs...)
