@@ -3,8 +3,10 @@ package cmd
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"

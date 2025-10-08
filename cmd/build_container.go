@@ -61,8 +61,6 @@ func BuildContainer(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error LoadPromiseWithWorkflows: %s", err)
 	}
 
-	fmt.Println("")
-
 	if len(promise.Spec.Workflows.Resource.Configure) == 0 && len(promise.Spec.Workflows.Resource.Delete) == 0 &&
 		len(promise.Spec.Workflows.Promise.Configure) == 0 && len(promise.Spec.Workflows.Promise.Delete) == 0 {
 		return fmt.Errorf("no workflows found")
