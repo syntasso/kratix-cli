@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/syntasso/kratix-cli/compare/v0.9.0...v0.9.1) (2025-10-08)
+
+
+### Chores
+
+* document build container in README ([b15ae46](https://github.com/syntasso/kratix-cli/commit/b15ae4654b9c8f849ad1aa78c2b88e0e5d402712))
+
 ## [0.9.0](https://github.com/syntasso/kratix-cli/compare/v0.8.0...v0.9.0) (2025-10-08)
 
 
