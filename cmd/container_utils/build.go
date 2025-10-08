@@ -35,10 +35,7 @@ func ForkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir
 	builder := exec.Command(opts.Engine, buildArgs...)
 	builder.Stdout = os.Stdout
 	builder.Stderr = os.Stderr
-	if err := builder.Run(); err != nil {
-		return err
-	}
-	return nil
+	return builder.Run()
 }
 
 func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, outputVolume, metadataVolume, command string) error {
