@@ -29,7 +29,6 @@ func LoadPromiseWithWorkflows(dir string) (*v1alpha1.Promise, error) {
 	}
 
 	fileBytes, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
-	fmt.Println(string(fileBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +38,6 @@ func LoadPromiseWithWorkflows(dir string) (*v1alpha1.Promise, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("%#v", promise)
 
 	return &promise, nil
 }
