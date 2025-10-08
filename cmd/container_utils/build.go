@@ -42,25 +42,24 @@ func ForkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir
 }
 
 func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, outputVolume, metadataVolume, command string) error {
-	runCommand := "run"
-
-	buildArgs := []string{"--volume", fmt.Sprintf("%s:%s", inputVolume, "/kratix/input/"), "--volume", fmt.Sprintf("%s:%s", outputVolume, "/kratix/output/"), "--volume", fmt.Sprintf("%s:%s", metadataVolume, "/kratix/metadata/"), containerImage}
-	commandArgs := []string{"sh", "-c", command}
+	args := []string{
+		"run",
+		"--volume", fmt.Sprintf("%s:/kratix/input/", inputVolume),
+		"--volume", fmt.Sprintf("%s:/kratix/output/", outputVolume),
+		"--volume", fmt.Sprintf("%s:/kratix/metadata/", metadataVolume),
+	}
+	
+	args = append(args, strings.Fields(opts.BuildArgs)...)
+	args = append(args, containerImage)
 
 	if command != "" {
-		buildArgs = append(buildArgs, commandArgs...)
+		args = append(args, "sh", "-c", command)
 	}
 
-	buildArgs = append(buildArgs, strings.Fields(opts.BuildArgs)...)
-	buildArgs = append(strings.Fields(runCommand), buildArgs...)
-
-	builder := exec.Command(opts.Engine, buildArgs...)
-	builder.Stdout = os.Stdout
-	builder.Stderr = os.Stderr
-	if err := builder.Run(); err != nil {
-		return err
-	}
-	return nil
+	cmd := exec.Command(opts.Engine, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func ForkPushCommand(engine, containerImage string) error {
