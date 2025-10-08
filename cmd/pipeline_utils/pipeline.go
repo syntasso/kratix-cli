@@ -142,6 +142,3 @@ func PipelinesToUnstructured(pipelines []v1alpha1.Pipeline) ([]unstructured.Unst
 	return pipelinesUnstructured, nil
 }
 
-// RetrievePipeline => pipelineObj
-// FindContainer =>
-// FindContainerDir =>
