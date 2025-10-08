@@ -28,6 +28,10 @@ var rootCmd = &cobra.Command{
 
 func Execute(version string) {
 	rootCmd.Version = version
+	if err := handlePotentialPluginCommand(os.Args[1:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
@@ -75,4 +79,35 @@ func ParseContainerCmdArgs(containerPath string) (*ContainerCmdArgs, error) {
 		Action:    parts[1],
 		Pipeline:  parts[2],
 	}, nil
+}
+
+func handlePotentialPluginCommand(args []string) error {
+	if len(args) == 0 {
+		return nil
+	}
+
+	handler := NewDefaultPluginHandler([]string{PluginPrefix})
+	if handler == nil {
+		return nil
+	}
+
+	if _, _, err := rootCmd.Find(args); err == nil {
+		return nil
+	}
+
+	var cmdName string
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		cmdName = arg
+		break
+	}
+
+	switch cmdName {
+	case "", "help", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd:
+		return nil
+	}
+
+	return HandlePluginCommand(handler, args, 1)
 }
