@@ -43,6 +43,16 @@ To add workflow containers, you can use the `kratix add container` command:
 kratix add container WORKFLOW/ACTION/PIPELINENAME --image CONTAINER-IMAGE [--name] [--language]
 ```
 
+### Building Containers
+
+If you added containers with `kratix add container` command, you can build and push these containers by running:
+```
+kratix build container LIFECYCLE/ACTION/PIPELINE-NAME [flags]
+```
+
+This command supports `docker` and `podman` as the build engine, and you can provide an optional flag `--push` to
+push the container after building it.
+
 ### Updating Dependencies
 
 To add Promise dependencies, you can run the `kratix update dependencies dependencies` command:
