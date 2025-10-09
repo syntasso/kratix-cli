@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.2](https://github.com/syntasso/kratix-cli/compare/v0.9.1...v0.9.2) (2025-10-09)
+
+
+### Chores
+
+* bump cli version ([537e089](https://github.com/syntasso/kratix-cli/commit/537e0899c832ed9d1209a79b0de627bd123ee9b4))
+* remove debug output ([52859bc](https://github.com/syntasso/kratix-cli/commit/52859bca3acf9d0ed21227dad3e5e16149a6d55f))
+
 ## [0.9.1](https://github.com/syntasso/kratix-cli/compare/v0.9.0...v0.9.1) (2025-10-08)
 
 
