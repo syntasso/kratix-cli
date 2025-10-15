@@ -48,7 +48,8 @@ func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, ou
 
 	if len(envvars) > 0 {
 		for _, evar := range envvars {
-			args = append(args, fmt.Sprintf("--env %s", evar))
+			args = append(args, "--env")
+			args = append(args, evar)
 		}
 	}
 
