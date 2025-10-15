@@ -38,14 +38,20 @@ func ForkBuilderCommand(opts *BuildContainerOptions, containerImage, pipelineDir
 	return builder.Run()
 }
 
-func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, outputVolume, metadataVolume, command string) error {
+func ForkRunCommand(opts *BuildContainerOptions, containerImage, inputVolume, outputVolume, metadataVolume string, envvars []string, command string) error {
 	args := []string{
 		"run",
 		"--volume", fmt.Sprintf("%s:/kratix/input/", inputVolume),
 		"--volume", fmt.Sprintf("%s:/kratix/output/", outputVolume),
 		"--volume", fmt.Sprintf("%s:/kratix/metadata/", metadataVolume),
 	}
-	
+
+	if len(envvars) > 0 {
+		for _, evar := range envvars {
+			args = append(args, fmt.Sprintf("--env %s", evar))
+		}
+	}
+
 	args = append(args, strings.Fields(opts.BuildArgs)...)
 	args = append(args, containerImage)
 
