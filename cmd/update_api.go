@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	promiseutils "github.com/syntasso/kratix-cli/cmd/promise_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
@@ -73,9 +75,10 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 	var splitFile bool
 	filePath := filepath.Join(dir, apiFileName)
 	if _, foundErr := os.Stat(filePath); foundErr == nil {
+		var err error
 		splitFile = true
-		apiBytes, err := os.ReadFile(filePath)
-		if err = yaml.Unmarshal(apiBytes, &crd); err != nil {
+		crd, err = promiseutils.LoadCRD(dir)
+		if err != nil {
 			return err
 		}
 	} else {

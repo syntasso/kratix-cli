@@ -37,6 +37,7 @@ var _ = Describe("plugin", func() {
 	Context("list", func() {
 		When("there is no plugin found in PATH", func() {
 			It("errors and prints a message", func() {
+				r.Path = "does-not-contain-a-plugin"
 				r.exitCode = 1
 				session := r.run("plugin", "list")
 				Expect(session.Err).To(gbytes.Say("error: unable to find any kratix plugins in your PATH"))
