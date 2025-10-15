@@ -68,6 +68,16 @@ func LoadPromiseWithAPI(dir string) (*v1alpha1.Promise, error) {
 		}
 		return nil, err
 	}
+
+	fileBytes, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = yaml.Unmarshal(fileBytes, &promise)
+	if err != nil {
+		return nil, err
+	}
 	return &promise, nil
 }
 
