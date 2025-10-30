@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.10.0](https://github.com/syntasso/kratix-cli/compare/v0.9.2...v0.10.0) (2025-10-30)
+
+
+### Features
+
+* containerrun helper can take in envvars ([fc71234](https://github.com/syntasso/kratix-cli/commit/fc7123471c57a7beb0d38d6a8c04b455d2fd2d39))
+
+
+### Chores
+
+* bump dependencies ([#152](https://github.com/syntasso/kratix-cli/issues/152)) ([f8a92a3](https://github.com/syntasso/kratix-cli/commit/f8a92a33cf8bd5fe112b6ab4f9b89922a4d70ef2))
+* ensure LoadPromiseWithAPI reads the promise.yaml when it exists ([0fdea55](https://github.com/syntasso/kratix-cli/commit/0fdea55f09c067061a158dd98c2dec5459268f7c))
+* introduce LoadPromiseWithAPI for parsing promises.yaml and api.yaml ([d368f99](https://github.com/syntasso/kratix-cli/commit/d368f993f94ad97ba69cf8ad915333789e33651f))
+* provide env var and --env flag as two separate args the run command in ForkRunCommand ([cebf1be](https://github.com/syntasso/kratix-cli/commit/cebf1bedcb1b81d51dbbb2f661f8068b886d662d))
+
 ## [0.9.2](https://github.com/syntasso/kratix-cli/compare/v0.9.1...v0.9.2) (2025-10-09)
 
 
