@@ -120,23 +120,75 @@ func extractDefault(varContent *hcl.BodyContent, fileContent string) (any, error
 		if defaultVal.IsNull() {
 			return nil, nil
 		}
-		if defaultVal.Type() == cty.String {
-			return defaultVal.AsString(), nil
-		}
-		if defaultVal.Type() == cty.Number {
-			return defaultVal.AsBigFloat().String(), nil
-		}
-		if defaultVal.Type() == cty.Bool {
-			return defaultVal.True(), nil
-		}
-		if defaultVal.Type().IsTupleType() || defaultVal.Type().IsListType() || defaultVal.Type().IsMapType() {
-			return defaultVal.AsValueSlice(), nil
-		}
 
-		return defaultVal, nil
+		return convertCtyValue(defaultVal), nil
 	}
 
 	return nil, nil
+}
+
+func convertCtySliceToGoSlice(values []cty.Value) any {
+	if len(values) == 0 {
+		return []any{}
+	}
+
+	firstType := values[0].Type()
+	switch firstType {
+	case cty.String:
+		result := make([]string, len(values))
+		for i, v := range values {
+			result[i] = v.AsString()
+		}
+		return result
+
+	case cty.Number:
+		result := make([]float64, len(values))
+		for i, v := range values {
+			f, _ := v.AsBigFloat().Float64()
+			result[i] = f
+		}
+		return result
+
+	case cty.Bool:
+		result := make([]bool, len(values))
+		for i, v := range values {
+			result[i] = v.True()
+		}
+		return result
+
+	default:
+		result := make([]any, len(values))
+		for i, v := range values {
+			result[i] = convertCtyValue(v)
+		}
+		return result
+	}
+}
+
+func convertCtyMapToGoMap(values map[string]cty.Value) map[string]any {
+	result := make(map[string]any)
+	for k, v := range values {
+		result[k] = convertCtyValue(v)
+	}
+	return result
+}
+
+func convertCtyValue(v cty.Value) any {
+	switch {
+	case v.Type() == cty.String:
+		return v.AsString()
+	case v.Type() == cty.Number:
+		f, _ := v.AsBigFloat().Float64()
+		return f
+	case v.Type() == cty.Bool:
+		return v.True()
+	case v.Type().IsListType() || v.Type().IsTupleType():
+		return convertCtySliceToGoSlice(v.AsValueSlice())
+	case v.Type().IsMapType():
+		return convertCtyMapToGoMap(v.AsValueMap())
+	default:
+		return v
+	}
 }
 
 func extractType(varContent *hcl.BodyContent, fileContent string) string {
@@ -182,9 +234,7 @@ func extractTypeFromExpr(expr hclsyntax.Expression, fileContent string) string {
 		// For function-like types like 'list(string)', 'map(number)', etc.
 		args := make([]string, 0, len(e.Args))
 		for _, arg := range e.Args {
-			if syntaxArg, ok := arg.(hclsyntax.Expression); ok {
-				args = append(args, extractTypeFromExpr(syntaxArg, fileContent))
-			}
+			args = append(args, extractTypeFromExpr(arg, fileContent))
 		}
 		return fmt.Sprintf("%s(%s)", e.Name, strings.Join(args, ", "))
 
