@@ -74,7 +74,7 @@ var _ = Describe("From TF module to Promise Stage", func() {
 		envVars = map[string]string{
 			"KRATIX_INPUT_FILE": "assets/test-object.yaml",
 			"KRATIX_OUTPUT_DIR": tmpDir,
-			"MODULE_SOURCE":     "example.com",
+			"MODULE_SOURCE":     "git::example.com",
 			"MODULE_VERSION":    "1.0.0",
 		}
 
