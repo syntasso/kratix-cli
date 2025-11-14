@@ -2,7 +2,7 @@ import kratix_sdk as ks
 
 def main():
     sdk = ks.KratixSDK()
-    if sdk.workflow_type() == "promise":
+    if sdk.is_promise_workflow():
         print(f'Hello from {sdk.promise_name()}')
     else:
         resource = sdk.read_resource_input()

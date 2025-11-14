@@ -8,7 +8,7 @@ import (
 
 func main() {
 	sdk := kratix.New()
-	if sdk.WorkflowType() == "promise" {
+	if sdk.IsPromiseWorkflow() {
 		fmt.Printf("Hello from %s", sdk.PromiseName())
 	} else {
 		resource, _ := sdk.ReadResourceInput()
