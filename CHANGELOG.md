@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.0](https://github.com/syntasso/kratix-cli/compare/v0.10.0...v0.11.0) (2025-11-14)
+
+
+### Features
+
+* use isPromiseWorkflow/is_promise_workflow functions within generated workflow templates ([7c99c4a](https://github.com/syntasso/kratix-cli/commit/7c99c4a28d4529b5696600fd6e22c7ff098919e4))
+* use isPromiseWorkflow/is_promise_workflow functions within generated workflow templates ([0e3a1a3](https://github.com/syntasso/kratix-cli/commit/0e3a1a3f8e134979726c8e1cccd4f6fcad1f1d1a))
+
+
+### Bug Fixes
+
+* do not assume terraform module source protocol ([#157](https://github.com/syntasso/kratix-cli/issues/157)) ([12ef49d](https://github.com/syntasso/kratix-cli/commit/12ef49d42662a7fd992197fd4762013bcc9c174e))
+
 ## [0.10.0](https://github.com/syntasso/kratix-cli/compare/v0.9.2...v0.10.0) (2025-10-30)
 
 
