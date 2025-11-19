@@ -51,10 +51,16 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 
 					variable "number_var" {
 					  type        = number
+					  default     = 10
 					}
 
 					variable "bool_var" {
 					  type        = bool
+					}
+
+					variable "list_string_var" {
+					  type        = list(string)
+					  default     = ["stringValue"]
 					}
 				`), 0644)
 			})
@@ -65,7 +71,7 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(src).To(Equal("mock-source"))
 			Expect(dst).To(Equal(tempDir))
-			Expect(variables).To(HaveLen(4))
+			Expect(variables).To(HaveLen(5))
 
 			Expect(variables[0].Name).To(Equal("example_var"))
 			Expect(variables[0].Type).To(Equal("string"))
@@ -77,11 +83,23 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 
 			Expect(variables[2].Name).To(Equal("number_var"))
 			Expect(variables[2].Type).To(Equal("number"))
+			Expect(variables[2].Default).To(BeAssignableToTypeOf(float64(0)))
+			numberVarDefault, ok := variables[2].Default.(float64)
+			Expect(ok).To(BeTrue())
+			Expect(numberVarDefault).To(Equal(10.0))
 			Expect(variables[2].Description).To(BeEmpty())
 
 			Expect(variables[3].Name).To(Equal("bool_var"))
 			Expect(variables[3].Type).To(Equal("bool"))
 			Expect(variables[3].Description).To(BeEmpty())
+
+			Expect(variables[4].Name).To(Equal("list_string_var"))
+			Expect(variables[4].Type).To(Equal("list(string)"))
+			Expect(variables[4].Default).To(BeAssignableToTypeOf([]string{"stringValue"}))
+			listStringVarDefault, ok := variables[4].Default.([]string)
+			Expect(ok).To(BeTrue())
+			Expect(listStringVarDefault).To(Equal([]string{"stringValue"}))
+			Expect(variables[4].Description).To(BeEmpty())
 		})
 	})
 

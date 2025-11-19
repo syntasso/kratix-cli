@@ -11,7 +11,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("InitterraformPromise", func() {
+var _ = Describe("InitTerraformPromise", func() {
 	var r *runner
 	var workingDir string
 	var initPromiseCmd []string
