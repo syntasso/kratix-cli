@@ -3,6 +3,7 @@ HELM_STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-resource-configure"
 CROSSPLANE_STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim"
 TERRAFORM_MODULE_TAG ?= "ghcr.io/syntasso/kratix-cli/terraform-generate"
 KRATIX_CLI_VERSION ?= "v0.2.0"
+TERRAFORM_STAGE_VERSION ?= "v0.3.0"
 
 all: test build
 
@@ -99,7 +100,7 @@ build-and-load-crossplane-promise-stage: build-crossplane-promise-stage
 
 build-terraform-module-promise-stage:
 	docker build \
-		--tag ${TERRAFORM_MODULE_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${TERRAFORM_MODULE_TAG}:${TERRAFORM_STAGE_VERSION} \
 		--tag ${TERRAFORM_MODULE_TAG}:latest \
 		--file stages/terraform-module-promise/Dockerfile \
 		.
@@ -112,13 +113,13 @@ build-and-push-terraform-module-promise-stage:
 		--builder kratix-cli-image-builder \
 		--push \
 		--platform linux/arm64,linux/amd64\
-		--tag ${TERRAFORM_MODULE_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${TERRAFORM_MODULE_TAG}:${TERRAFORM_STAGE_VERSION} \
 		--tag ${TERRAFORM_MODULE_TAG}:latest \
 		--file stages/terraform-module-promise/Dockerfile \
 		.
 
 build-and-load-terraform-module-promise-stage: build-terraform-module-promise-stage
-	kind load docker-image ${TERRAFORM_MODULE_TAG}:${KRATIX_CLI_VERSION} --name platform
+	kind load docker-image ${TERRAFORM_MODULE_TAG}:${TERRAFORM_STAGE_VERSION} --name platform
 
 
 release: check-version-alignment
