@@ -42,7 +42,7 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func templateFiles(templates embed.FS, outputDir string, filesToTemplate map[string]string, templateValues interface{}) error {
+func templateFiles(templates embed.FS, outputDir string, filesToTemplate map[string]string, templateValues any) error {
 	for path, tmpl := range filesToTemplate {
 		t, err := template.New(filepath.Base(tmpl)).Funcs(sprig.FuncMap()).ParseFS(templates, tmpl)
 		if err != nil {

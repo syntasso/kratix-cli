@@ -24,6 +24,7 @@ spec:
               type: object
               properties:
                 spec:
+                  default: {}
                   properties:
                     api_id:
                       description: API identifier.

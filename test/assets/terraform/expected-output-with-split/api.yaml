@@ -16,6 +16,7 @@ spec:
           type: object
           properties:
             spec:
+              default: {}
               properties:
                 argument:
                   default: []
