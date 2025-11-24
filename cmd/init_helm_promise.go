@@ -53,7 +53,10 @@ func InitHelmPromise(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	templateValues := generateTemplateValues(promiseName, "helm-promise", flags(), resourceConfigure, crdSchema)
+	templateValues, err := generateTemplateValues(promiseName, "helm-promise", flags(), resourceConfigure, crdSchema)
+	if err != nil {
+		return err
+	}
 
 	templates := map[string]string{
 		resourceFileName: "templates/promise/example-resource.yaml.tpl",

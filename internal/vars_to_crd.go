@@ -20,6 +20,7 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 	varSchema := &v1.JSONSchemaProps{
 		Type:       "object",
 		Properties: make(map[string]v1.JSONSchemaProps),
+		Default:    &v1.JSON{Raw: []byte(`{}`)},
 	}
 
 	var warnings []string
