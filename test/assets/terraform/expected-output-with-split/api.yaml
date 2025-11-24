@@ -117,7 +117,8 @@ spec:
                 service_annotations:
                   additionalProperties:
                     type: string
-                  default: {}
+                  default:
+                    run.googleapis.com/ingress: all
                   description: Annotations to the service. Acceptable values all, internal, internal-and-cloud-load-balancing
                   type: object
                 service_labels:
@@ -140,7 +141,11 @@ spec:
                 template_annotations:
                   additionalProperties:
                     type: string
-                  default: {}
+                  default:
+                    autoscaling.knative.dev/maxScale: "2"
+                    autoscaling.knative.dev/minScale: "1"
+                    generated-by: terraform
+                    run.googleapis.com/client-name: terraform
                   description: Annotations to the container metadata including VPC Connector and
                     SQL. See [more details](https://cloud.google.com/run/docs/reference/rpc/google.cloud.run.v1#revisiontemplate)
                   type: object

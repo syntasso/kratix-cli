@@ -62,6 +62,16 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 					  type        = list(string)
 					  default     = ["stringValue"]
 					}
+
+					variable "list_object_var" {
+						type      = list(map(string))
+						 default = [
+							{
+								key1 = "value1"
+								key2 = 100
+							}
+						]
+					}
 				`), 0644)
 			})
 		})
@@ -71,7 +81,7 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(src).To(Equal("mock-source"))
 			Expect(dst).To(Equal(tempDir))
-			Expect(variables).To(HaveLen(5))
+			Expect(variables).To(HaveLen(6))
 
 			Expect(variables[0].Name).To(Equal("example_var"))
 			Expect(variables[0].Type).To(Equal("string"))
@@ -100,6 +110,18 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 			Expect(ok).To(BeTrue())
 			Expect(listStringVarDefault).To(Equal([]string{"stringValue"}))
 			Expect(variables[4].Description).To(BeEmpty())
+
+			Expect(variables[5].Name).To(Equal("list_object_var"))
+			Expect(variables[5].Type).To(Equal("list(map(string))"))
+			Expect(variables[5].Default).To(BeAssignableToTypeOf([]any{}))
+			listObjectVarDefault, ok := variables[5].Default.([]any)
+			Expect(ok).To(BeTrue())
+			Expect(len(listObjectVarDefault)).To(Equal(1))
+			Expect(listObjectVarDefault[0]).To(BeAssignableToTypeOf(map[string]any{}))
+			listObjectVarDefaultObj, ok := listObjectVarDefault[0].(map[string]any)
+			Expect(ok).To(BeTrue())
+			Expect(listObjectVarDefaultObj).To(Equal(map[string]any{"key1": "value1", "key2": float64(100)}))
+			Expect(variables[5].Description).To(BeEmpty())
 		})
 	})
 
