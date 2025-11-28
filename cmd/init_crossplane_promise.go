@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"strings"
 
@@ -197,14 +198,12 @@ func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*api
 		schema.Properties = make(map[string]apiextensionsv1.JSONSchemaProps)
 	}
 	specProp := schema.Properties["spec"]
-	if schema.Properties["spec"].Properties == nil {
+	specProp.Default = &apiextensionsv1.JSON{Raw: []byte(`{}`)}
+	if specProp.Properties == nil {
 		specProp.Properties = make(map[string]apiextensionsv1.JSONSchemaProps)
-		schema.Properties["spec"] = specProp
 	}
-
-	for key, value := range mandatoryAdditionalClaimFields {
-		schema.Properties["spec"].Properties[key] = value
-	}
+	schema.Properties["spec"] = specProp
+	maps.Copy(schema.Properties["spec"].Properties, mandatoryAdditionalClaimFields)
 
 	crd.Spec.Versions = []apiextensionsv1.CustomResourceDefinitionVersion{
 		{

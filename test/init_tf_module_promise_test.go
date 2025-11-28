@@ -97,7 +97,9 @@ var _ = Describe("InitTerraformPromise", func() {
 			It("generates the expected files", func() {
 				files := []string{"api.yaml", "workflows", "example-resource.yaml", "README.md", "dependencies.yaml"}
 				Expect(generatedFiles).To(ConsistOf(files))
-				Expect(cat(filepath.Join(workingDir, "api.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/api.yaml")))
+				actualApi := cat(filepath.Join(workingDir, "api.yaml"))
+				api := cat("assets/terraform/expected-output-with-split/api.yaml")
+				Expect(actualApi).To(Equal(api), "actual api %s\n expected api %s\n", actualApi, api)
 				Expect(cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
 				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/example-resource.yaml")))
 				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output-with-split/README.md")))

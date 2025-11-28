@@ -20,6 +20,7 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 	varSchema := &v1.JSONSchemaProps{
 		Type:       "object",
 		Properties: make(map[string]v1.JSONSchemaProps),
+		Default:    &v1.JSON{Raw: []byte(`{}`)},
 	}
 
 	var warnings []string
@@ -34,7 +35,7 @@ func VariablesToCRDSpecSchema(variables []TerraformVariable) (*v1.JSONSchemaProp
 			v.Type = inferredType
 		}
 
-		prop, warn := convertTerraformTypeToCRD(v.Type)
+		prop, warn := convertTerraformTypeToCRD(v)
 		if warn != "" {
 			warnings = append(warnings, fmt.Sprintf("warning: unable to automatically convert %s of type %s into CRD, skipping", v.Name, v.Type))
 			continue
@@ -84,7 +85,8 @@ func inferTypeFromDefault(value any) string {
 	}
 }
 
-func convertTerraformTypeToCRD(terraformType string) (v1.JSONSchemaProps, string) {
+func convertTerraformTypeToCRD(variable TerraformVariable) (v1.JSONSchemaProps, string) {
+	terraformType := variable.Type
 	terraformType = strings.TrimSpace(terraformType)
 
 	switch {
@@ -97,10 +99,21 @@ func convertTerraformTypeToCRD(terraformType string) (v1.JSONSchemaProps, string
 
 	case strings.HasPrefix(terraformType, "list("):
 		innerType := extractInnerType(terraformType, "list")
-		prop, warn := convertTerraformTypeToCRD(innerType)
+		prop, warn := convertTerraformTypeToCRD(TerraformVariable{Type: innerType})
 		if warn != "" {
 			return v1.JSONSchemaProps{}, "unsupported list type"
 		}
+
+		if variable.Default != nil && innerType == "map(string)" {
+			defaultSlice := variable.Default.([]any)
+			for i := range defaultSlice {
+				defaultMap := defaultSlice[i].(map[string]any)
+				for key, val := range defaultMap {
+					defaultMap[key] = fmt.Sprintf("%v", val)
+				}
+			}
+		}
+
 		return v1.JSONSchemaProps{
 			Type: "array",
 			Items: &v1.JSONSchemaPropsOrArray{
@@ -110,13 +123,20 @@ func convertTerraformTypeToCRD(terraformType string) (v1.JSONSchemaProps, string
 
 	case strings.HasPrefix(terraformType, "map("):
 		innerType := extractInnerType(terraformType, "map")
-		prop, warn := convertTerraformTypeToCRD(innerType)
+		prop, warn := convertTerraformTypeToCRD(TerraformVariable{Type: innerType})
 		if warn != "" {
 			return v1.JSONSchemaProps{
 				Type:                   "object",
 				XPreserveUnknownFields: boolPtr(true),
 			}, ""
 		}
+
+		if variable.Default != nil && innerType == "string" {
+			for k, v := range variable.Default.(map[string]any) {
+				variable.Default.(map[string]any)[k] = fmt.Sprintf("%v", v)
+			}
+		}
+
 		return v1.JSONSchemaProps{
 			Type: "object",
 			AdditionalProperties: &v1.JSONSchemaPropsOrBool{

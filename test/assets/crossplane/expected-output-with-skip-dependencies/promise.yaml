@@ -25,6 +25,7 @@ spec:
           openAPIV3Schema:
             properties:
               spec:
+                default: {}
                 description: ObjectStorageSpec defines the desired state of ObjectStorage
                 properties:
                   compositeDeletePolicy:

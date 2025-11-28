@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"sigs.k8s.io/yaml"
 )
 
 //go:embed templates/promise/*
@@ -55,7 +57,10 @@ type promiseTemplateValues struct {
 func InitPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
 
-	templateValues := generateTemplateValues(promiseName, "promise", "", "[]", "")
+	templateValues, err := generateTemplateValues(promiseName, "promise", "", "[]", "")
+	if err != nil {
+		return err
+	}
 
 	templates := map[string]string{
 		resourceFileName: fmt.Sprintf("templates/promise/%s.tpl", resourceFileName),
@@ -82,13 +87,27 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 
 }
 
-func generateTemplateValues(promiseName, subCommand, extraFlags, resourceConfigure, crdSchema string) promiseTemplateValues {
+func generateTemplateValues(promiseName, subCommand, extraFlags, resourceConfigure, crdSchema string) (promiseTemplateValues, error) {
 	if version == "" {
 		version = "v1alpha1"
 	}
 
 	if plural == "" {
 		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
+	}
+
+	if crdSchema == "" {
+		schema := &apiextensionsv1.JSONSchemaProps{
+			Type:       "object",
+			Default:    &apiextensionsv1.JSON{Raw: []byte(`{}`)},
+			Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+		}
+
+		crdSchemaBytes, err := yaml.Marshal(schema)
+		if err != nil {
+			return promiseTemplateValues{}, err
+		}
+		crdSchema = string(crdSchemaBytes)
 	}
 
 	return promiseTemplateValues{
@@ -103,5 +122,5 @@ func generateTemplateValues(promiseName, subCommand, extraFlags, resourceConfigu
 		PromiseConfigure:  "[]",
 		CRDSchema:         crdSchema,
 		ExtraFlags:        extraFlags,
-	}
+	}, nil
 }

@@ -17,6 +17,7 @@ var _ = Describe("VariablesToCRDSpecSchema", func() {
 			{Name: "boolVar", Type: "bool"},
 			{Name: "listStringVar", Type: "list(string)"},
 			{Name: "mapStringVar", Type: "map(string)"},
+			{Name: "listMapStringVar", Type: "list(map(string))"},
 			{Name: "listObjectVar", Type: "list(object({ key1 = string, key2 = number }))"},
 			{Name: "complexMap", Type: "map(map(list(string)))"},
 			{Name: "complexMap2", Type: "map(object({ key1 = string, key2 = bool }))"},
@@ -40,7 +41,8 @@ var _ = Describe("VariablesToCRDSpecSchema", func() {
 				{Name: "defaultEmptyList", Type: "list(string)", Default: []any{}},
 				{Name: "defaultEmptyMap", Type: "map(string)", Default: map[string]any{}},
 				{Name: "defaultNonEmptyList", Type: "list(string)", Default: []any{"one", "two"}},
-				{Name: "defaultNonEmptyMap", Type: "map(string)", Default: map[string]any{"key": "value"}},
+				{Name: "defaultNonEmptyMap", Type: "map(string)", Default: map[string]any{"key": "value", "number": 1}},
+				{Name: "defaultNonEmptyListMap", Type: "list(map(string))", Default: []any{map[string]any{"key": "value", "number": 1}}},
 			}
 
 			schema, warnings := internal.VariablesToCRDSpecSchema(vars)
@@ -78,6 +80,20 @@ var _ = Describe("VariablesToCRDSpecSchema", func() {
 			Expect(json.Unmarshal(schema.Properties["defaultEmptyMap"].Default.Raw, &defaultEmptyMap)).To(Succeed())
 			Expect(defaultEmptyMap).To(BeEmpty())
 
+			Expect(schema.Properties["defaultNonEmptyList"].Type).To(Equal("array"))
+			var defaultNonEmptyList []string
+			Expect(json.Unmarshal(schema.Properties["defaultNonEmptyList"].Default.Raw, &defaultNonEmptyList)).To(Succeed())
+			Expect(defaultNonEmptyList).To(Equal([]string{"one", "two"}))
+
+			Expect(schema.Properties["defaultNonEmptyMap"].Type).To(Equal("object"))
+			var defaultNonEmptyMap map[string]any
+			Expect(json.Unmarshal(schema.Properties["defaultNonEmptyMap"].Default.Raw, &defaultNonEmptyMap)).To(Succeed())
+			Expect(defaultNonEmptyMap).To(Equal(map[string]any{"key": "value", "number": "1"}))
+
+			Expect(schema.Properties["defaultNonEmptyListMap"].Type).To(Equal("array"))
+			var defaultNonEmptyListMap []map[string]any
+			Expect(json.Unmarshal(schema.Properties["defaultNonEmptyListMap"].Default.Raw, &defaultNonEmptyListMap)).To(Succeed())
+			Expect(defaultNonEmptyListMap).To(Equal([]map[string]any{{"key": "value", "number": "1"}}))
 		})
 	})
 

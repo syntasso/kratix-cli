@@ -98,7 +98,7 @@ func extractVariables(blocks []*hcl.Block, fileContent string) []TerraformVariab
 
 		variable.Type = extractType(varContent, fileContent)
 		variable.Description = extractDescription(varContent, fileContent)
-		d, err := extractDefault(varContent, fileContent)
+		d, err := extractDefault(varContent)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error extracting default for variable %s: %s\n", variable.Name, err)
 			fmt.Fprintln(os.Stderr, "Continuing without default value")
@@ -110,7 +110,7 @@ func extractVariables(blocks []*hcl.Block, fileContent string) []TerraformVariab
 	return variables
 }
 
-func extractDefault(varContent *hcl.BodyContent, fileContent string) (any, error) {
+func extractDefault(varContent *hcl.BodyContent) (any, error) {
 	if defaultAttr, ok := varContent.Attributes["default"]; ok {
 		defaultVal, diags := defaultAttr.Expr.Value(nil)
 		if diags.HasErrors() {
@@ -120,7 +120,6 @@ func extractDefault(varContent *hcl.BodyContent, fileContent string) (any, error
 		if defaultVal.IsNull() {
 			return nil, nil
 		}
-
 		return convertCtyValue(defaultVal), nil
 	}
 
@@ -173,6 +172,14 @@ func convertCtyMapToGoMap(values map[string]cty.Value) map[string]any {
 	return result
 }
 
+func convertCtyObjectToGoObject(values map[string]cty.Value) map[string]any {
+	result := make(map[string]any)
+	for k, v := range values {
+		result[k] = convertCtyValue(v)
+	}
+	return result
+}
+
 func convertCtyValue(v cty.Value) any {
 	switch {
 	case v.Type() == cty.String:
@@ -186,6 +193,8 @@ func convertCtyValue(v cty.Value) any {
 		return convertCtySliceToGoSlice(v.AsValueSlice())
 	case v.Type().IsMapType():
 		return convertCtyMapToGoMap(v.AsValueMap())
+	case v.Type().IsObjectType():
+		return convertCtyObjectToGoObject(v.AsValueMap())
 	default:
 		return v
 	}

@@ -11,6 +11,7 @@ func HelmValuesToSchema(values map[string]any) (*apiextensionsv1.JSONSchemaProps
 	schema := &apiextensionsv1.JSONSchemaProps{
 		Type:       "object",
 		Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+		Default:    &apiextensionsv1.JSON{Raw: []byte(`{}`)},
 	}
 	for k, v := range values {
 		t, err := getJSONSchema(v)
