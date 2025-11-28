@@ -103,6 +103,17 @@ func convertTerraformTypeToCRD(variable TerraformVariable) (v1.JSONSchemaProps, 
 		if warn != "" {
 			return v1.JSONSchemaProps{}, "unsupported list type"
 		}
+
+		if variable.Default != nil && innerType == "map(string)" {
+			defaultSlice := variable.Default.([]any)
+			for i := range defaultSlice {
+				defaultMap := defaultSlice[i].(map[string]any)
+				for key, val := range defaultMap {
+					defaultMap[key] = fmt.Sprintf("%v", val)
+				}
+			}
+		}
+
 		return v1.JSONSchemaProps{
 			Type: "array",
 			Items: &v1.JSONSchemaPropsOrArray{
