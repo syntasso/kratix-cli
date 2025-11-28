@@ -199,11 +199,10 @@ func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*api
 	}
 	specProp := schema.Properties["spec"]
 	specProp.Default = &apiextensionsv1.JSON{Raw: []byte(`{}`)}
-	if schema.Properties["spec"].Properties == nil {
+	if specProp.Properties == nil {
 		specProp.Properties = make(map[string]apiextensionsv1.JSONSchemaProps)
-		schema.Properties["spec"] = specProp
 	}
-
+	schema.Properties["spec"] = specProp
 	maps.Copy(schema.Properties["spec"].Properties, mandatoryAdditionalClaimFields)
 
 	crd.Spec.Versions = []apiextensionsv1.CustomResourceDefinitionVersion{

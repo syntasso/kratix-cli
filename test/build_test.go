@@ -9,6 +9,7 @@ import (
 
 	"fmt"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -101,6 +102,7 @@ var _ = Describe("build", func() {
 				Expect(promise.Name).To(Equal("postgresql"))
 				Expect(promise.Kind).To(Equal("Promise"))
 				Expect(promise.APIVersion).To(Equal(v1alpha1.GroupVersion.String()))
+				ctrl.SetLogger(logr.Discard())
 				pipelines, err := v1alpha1.NewPipelinesMap(&promise, ctrl.LoggerFrom(context.Background()))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(pipelines[v1alpha1.WorkflowTypePromise][v1alpha1.WorkflowActionConfigure]).To(HaveLen(1))
