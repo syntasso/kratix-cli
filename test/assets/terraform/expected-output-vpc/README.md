@@ -3,7 +3,7 @@
 This Promise was generated with:
 
 ```
-kratix init tf-module-promise vpc --module-source https://github.com/GoogleCloudPlatform/cloud-foundation-fabric --module-version v44.1.0 --group syntasso.io --kind VPC
+kratix init tf-module-promise vpc --module-source git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric.git//modules/api-gateway?ref=v49.1.0 --group syntasso.io --kind VPC
 ```
 
 ## Updating API properties

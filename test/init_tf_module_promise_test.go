@@ -113,17 +113,12 @@ var _ = Describe("InitTerraformPromise", func() {
 		Describe("with module-path on Cloud Foundation Fabric", func() {
 			var vpcCmd []string
 			BeforeEach(func() {
-				// ./bin/kratix init tf-module-promise vpc --module-version v44.1.0 \
-				// --module-source https://github.com/GoogleCloudPlatform/cloud-foundation-fabric \
-				// --group syntasso.io --kind VPC --version v1alpha1 --module-path modules/api-gateway
 				r.flags = map[string]string{
-					"--group":          "syntasso.io",
-					"--kind":           "VPC",
-					"--version":        "v1alpha1",
-					"--dir":            workingDir,
-					"--module-version": "v44.1.0",
-					"--module-source":  "https://github.com/GoogleCloudPlatform/cloud-foundation-fabric",
-					"--module-path":    "modules/api-gateway",
+					"--group":         "syntasso.io",
+					"--kind":          "VPC",
+					"--version":       "v1alpha1",
+					"--dir":           workingDir,
+					"--module-source": "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric.git//modules/api-gateway?ref=v49.1.0",
 				}
 				vpcCmd = []string{"init", "tf-module-promise", "vpc"}
 				r.timeout = time.Minute
