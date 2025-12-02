@@ -28,19 +28,14 @@ var (
 	terraformInit func(dir string) error                    = runTerraformInit
 )
 
-func GetVariablesFromModule(moduleSource, modulePath, moduleVersion string) ([]TerraformVariable, error) {
+func GetVariablesFromModule(moduleSource, moduleVersion string) ([]TerraformVariable, error) {
 	tempDir, err := mkdirTemp("", "terraform-module")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	moduleAddress := moduleSource
-	if modulePath != "" {
-		moduleAddress = buildModuleAddress(moduleSource, modulePath)
-	}
-
-	if err := writeTerraformModuleConfig(tempDir, moduleAddress, moduleVersion); err != nil {
+	if err := writeTerraformModuleConfig(tempDir, moduleSource, moduleVersion); err != nil {
 		return nil, err
 	}
 
@@ -60,16 +55,6 @@ func GetVariablesFromModule(moduleSource, modulePath, moduleVersion string) ([]T
 	}
 
 	return variables, nil
-}
-
-func buildModuleAddress(moduleSource, modulePath string) string {
-	cleanPath := strings.TrimPrefix(modulePath, "/")
-	parts := strings.SplitN(moduleSource, "?", 2)
-	if len(parts) == 2 {
-		return fmt.Sprintf("%s//%s?%s", parts[0], cleanPath, parts[1])
-	}
-
-	return fmt.Sprintf("%s//%s", moduleSource, cleanPath)
 }
 
 func writeTerraformModuleConfig(workDir, moduleSource, moduleVersion string) error {

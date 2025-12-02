@@ -78,7 +78,7 @@ variable "list_object_var" {
 		})
 
 		It("returns a list of variables with correct types and descriptions", func() {
-			variables, err := internal.GetVariablesFromModule("mock-source", "", "")
+			variables, err := internal.GetVariablesFromModule("mock-source", "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(variables).To(HaveLen(6))
 
@@ -161,7 +161,7 @@ variable "bool_var" {
 `), 0o644)
 			})
 
-			variables, err := internal.GetVariablesFromModule("git::mock-source.git", "subdir", "v1.0.0")
+			variables, err := internal.GetVariablesFromModule("git::mock-source.git", "v1.0.0")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(variables).To(HaveLen(4))
 
@@ -189,7 +189,7 @@ variable "bool_var" {
 				return errors.New("mock init failure")
 			})
 
-			_, err := internal.GetVariablesFromModule("mock-source", "", "")
+			_, err := internal.GetVariablesFromModule("mock-source", "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to initialize terraform"))
 		})
@@ -203,7 +203,7 @@ variable "bool_var" {
 				return os.WriteFile(variablesPath, []byte(`invalid hcl`), 0o644)
 			})
 
-			_, err := internal.GetVariablesFromModule("mock-source", "", "")
+			_, err := internal.GetVariablesFromModule("mock-source", "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to parse variables"))
 		})

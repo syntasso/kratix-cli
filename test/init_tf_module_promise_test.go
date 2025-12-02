@@ -23,15 +23,13 @@ var _ = Describe("InitTerraformPromise", func() {
 		Expect(err).NotTo(HaveOccurred())
 		r = &runner{exitCode: 0}
 		r.flags = map[string]string{
-			"--group":          "gcp.com",
-			"--kind":           "GoogleCloudRun",
-			"--version":        "v2",
-			"--dir":            workingDir,
-			"--module-version": "v0.16.4",
-			"--module-source":  "https://github.com/GoogleCloudPlatform/terraform-google-cloud-run",
+			"--group":         "gcp.com",
+			"--kind":          "GoogleCloudRun",
+			"--version":       "v2",
+			"--dir":           workingDir,
+			"--module-source": "git::https://github.com/GoogleCloudPlatform/terraform-google-cloud-run?ref=v0.16.4",
 		}
 		initPromiseCmd = []string{"init", "tf-module-promise", "googlecloudrun"}
-
 	})
 
 	AfterEach(func() {
@@ -43,7 +41,7 @@ var _ = Describe("InitTerraformPromise", func() {
 			r.exitCode = 1
 			r.flags = map[string]string{}
 			session := r.run(initPromiseCmd...)
-			Expect(session.Err).To(gbytes.Say(`Error: required flag\(s\) "group", "kind", "module-source", "module-version" not set`))
+			Expect(session.Err).To(gbytes.Say(`Error: required flag\(s\) "group", "kind", "module-source" not set`))
 		})
 	})
 
