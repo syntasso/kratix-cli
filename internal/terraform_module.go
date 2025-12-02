@@ -28,7 +28,7 @@ var (
 	terraformInit func(dir string) error                    = runTerraformInit
 )
 
-func GetVariablesFromModule(moduleSource, modulePath string) ([]TerraformVariable, error) {
+func GetVariablesFromModule(moduleSource, modulePath, moduleVersion string) ([]TerraformVariable, error) {
 	tempDir, err := mkdirTemp("", "terraform-module")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
@@ -40,7 +40,7 @@ func GetVariablesFromModule(moduleSource, modulePath string) ([]TerraformVariabl
 		moduleAddress = buildModuleAddress(moduleSource, modulePath)
 	}
 
-	if err := writeTerraformModuleConfig(tempDir, moduleAddress); err != nil {
+	if err := writeTerraformModuleConfig(tempDir, moduleAddress, moduleVersion); err != nil {
 		return nil, err
 	}
 
@@ -72,8 +72,12 @@ func buildModuleAddress(moduleSource, modulePath string) string {
 	return fmt.Sprintf("%s//%s", moduleSource, cleanPath)
 }
 
-func writeTerraformModuleConfig(workDir, moduleSource string) error {
-	config := fmt.Sprintf("module \"%s\" {\n  source = \"%s\"\n}\n", kratixModuleName, moduleSource)
+func writeTerraformModuleConfig(workDir, moduleSource, moduleVersion string) error {
+	config := fmt.Sprintf("module \"%s\" {\n  source = \"%s\"\n", kratixModuleName, moduleSource)
+	if moduleVersion != "" {
+		config += fmt.Sprintf("  version = \"%s\"\n", moduleVersion)
+	}
+	config += "}\n"
 	if err := os.WriteFile(filepath.Join(workDir, "main.tf"), []byte(config), 0o644); err != nil {
 		return fmt.Errorf("failed to write terraform config: %w", err)
 	}

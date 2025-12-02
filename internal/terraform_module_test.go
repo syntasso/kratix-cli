@@ -78,7 +78,7 @@ variable "list_object_var" {
 		})
 
 		It("returns a list of variables with correct types and descriptions", func() {
-			variables, err := internal.GetVariablesFromModule("mock-source", "")
+			variables, err := internal.GetVariablesFromModule("mock-source", "", "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(variables).To(HaveLen(6))
 
@@ -128,11 +128,15 @@ variable "list_object_var" {
 		BeforeEach(func() {
 			expectDir := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "subdir")
 			variablesPath = filepath.Join(expectDir, "variables.tf")
-			sourceWithVersion := "git::mock-source.git?ref=v1.0.0"
 			internal.SetTerraformInitFunc(func(dir string) error {
 				mainContent, err := os.ReadFile(filepath.Join(tempDir, "main.tf"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(mainContent)).To(ContainSubstring(`source = "git::mock-source.git//subdir?ref=v1.0.0"`))
+				expectContent := `module "kratix_target" {
+  source = "git::mock-source.git//subdir"
+  version = "v1.0.0"
+}
+`
+				Expect(string(mainContent)).To(Equal(expectContent))
 
 				expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), expectDir)
 				Expect(os.MkdirAll(expectDir, 0o755)).To(Succeed())
@@ -157,7 +161,7 @@ variable "bool_var" {
 `), 0o644)
 			})
 
-			variables, err := internal.GetVariablesFromModule(sourceWithVersion, "subdir")
+			variables, err := internal.GetVariablesFromModule("git::mock-source.git", "subdir", "v1.0.0")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(variables).To(HaveLen(4))
 
@@ -185,7 +189,7 @@ variable "bool_var" {
 				return errors.New("mock init failure")
 			})
 
-			_, err := internal.GetVariablesFromModule("mock-source", "")
+			_, err := internal.GetVariablesFromModule("mock-source", "", "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to initialize terraform"))
 		})
@@ -199,7 +203,7 @@ variable "bool_var" {
 				return os.WriteFile(variablesPath, []byte(`invalid hcl`), 0o644)
 			})
 
-			_, err := internal.GetVariablesFromModule("mock-source", "")
+			_, err := internal.GetVariablesFromModule("mock-source", "", "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to parse variables"))
 		})

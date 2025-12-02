@@ -41,8 +41,8 @@ func init() {
 
 func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	fmt.Println("Fetching terraform module variables, this might take up to a minute...")
-	versionedModuleSourceURL := fmt.Sprintf("git::%s?ref=%s", moduleSource, moduleVersion)
-	variables, err := internal.GetVariablesFromModule(versionedModuleSourceURL, modulePath)
+	versionedModuleSourceURL := fmt.Sprintf("git::%s", moduleSource)
+	variables, err := internal.GetVariablesFromModule(versionedModuleSourceURL, modulePath, moduleVersion)
 	if err != nil {
 		return fmt.Errorf("failed to download and convert terraform module to CRD: %w", err)
 	}
