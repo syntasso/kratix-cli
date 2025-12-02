@@ -1,22 +1,31 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
-	"path/filepath"
-
-	"github.com/hashicorp/go-getter"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/zclconf/go-cty/cty"
 )
 
+const kratixModuleName = "kratix_target"
+
+type terraformModuleManifest struct {
+	Modules []struct {
+		Key string `json:"Key"`
+		Dir string `json:"Dir"`
+	} `json:"Modules"`
+}
+
 var (
-	getModule func(dst, src string, opts ...getter.ClientOption) error = getter.Get
-	mkdirTemp func(dir, pattern string) (string, error)                = os.MkdirTemp
+	mkdirTemp     func(dir, pattern string) (string, error) = os.MkdirTemp
+	terraformInit func(dir string) error                    = runTerraformInit
 )
 
 func GetVariablesFromModule(moduleSource, modulePath string) ([]TerraformVariable, error) {
@@ -26,17 +35,89 @@ func GetVariablesFromModule(moduleSource, modulePath string) ([]TerraformVariabl
 	}
 	defer os.RemoveAll(tempDir)
 
-	err = getModule(tempDir, moduleSource)
-	if err != nil {
-		return nil, fmt.Errorf("failed to download module: %w", err)
+	moduleAddress := moduleSource
+	if modulePath != "" {
+		moduleAddress = buildModuleAddress(moduleSource, modulePath)
 	}
-	absPath := filepath.Join(tempDir, modulePath, "variables.tf")
+
+	if err := writeTerraformModuleConfig(tempDir, moduleAddress); err != nil {
+		return nil, err
+	}
+
+	if err := terraformInit(tempDir); err != nil {
+		return nil, fmt.Errorf("failed to initialize terraform: %w", err)
+	}
+
+	moduleDir, err := resolveModuleDir(tempDir)
+	if err != nil {
+		return nil, err
+	}
+
+	absPath := filepath.Join(moduleDir, "variables.tf")
 	variables, err := extractVariablesFromVarsFile(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse variables: %w", err)
 	}
 
 	return variables, nil
+}
+
+func buildModuleAddress(moduleSource, modulePath string) string {
+	cleanPath := strings.TrimPrefix(modulePath, "/")
+	parts := strings.SplitN(moduleSource, "?", 2)
+	if len(parts) == 2 {
+		return fmt.Sprintf("%s//%s?%s", parts[0], cleanPath, parts[1])
+	}
+
+	return fmt.Sprintf("%s//%s", moduleSource, cleanPath)
+}
+
+func writeTerraformModuleConfig(workDir, moduleSource string) error {
+	config := fmt.Sprintf("module \"%s\" {\n  source = \"%s\"\n}\n", kratixModuleName, moduleSource)
+	if err := os.WriteFile(filepath.Join(workDir, "main.tf"), []byte(config), 0o644); err != nil {
+		return fmt.Errorf("failed to write terraform config: %w", err)
+	}
+
+	return nil
+}
+
+func runTerraformInit(dir string) error {
+	cmd := exec.Command("terraform", "init", "-backend=false")
+	cmd.Dir = dir
+
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("terraform init failed: %w: %s", err, string(output))
+	}
+
+	return nil
+}
+
+func resolveModuleDir(workDir string) (string, error) {
+	manifestPath := filepath.Join(workDir, ".terraform", "modules", "modules.json")
+	manifestBytes, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read terraform module manifest: %w", err)
+	}
+
+	var manifest terraformModuleManifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return "", fmt.Errorf("failed to unmarshal terraform module manifest: %w", err)
+	}
+
+	for _, module := range manifest.Modules {
+		moduleKey := strings.TrimPrefix(module.Key, "module.")
+		if moduleKey != kratixModuleName {
+			continue
+		}
+
+		if filepath.IsAbs(module.Dir) {
+			return filepath.Clean(module.Dir), nil
+		}
+
+		return filepath.Clean(filepath.Join(workDir, module.Dir)), nil
+	}
+
+	return "", fmt.Errorf("module %s not found in terraform module manifest", kratixModuleName)
 }
 
 func extractVariablesFromVarsFile(filePath string) ([]TerraformVariable, error) {
