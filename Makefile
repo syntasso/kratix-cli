@@ -4,6 +4,9 @@ CROSSPLANE_STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-clai
 TERRAFORM_MODULE_TAG ?= "ghcr.io/syntasso/kratix-cli/terraform-generate"
 KRATIX_CLI_VERSION ?= "v0.2.0"
 TERRAFORM_STAGE_VERSION ?= "v0.3.0"
+HELM_STAGE_VERSION ?= "dev"
+OPERATOR_STAGE_VERSION ?= "dev"
+CROSSPLANE_STAGE_VERSION ?= "dev"
 
 all: test build
 
@@ -46,7 +49,7 @@ help: # Show help for each of the Makefile recipes.
 
 build-operator-promise-stage:
 	docker build \
-		--tag ${OPERATOR_STAGE_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${OPERATOR_STAGE_TAG}:${OPERATOR_STAGE_VERSION} \
 		--tag ${OPERATOR_STAGE_TAG}:latest \
 		--file stages/operator-promise/Dockerfile \
 		.
@@ -56,14 +59,14 @@ build-and-push-operator-promise-stage:
 		--builder kratix-cli-image-builder \
 		--push \
 		--platform linux/arm64,linux/amd64\
-		--tag ${OPERATOR_STAGE_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${OPERATOR_STAGE_TAG}:${OPERATOR_STAGE_VERSION} \
 		--tag ${OPERATOR_STAGE_TAG}:latest \
 		--file stages/operator-promise/Dockerfile \
 		.
 
 build-helm-promise-stage:
 	docker build \
-		--tag ${HELM_STAGE_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${HELM_STAGE_TAG}:${HELM_STAGE_VERSION} \
 		--tag ${HELM_STAGE_TAG}:latest \
 		--file stages/helm-promise/Dockerfile \
 		.
@@ -73,14 +76,14 @@ build-and-push-helm-promise-stage:
 		--builder kratix-cli-image-builder \
 		--push \
 		--platform linux/arm64,linux/amd64\
-		--tag ${HELM_STAGE_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${HELM_STAGE_TAG}:${HELM_STAGE_VERSION} \
 		--tag ${HELM_STAGE_TAG}:latest \
 		--file stages/helm-promise/Dockerfile \
 		stages/helm-promise
 
 build-crossplane-promise-stage:
 	docker build \
-		--tag ${CROSSPLANE_STAGE_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${CROSSPLANE_STAGE_TAG}:${CROSSPLANE_STAGE_VERSION} \
 		--tag ${CROSSPLANE_STAGE_TAG}:latest \
 		--file stages/crossplane-promise/Dockerfile \
 		.
@@ -90,13 +93,13 @@ build-and-push-crossplane-promise-stage:
 		--builder kratix-cli-image-builder \
 		--push \
 		--platform linux/arm64,linux/amd64\
-		--tag ${CROSSPLANE_STAGE_TAG}:${KRATIX_CLI_VERSION} \
+		--tag ${CROSSPLANE_STAGE_TAG}:${CROSSPLANE_STAGE_VERSION} \
 		--tag ${CROSSPLANE_STAGE_TAG}:latest \
 		--file stages/crossplane-promise/Dockerfile \
 		stages/crossplane-promise
 
 build-and-load-crossplane-promise-stage: build-crossplane-promise-stage
-	kind load docker-image ${CROSSPLANE_STAGE_TAG}:${KRATIX_CLI_VERSION} --name platform
+	kind load docker-image ${CROSSPLANE_STAGE_TAG}:${CROSSPLANE_STAGE_VERSION} --name platform
 
 build-terraform-module-promise-stage:
 	docker build \
@@ -106,7 +109,7 @@ build-terraform-module-promise-stage:
 		.
 
 build-and-load-operator-promise-stage: build-operator-promise-stage
-	kind load docker-image ${OPERATOR_STAGE_TAG}:${KRATIX_CLI_VERSION} --name platform
+	kind load docker-image ${OPERATOR_STAGE_TAG}:${CROSSPLANE_STAGE_VERSION} --name platform
 
 build-and-push-terraform-module-promise-stage:
 	docker buildx build \
