@@ -1,4 +1,5 @@
 {
     ".": "0.11.0",
-    "stages/helm-promise": "0.3.0"
+    "stages/helm-promise": "0.3.0",
+    "stages/terraform-module-promise": "0.3.0"
 }
