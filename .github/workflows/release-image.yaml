@@ -42,5 +42,5 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
       - name: Make release
         run: |
-          cd stages/${$PACKAGE_NAME}
+          cd stages/${PACKAGE_NAME}
           make build-and-push
