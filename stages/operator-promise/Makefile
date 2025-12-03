@@ -1,10 +1,10 @@
-IMG_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-resource-configure"
+IMG_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-operator"
 VERSION ?= "dev"
 
 .PHONY: test
 test: # Run tests
-	./pipeline_test.bash
-
+	go run github.com/onsi/ginkgo/v2/ginkgo -r
+	
 build:
 	docker build \
 		--tag ${IMG_TAG}:${VERSION} \
