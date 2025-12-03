@@ -2,6 +2,7 @@ package internal_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -9,19 +10,17 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/syntasso/kratix-cli/internal"
-
-	"github.com/hashicorp/go-getter"
 )
 
 var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
-	var dst, src, tempDir, variablesPath string
+	var tempDir, variablesPath string
 
 	BeforeEach(func() {
 		var err error
 		tempDir, err = os.MkdirTemp("", "test-tf-module")
 		Expect(err).ToNot(HaveOccurred())
 
-		variablesPath = filepath.Join(tempDir, "variables.tf")
+		variablesPath = filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "variables.tf")
 
 		internal.SetMkdirTempFunc(func(dir, pattern string) (string, error) {
 			return tempDir, nil
@@ -30,57 +29,57 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 
 	AfterEach(func() {
 		os.RemoveAll(tempDir)
+		internal.SetMkdirTempFunc(os.MkdirTemp)
+		internal.SetTerraformInitFunc(internal.RunTerraformInit)
 	})
 
 	Context("when the module is successfully downloaded and parsed", func() {
 		BeforeEach(func() {
-			// Mock getter function to simulate a successful download
-			internal.SetGetModuleFunc(func(givenDst, givenSrc string, opts ...getter.ClientOption) error {
-				dst = givenDst
-				src = givenSrc
+			internal.SetTerraformInitFunc(func(dir string) error {
+				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+				manifestPath := filepath.Join(tempDir, ".terraform", "modules", "modules.json")
+				expectManifest(manifestPath, ".terraform/modules/kratix_target")
 				return os.WriteFile(variablesPath, []byte(`
-					variable "example_var" {
-					  type        = string
-					  description = "An example variable"
-					}
+variable "example_var" {
+  type        = string
+  description = "An example variable"
+}
 
-					variable "complex_var" {
-					  type        = list(map(string))
-					  description = "A complex variable"
-					}
+variable "complex_var" {
+  type        = list(map(string))
+  description = "A complex variable"
+}
 
-					variable "number_var" {
-					  type        = number
-					  default     = 10
-					}
+variable "number_var" {
+  type        = number
+  default     = 10
+}
 
-					variable "bool_var" {
-					  type        = bool
-					}
+variable "bool_var" {
+  type        = bool
+}
 
-					variable "list_string_var" {
-					  type        = list(string)
-					  default     = ["stringValue"]
-					}
+variable "list_string_var" {
+  type        = list(string)
+  default     = ["stringValue"]
+}
 
-					variable "list_object_var" {
-						type      = list(map(string))
-						 default = [
-							{
-								key1 = "value1"
-								key2 = 100
-							}
-						]
-					}
-				`), 0644)
+variable "list_object_var" {
+        type      = list(map(string))
+         default = [
+                {
+                        key1 = "value1"
+                        key2 = 100
+                }
+        ]
+}
+`), 0o644)
 			})
 		})
 
 		It("returns a list of variables with correct types and descriptions", func() {
 			variables, err := internal.GetVariablesFromModule("mock-source", "")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(src).To(Equal("mock-source"))
-			Expect(dst).To(Equal(tempDir))
 			Expect(variables).To(HaveLen(6))
 
 			Expect(variables[0].Name).To(Equal("example_var"))
@@ -127,39 +126,43 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 
 	Context("when the variables.tf file is not at the root of the module", func() {
 		BeforeEach(func() {
-			Expect(os.MkdirAll(filepath.Join(tempDir, "subdir"), 0755)).To(Succeed())
-			variablesPath = filepath.Join(tempDir, "subdir", "variables.tf")
-			// Mock getter function to simulate a successful download
-			internal.SetGetModuleFunc(func(givenDst, givenSrc string, opts ...getter.ClientOption) error {
-				dst = givenDst
-				src = givenSrc
+			expectDir := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "subdir")
+			variablesPath = filepath.Join(expectDir, "variables.tf")
+			internal.SetTerraformInitFunc(func(dir string) error {
+				mainContent, err := os.ReadFile(filepath.Join(tempDir, "main.tf"))
+				Expect(err).NotTo(HaveOccurred())
+				expectContent := `module "kratix_target" {
+  source = "git::mock-source.git//subdir"
+  version = "v1.0.0"
+}
+`
+				Expect(string(mainContent)).To(Equal(expectContent))
+
+				expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), expectDir)
+				Expect(os.MkdirAll(expectDir, 0o755)).To(Succeed())
 				return os.WriteFile(variablesPath, []byte(`
-					variable "example_var" {
-					  type        = string
-					  description = "An example variable"
-					}
+variable "example_var" {
+  type        = string
+  description = "An example variable"
+}
 
-					variable "complex_var" {
-					  type        = list(map(string))
-					  description = "A complex variable"
-					}
+variable "complex_var" {
+  type        = list(map(string))
+  description = "A complex variable"
+}
 
-					variable "number_var" {
-					  type        = number
-					}
+variable "number_var" {
+  type        = number
+}
 
-					variable "bool_var" {
-					  type        = bool
-					}
-				`), 0644)
+variable "bool_var" {
+  type        = bool
+}
+`), 0o644)
 			})
-		})
 
-		It("returns a list of variables with correct types and descriptions", func() {
-			variables, err := internal.GetVariablesFromModule("mock-source", "subdir")
+			variables, err := internal.GetVariablesFromModule("git::mock-source.git", "v1.0.0")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(src).To(Equal("mock-source"))
-			Expect(dst).To(Equal(tempDir))
 			Expect(variables).To(HaveLen(4))
 
 			Expect(variables[0].Name).To(Equal("example_var"))
@@ -180,22 +183,24 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 		})
 	})
 
-	Context("when the module download fails", func() {
+	Context("when terraform init fails", func() {
 		It("errors", func() {
-			internal.SetGetModuleFunc(func(dst, src string, opts ...getter.ClientOption) error {
-				return errors.New("mock download failure")
+			internal.SetTerraformInitFunc(func(dir string) error {
+				return errors.New("mock init failure")
 			})
 
 			_, err := internal.GetVariablesFromModule("mock-source", "")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to download module"))
+			Expect(err.Error()).To(ContainSubstring("failed to initialize terraform"))
 		})
 	})
 
 	Context("when the module is downloaded but variable parsing fails", func() {
 		It("errors", func() {
-			internal.SetGetModuleFunc(func(dst, src string, opts ...getter.ClientOption) error {
-				return os.WriteFile(variablesPath, []byte(`invalid hcl`), 0644)
+			internal.SetTerraformInitFunc(func(dir string) error {
+				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+				expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+				return os.WriteFile(variablesPath, []byte(`invalid hcl`), 0o644)
 			})
 
 			_, err := internal.GetVariablesFromModule("mock-source", "")
@@ -204,3 +209,9 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 		})
 	})
 })
+
+func expectManifest(manifestPath, moduleDir string) {
+	manifest := fmt.Sprintf(`{"Modules":[{"Key":"module.%s","Dir":"%s"}]}`, "kratix_target", moduleDir)
+	Expect(os.MkdirAll(filepath.Dir(manifestPath), 0o755)).To(Succeed())
+	Expect(os.WriteFile(manifestPath, []byte(manifest), 0o644)).To(Succeed())
+}

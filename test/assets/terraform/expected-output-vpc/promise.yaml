@@ -78,11 +78,7 @@ spec:
             containers:
             - env:
               - name: MODULE_SOURCE
-                value: https://github.com/GoogleCloudPlatform/cloud-foundation-fabric
-              - name: MODULE_VERSION
-                value: v44.1.0
-              - name: MODULE_PATH
-                value: modules/api-gateway
+                value: git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric.git//modules/api-gateway?ref=v49.1.0
               image: ghcr.io/syntasso/kratix-cli/terraform-generate:v0.2.0
               name: terraform-generate
         
