@@ -47,7 +47,7 @@
       "draft": false,
       "prerelease": false,
       "release-type": "go",
-      "initial-version": "0.3.0"
+      "release-as": "0.3.0"
     }
   },
   "separate-pull-requests": true,
