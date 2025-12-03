@@ -13,6 +13,9 @@ build:
 		.
 
 build-and-push:
+	if ! docker buildx ls | grep -q "kratix-cli-image-builder"; then \
+		docker buildx create --name kratix-cli-image-builder; \
+	fi;
 	docker buildx build \
 		--builder kratix-cli-image-builder \
 		--push \
