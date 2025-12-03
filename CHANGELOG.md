@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.11.0](https://github.com/syntasso/kratix-cli/compare/v0.10.0...v0.11.0) (2025-12-03)
+
+
+### Features
+
+* refactor Terraform module resolution via terraform init to support terraform private registry modules ([#167](https://github.com/syntasso/kratix-cli/issues/167)) ([4fce203](https://github.com/syntasso/kratix-cli/commit/4fce203c44c25deb59f3a98ac0cff1906262bbc0))
+* use isPromiseWorkflow/is_promise_workflow functions within generated workflow templates ([7c99c4a](https://github.com/syntasso/kratix-cli/commit/7c99c4a28d4529b5696600fd6e22c7ff098919e4))
+* use isPromiseWorkflow/is_promise_workflow functions within generated workflow templates ([0e3a1a3](https://github.com/syntasso/kratix-cli/commit/0e3a1a3f8e134979726c8e1cccd4f6fcad1f1d1a))
+
+
+### Bug Fixes
+
+* **#154:** ensure tf defaults are parsed correctly ([#156](https://github.com/syntasso/kratix-cli/issues/156)) ([d51804a](https://github.com/syntasso/kratix-cli/commit/d51804a923aa2470f288a96652cff440aa3060e4))
+* copilot codereview ([5f65fc0](https://github.com/syntasso/kratix-cli/commit/5f65fc068dec29ea63d054b3c1b38819be0ce79e))
+* defaults for list(map(string)) ([0963e27](https://github.com/syntasso/kratix-cli/commit/0963e277efea43ccf14e0be6f34ffe4492537999))
+* do not assume terraform module source protocol ([#157](https://github.com/syntasso/kratix-cli/issues/157)) ([12ef49d](https://github.com/syntasso/kratix-cli/commit/12ef49d42662a7fd992197fd4762013bcc9c174e))
+* proper parsing of defaults for maps ([41a770c](https://github.com/syntasso/kratix-cli/commit/41a770c6d438b7f51a1987488aaaf7cfccb92874))
+* sets a default value to .spec ([0676981](https://github.com/syntasso/kratix-cli/commit/067698145713a14afef022e4c7f26b9025a586e8)), closes [#155](https://github.com/syntasso/kratix-cli/issues/155)
+
+
+### Chores
+
+* add a space in help msg ([18f4974](https://github.com/syntasso/kratix-cli/commit/18f4974ea8f4d5285275ad7d9248c6278db65e57))
+* bootstrap releases for path: stages/helm-promise ([#168](https://github.com/syntasso/kratix-cli/issues/168)) ([fcaaf37](https://github.com/syntasso/kratix-cli/commit/fcaaf37b96dace81a1fde3e21b05664cfe3e2356))
+* install python SDK from pypi instead of github ([35d2289](https://github.com/syntasso/kratix-cli/commit/35d2289cf4fb740e16f3587f69ef72a945425477))
+* install python SDK from pypi instead of github ([0b7af0b](https://github.com/syntasso/kratix-cli/commit/0b7af0b6b7e4199ad0453274f001b9b6318d68a2))
+* temporary fix for release a terraform generate 0.3.0 ([#164](https://github.com/syntasso/kratix-cli/issues/164)) ([eba557e](https://github.com/syntasso/kratix-cli/commit/eba557e16b5d590f3ebe22bfa2c8c570f5ffcff8))
+* update version to match next release version ([1b72ede](https://github.com/syntasso/kratix-cli/commit/1b72ede0e8695c5aad2516caf8da225d0e2ea77f))
+
 ## [0.10.0](https://github.com/syntasso/kratix-cli/compare/v0.9.2...v0.10.0) (2025-10-30)
 
 
