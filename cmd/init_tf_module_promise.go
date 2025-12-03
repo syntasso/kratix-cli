@@ -56,7 +56,7 @@ func init() {
 		"This can be a Git URL, Terraform registry path, or a local directory path. \n"+
 		"It follows the same format as the `source` argument in the Terraform module block.",
 	)
-	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "module-version", "m", "", "(Optional) version of the terraform module;"+
+	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "module-version", "m", "", "(Optional) version of the terraform module; "+
 		"only use when pulling modules from Terraform registry",
 	)
 	terraformModuleCmd.MarkFlagRequired("module-source")
