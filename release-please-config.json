@@ -39,6 +39,7 @@
       ]
     },
     "stages/helm-promise": {
+      "component": "helm-promise",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
