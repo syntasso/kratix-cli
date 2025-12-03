@@ -29,9 +29,9 @@ jobs:
           fi
       - name: Set release name and version as Environment Variables
         run: |
-          PACKAGE_NAME=$(echo ${PIPELINE_TAG} | awk -F'-v' '{ print $1 }')"
+          PACKAGE_NAME="$(echo ${PIPELINE_TAG} | awk -F'-v' '{ print $1 }')"
           echo PACKAGE_NAME=$PACKAGE_NAME >> $GITHUB_ENV
-          VERSION=v$(echo ${PIPELINE_TAG} | awk -F'-v' '{ print $2 }')"
+          VERSION="v$(echo ${PIPELINE_TAG} | awk -F'-v' '{ print $2 }')"
           echo VERSION=$VERSION >> $GITHUB_ENV
           echo "Packaging $PACKAGE_NAME at version $VERSION"
       - name: Docker login to GHCR
