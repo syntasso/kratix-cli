@@ -41,4 +41,4 @@ jobs:
       - name: Make release
         run: |
           cd $PACKAGE_NAME
-          make release
+          make build-and-push

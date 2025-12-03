@@ -1,10 +1,10 @@
-STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-resource-configure"
+STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/terraform-generate"
 STAGE_VERSION ?= "dev"
 
 .PHONY: test
 test: # Run tests
-	./pipeline_test.bash
-
+	go run github.com/onsi/ginkgo/v2/ginkgo -r
+	
 build:
 	docker build \
 		--tag ${STAGE_TAG}:${STAGE_VERSION} \
