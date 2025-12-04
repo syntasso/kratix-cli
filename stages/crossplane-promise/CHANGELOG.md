@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.0](https://github.com/syntasso/kratix-cli/compare/crossplane-promise-v0.2.0...crossplane-promise-v0.2.0) (2025-12-04)
+
+
+### Chores
+
+* added dry-run to jobs ([250ac28](https://github.com/syntasso/kratix-cli/commit/250ac289c33a09ea72fda7bd1e8b053ceada246c))
+* added help to location makefiles ([b210cb9](https://github.com/syntasso/kratix-cli/commit/b210cb990bf6309a933af4aec6b051f29647c1a2))
+* ensuring that image building works in each subdirectory ([9794f76](https://github.com/syntasso/kratix-cli/commit/9794f76e3c8c4be0cabe06fcb158d0dae431637b))
+* fixing jobs to run from Makefiles on stages locations ([92f3360](https://github.com/syntasso/kratix-cli/commit/92f3360416bf292641c060a11523170084af07c2))
+
 ## [0.2.0](https://github.com/syntasso/kratix-cli/compare/crossplane-promise-v0.1.0...crossplane-promise-v0.2.0) (2025-12-04)
 
 
