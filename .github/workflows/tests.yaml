@@ -26,9 +26,6 @@ jobs:
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck --version
-          pwd
-          ls
           govulncheck ./...
 
   update-release-pr:

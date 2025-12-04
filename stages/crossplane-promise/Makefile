@@ -2,7 +2,7 @@ STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim"
 STAGE_VERSION ?= "dev"
 
 .PHONY: test
-test: # Run tests
+test:
 	go run github.com/onsi/ginkgo/v2/ginkgo -r
 	
 build:
