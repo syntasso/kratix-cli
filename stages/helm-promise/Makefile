@@ -6,18 +6,22 @@ BASE_PATH ?= .
 
 PUSH_FLAG := $(if $(filter 0,$(DRY_RUN)),--push,)
 
+.PHONY: help
+help: # Show help for each of the Makefile recipes.
+	@grep -E '^[a-zA-Z0-9 -]+:.*#'  Makefile | sort | while read -r l; do printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m:$$(echo $$l | cut -f 2- -d'#')\n"; done
+
 .PHONY: test
-test:
+test: # Run tests
 	./pipeline_test.bash
 
-build:
+build: # Build local container image
 	docker build \
 		--tag ${IMG_TAG}:${VERSION} \
 		--tag ${IMG_TAG}:latest \
 		--file Dockerfile \
 		${BASE_PATH}
 
-build-and-push:
+build-and-push: # Build container image and push it to the container registry
 	if ! docker buildx ls | grep -q "kratix-cli-image-builder"; then \
 		docker buildx create --name kratix-cli-image-builder; \
 	fi;
@@ -30,5 +34,5 @@ build-and-push:
 		--file Dockerfile \
 		${BASE_PATH}
 
-build-and-load: build
+build-and-load: build # Build container image and load it into kind
 	kind load docker-image ${IMG_TAG}:${VERSION} --name platform
