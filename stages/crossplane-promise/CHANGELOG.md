@@ -9,6 +9,20 @@
 * added help to location makefiles ([b210cb9](https://github.com/syntasso/kratix-cli/commit/b210cb990bf6309a933af4aec6b051f29647c1a2))
 * ensuring that image building works in each subdirectory ([9794f76](https://github.com/syntasso/kratix-cli/commit/9794f76e3c8c4be0cabe06fcb158d0dae431637b))
 * fixing jobs to run from Makefiles on stages locations ([92f3360](https://github.com/syntasso/kratix-cli/commit/92f3360416bf292641c060a11523170084af07c2))
+* **main:** release crossplane-promise 0.2.0 ([c1fe883](https://github.com/syntasso/kratix-cli/commit/c1fe88377acbdfae8d8d152a5da6e3cec2162e16))
+* **main:** release crossplane-promise 0.2.0 ([6062dd9](https://github.com/syntasso/kratix-cli/commit/6062dd9ebf42dce0197c9b86f9519ea3d96f60d2))
+* **main:** release crossplane-promise 0.2.0 ([4897205](https://github.com/syntasso/kratix-cli/commit/489720596ba810d10a31abdebb10148bcacc50fb))
+* **main:** release crossplane-promise 0.2.0 ([43de305](https://github.com/syntasso/kratix-cli/commit/43de30563015d082dde23dc087d6e962c7686579))
+
+## [0.2.0](https://github.com/syntasso/kratix-cli/compare/crossplane-promise-v0.2.0...crossplane-promise-v0.2.0) (2025-12-04)
+
+
+### Chores
+
+* added dry-run to jobs ([250ac28](https://github.com/syntasso/kratix-cli/commit/250ac289c33a09ea72fda7bd1e8b053ceada246c))
+* added help to location makefiles ([b210cb9](https://github.com/syntasso/kratix-cli/commit/b210cb990bf6309a933af4aec6b051f29647c1a2))
+* ensuring that image building works in each subdirectory ([9794f76](https://github.com/syntasso/kratix-cli/commit/9794f76e3c8c4be0cabe06fcb158d0dae431637b))
+* fixing jobs to run from Makefiles on stages locations ([92f3360](https://github.com/syntasso/kratix-cli/commit/92f3360416bf292641c060a11523170084af07c2))
 * **main:** release crossplane-promise 0.2.0 ([4897205](https://github.com/syntasso/kratix-cli/commit/489720596ba810d10a31abdebb10148bcacc50fb))
 * **main:** release crossplane-promise 0.2.0 ([43de305](https://github.com/syntasso/kratix-cli/commit/43de30563015d082dde23dc087d6e962c7686579))
 
