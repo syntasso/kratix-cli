@@ -1,5 +1,8 @@
 STAGE_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim"
 STAGE_VERSION ?= "dev"
+DRY_RUN ?= 0
+
+PUSH_FLAG := $(if $(filter 0,$(DRY_RUN)),--push,)
 
 .PHONY: test
 test:
@@ -18,7 +21,7 @@ build-and-push:
 	fi;
 	docker buildx build \
 		--builder kratix-cli-image-builder \
-		--push \
+		$(PUSH_FLAG) \
 		--platform linux/arm64,linux/amd64\
 		--tag ${STAGE_TAG}:${STAGE_VERSION} \
 		--tag ${STAGE_TAG}:latest \

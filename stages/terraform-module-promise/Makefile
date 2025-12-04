@@ -1,5 +1,8 @@
 IMG_TAG ?= "ghcr.io/syntasso/kratix-cli/terraform-generate"
 VERSION ?= "dev"
+DRY_RUN ?= 0
+
+PUSH_FLAG := $(if $(filter 0,$(DRY_RUN)),--push,)
 
 .PHONY: test
 test: # Run tests
@@ -18,7 +21,7 @@ build-and-push:
 	fi;
 	docker buildx build \
 		--builder kratix-cli-image-builder \
-		--push \
+		$(PUSH_FLAG) \
 		--platform linux/arm64,linux/amd64\
 		--tag ${IMG_TAG}:${VERSION} \
 		--tag ${IMG_TAG}:latest \
