@@ -1,11 +1,13 @@
 IMG_TAG ?= "ghcr.io/syntasso/kratix-cli/from-api-to-operator"
 VERSION ?= "dev"
 DRY_RUN ?= 0
+# There are dependencies on code elsewhere in this repo
+BASE_PATH ?= ../..
 
 PUSH_FLAG := $(if $(filter 0,$(DRY_RUN)),--push,)
 
 .PHONY: test
-test: # Run tests
+test:
 	go run github.com/onsi/ginkgo/v2/ginkgo -r
 	
 build:
@@ -13,7 +15,7 @@ build:
 		--tag ${IMG_TAG}:${VERSION} \
 		--tag ${IMG_TAG}:latest \
 		--file Dockerfile \
-		.
+		${BASE_PATH}
 
 build-and-push:
 	if ! docker buildx ls | grep -q "kratix-cli-image-builder"; then \
@@ -26,7 +28,7 @@ build-and-push:
 		--tag ${IMG_TAG}:${VERSION} \
 		--tag ${IMG_TAG}:latest \
 		--file Dockerfile \
-		.
+		${BASE_PATH}
 
 build-and-load: build
 	kind load docker-image ${IMG_TAG}:${VERSION} --name platform

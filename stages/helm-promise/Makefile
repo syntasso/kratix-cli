@@ -1,11 +1,13 @@
-IMG_TAG ?= "ghcr.io/syntasso/kratix-cli/helm-resource-configure"
-VERSION ?= "dev"
+IMG_TAG ?= ghcr.io/syntasso/kratix-cli/helm-resource-configure
+VERSION ?= dev
 DRY_RUN ?= 0
+# No dependencies on code elsewhere in this repo
+BASE_PATH ?= .
 
 PUSH_FLAG := $(if $(filter 0,$(DRY_RUN)),--push,)
 
 .PHONY: test
-test: # Run tests
+test:
 	./pipeline_test.bash
 
 build:
@@ -13,7 +15,7 @@ build:
 		--tag ${IMG_TAG}:${VERSION} \
 		--tag ${IMG_TAG}:latest \
 		--file Dockerfile \
-		.
+		${BASE_PATH}
 
 build-and-push:
 	if ! docker buildx ls | grep -q "kratix-cli-image-builder"; then \
@@ -26,7 +28,7 @@ build-and-push:
 		--tag ${IMG_TAG}:${VERSION} \
 		--tag ${IMG_TAG}:latest \
 		--file Dockerfile \
-		.
+		${BASE_PATH}
 
 build-and-load: build
 	kind load docker-image ${IMG_TAG}:${VERSION} --name platform
