@@ -1,5 +1,5 @@
-STAGE_TAG ?= ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim
-STAGE_VERSION ?= dev
+IMG_TAG ?= ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim
+VERSION ?= dev
 DRY_RUN ?= 0
 # There are dependencies on code elsewhere in this repo
 BASE_PATH ?= ../..
@@ -16,8 +16,8 @@ test: # Run tests
 	
 build: # Build local container image
 	docker build \
-		--tag ${STAGE_TAG}:${STAGE_VERSION} \
-		--tag ${STAGE_TAG}:latest \
+		--tag ${IMG_TAG}:${VERSION} \
+		--tag ${IMG_TAG}:latest \
 		--file Dockerfile \
 		${BASE_PATH}
 
@@ -29,10 +29,10 @@ build-and-push: # Build container image and push it to the container registry
 		--builder kratix-cli-image-builder \
 		$(PUSH_FLAG) \
 		--platform linux/arm64,linux/amd64\
-		--tag ${STAGE_TAG}:${STAGE_VERSION} \
-		--tag ${STAGE_TAG}:latest \
+		--tag ${IMG_TAG}:${VERSION} \
+		--tag ${IMG_TAG}:latest \
 		--file Dockerfile \
 		${BASE_PATH}
 
 build-and-load: build # Build container image and load it into kind
-	kind load docker-image ${STAGE_TAG}:${STAGE_VERSION} --name platform
+	kind load docker-image ${IMG_TAG}:${VERSION} --name platform
