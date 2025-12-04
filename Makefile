@@ -23,97 +23,50 @@ check-version-alignment:
 build: # Build the binary
 	CGO_ENABLED=0 go build -o bin/kratix ./cmd/kratix/main.go
 
-build-stages: build-operator-promise-stage build-helm-promise-stage build-terraform-module-promise-stage
-
-build-and-push-stages: # build and push all stages
-	if ! docker buildx ls | grep -q "kratix-cli-image-builder"; then \
-		docker buildx create --name kratix-cli-image-builder; \
-	fi;
-	make build-and-push-operator-promise-stage
-	make build-and-push-helm-promise-stage
-	make build-and-push-terraform-module-promise-stage
 
 .PHONY: help
 help: # Show help for each of the Makefile recipes.
 	@grep -E '^[a-zA-Z0-9 -]+:.*#'  Makefile | sort | while read -r l; do printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m:$$(echo $$l | cut -f 2- -d'#')\n"; done
 
-build-operator-promise-stage:
-	docker build \
-		--tag ${OPERATOR_STAGE_TAG}:${OPERATOR_STAGE_VERSION} \
-		--tag ${OPERATOR_STAGE_TAG}:latest \
-		--file stages/operator-promise/Dockerfile \
-		.
-
-build-and-push-operator-promise-stage:
-	docker buildx build \
-		--builder kratix-cli-image-builder \
-		--push \
-		--platform linux/arm64,linux/amd64\
-		--tag ${OPERATOR_STAGE_TAG}:${OPERATOR_STAGE_VERSION} \
-		--tag ${OPERATOR_STAGE_TAG}:latest \
-		--file stages/operator-promise/Dockerfile \
-		.
-
-build-helm-promise-stage:
-	docker build \
-		--tag ${HELM_STAGE_TAG}:${HELM_STAGE_VERSION} \
-		--tag ${HELM_STAGE_TAG}:latest \
-		--file stages/helm-promise/Dockerfile \
-		.
-
-build-and-push-helm-promise-stage:
-	docker buildx build \
-		--builder kratix-cli-image-builder \
-		--push \
-		--platform linux/arm64,linux/amd64\
-		--tag ${HELM_STAGE_TAG}:${HELM_STAGE_VERSION} \
-		--tag ${HELM_STAGE_TAG}:latest \
-		--file stages/helm-promise/Dockerfile \
-		stages/helm-promise
+# Build commands for stages
+.PHONY: help
+build-and-load-stages: build-and-load-crossplane-promise-stage build-and-load-helm-promise-stage build-and-load-operator-promise-stage build-and-load-terraform-module-promise-stage # Build container images for all stages and load them into kind
 
 build-crossplane-promise-stage:
-	docker build \
-		--tag ${CROSSPLANE_STAGE_TAG}:${CROSSPLANE_STAGE_VERSION} \
-		--tag ${CROSSPLANE_STAGE_TAG}:latest \
-		--file stages/crossplane-promise/Dockerfile \
-		.
+	$(MAKE) -C stages/crossplane-promise build
+
+build-and-load-crossplane-promise-stage:
+	$(MAKE) -C stages/crossplane-promise build-and-load
 
 build-and-push-crossplane-promise-stage:
-	docker buildx build \
-		--builder kratix-cli-image-builder \
-		--push \
-		--platform linux/arm64,linux/amd64\
-		--tag ${CROSSPLANE_STAGE_TAG}:${CROSSPLANE_STAGE_VERSION} \
-		--tag ${CROSSPLANE_STAGE_TAG}:latest \
-		--file stages/crossplane-promise/Dockerfile \
-		stages/crossplane-promise
+	$(MAKE) -C stages/crossplane-promise build-and-push
 
-build-and-load-crossplane-promise-stage: build-crossplane-promise-stage
-	kind load docker-image ${CROSSPLANE_STAGE_TAG}:${CROSSPLANE_STAGE_VERSION} --name platform
+build-helm-promise-stage:
+	$(MAKE) -C stages/helm-promise build
+
+build-and-load-helm-promise-stage:
+	$(MAKE) -C stages/helm-promise build-and-load
+
+build-and-push-helm-promise-stage:
+	$(MAKE) -C stages/helm-promise build-and-push
+
+build-operator-promise-stage:
+	$(MAKE) -C stages/operator-promise build
+
+build-and-load-operator-promise-stage:
+	$(MAKE) -C stages/operator-promise build-and-load
+
+build-and-push-operator-promise-stage:
+	$(MAKE) -C stages/operator-promise build-and-push
 
 build-terraform-module-promise-stage:
-	docker build \
-		--tag ${TERRAFORM_MODULE_TAG}:${TERRAFORM_STAGE_VERSION} \
-		--tag ${TERRAFORM_MODULE_TAG}:latest \
-		--file stages/terraform-module-promise/Dockerfile \
-		.
+	$(MAKE) -C stages/terraform-module-promise build
 
-build-and-load-operator-promise-stage: build-operator-promise-stage
-	kind load docker-image ${OPERATOR_STAGE_TAG}:${CROSSPLANE_STAGE_VERSION} --name platform
+build-and-load-terraform-module-promise-stage:
+	$(MAKE) -C stages/terraform-module-promise build-and-load
 
 build-and-push-terraform-module-promise-stage:
-	docker buildx build \
-		--builder kratix-cli-image-builder \
-		--push \
-		--platform linux/arm64,linux/amd64\
-		--tag ${TERRAFORM_MODULE_TAG}:${TERRAFORM_STAGE_VERSION} \
-		--tag ${TERRAFORM_MODULE_TAG}:latest \
-		--file stages/terraform-module-promise/Dockerfile \
-		.
-
-build-and-load-terraform-module-promise-stage: build-terraform-module-promise-stage
-	kind load docker-image ${TERRAFORM_MODULE_TAG}:${TERRAFORM_STAGE_VERSION} --name platform
-
+	$(MAKE) -C stages/terraform-module-promise build-and-push
 
 release: check-version-alignment
 	goreleaser release --prepare --clean --config .goreleaser.yaml
