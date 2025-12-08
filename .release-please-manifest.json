@@ -1,5 +1,5 @@
 {
-    ".": "0.11.0",
+    ".": "0.11.1",
     "stages/helm-promise": "0.3.0",
     "stages/terraform-module-promise": "0.3.0",
     "stages/crossplane-promise": "0.2.0",
