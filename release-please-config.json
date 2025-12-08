@@ -173,7 +173,6 @@
       "draft": false,
       "prerelease": false,
       "release-type": "go",
-      "release-as": "0.3.0",
       "changelog-sections": [
         {
           "type": "feat",
