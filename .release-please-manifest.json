@@ -2,6 +2,6 @@
     ".": "0.11.1",
     "stages/helm-promise": "0.3.0",
     "stages/terraform-module-promise": "0.3.0",
-    "stages/crossplane-promise": "0.2.0",
+    "stages/crossplane-promise": "0.2.1",
     "stages/operator-promise": "0.3.0"
 }
