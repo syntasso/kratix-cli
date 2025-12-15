@@ -1,5 +1,60 @@
 # Changelog
 
+## [0.11.1](https://github.com/syntasso/kratix-cli/compare/v0.11.0...v0.11.1) (2025-12-08)
+
+
+### Chores
+
+* 159/release stage images ([#173](https://github.com/syntasso/kratix-cli/issues/173)) ([e39f21b](https://github.com/syntasso/kratix-cli/commit/e39f21ba13c918e7cbdb8ee0095ba90f8aab6de2))
+* add helm-promise image to release-please config and manaifest ([15bc290](https://github.com/syntasso/kratix-cli/commit/15bc290c63afed47815caec8f8cb1ff311723b26))
+* add makefile for testing and releasing helm-promise ([1180a3d](https://github.com/syntasso/kratix-cli/commit/1180a3d0d1d354064fc622d89215ea67cc85206d))
+* add release type for helm-promise release ([4c6aa1a](https://github.com/syntasso/kratix-cli/commit/4c6aa1a5e982e422b401a71c1ca665ac98349498))
+* add release-please config for crossplane-promise ([d1edbf1](https://github.com/syntasso/kratix-cli/commit/d1edbf10be6d1ebc0be354b9f3d52213de0a3693))
+* add release-please configuration for terraform module promise ([8b0fa81](https://github.com/syntasso/kratix-cli/commit/8b0fa8182c43d8d998dc42949e1ee2d8561c15ff))
+* added dry-run to jobs ([250ac28](https://github.com/syntasso/kratix-cli/commit/250ac289c33a09ea72fda7bd1e8b053ceada246c))
+* added help to location makefiles ([b210cb9](https://github.com/syntasso/kratix-cli/commit/b210cb990bf6309a933af4aec6b051f29647c1a2))
+* calling targets from stage makefiles ([977a3c2](https://github.com/syntasso/kratix-cli/commit/977a3c2dc6c257c39a97e1778aadbd2ea49e0291))
+* cleaned changelog ([3a31fcd](https://github.com/syntasso/kratix-cli/commit/3a31fcd4489d4f0d1fca385a913a6e4587ee87a7))
+* configure helm-promise to release-as 0.3.0 ([9138fdc](https://github.com/syntasso/kratix-cli/commit/9138fdc76af101b2a86ec88df144b835626bf509))
+* confirm govulncheck installation ([d660b72](https://github.com/syntasso/kratix-cli/commit/d660b72732960f82acbe5abfcf5cfa6aca79abb3))
+* correct path to stages directory in release-image action ([bbcc007](https://github.com/syntasso/kratix-cli/commit/bbcc007a025d16367e16ee7ca73ed1aaf4dbaca7))
+* correct path to stages directory in release-image action ([5ae57ec](https://github.com/syntasso/kratix-cli/commit/5ae57ecc9ffc281129619b015295ba4c77442518))
+* ensure a component name is set in helm-promise release config ([fa28504](https://github.com/syntasso/kratix-cli/commit/fa2850405efe7219bbb9c45e2ed73779b75a9703))
+* ensure buildx builder is created before building images ([1716305](https://github.com/syntasso/kratix-cli/commit/1716305087fca8bf19e4af88da80d20f452c5234))
+* ensure release-image action prints the package and version in outputs ([0fae459](https://github.com/syntasso/kratix-cli/commit/0fae4599ac23a31dd49b2939ea76e84030d138d1))
+* ensuring that image building works in each subdirectory ([9794f76](https://github.com/syntasso/kratix-cli/commit/9794f76e3c8c4be0cabe06fcb158d0dae431637b))
+* fix variable parsing in release-image action ([ded5a4a](https://github.com/syntasso/kratix-cli/commit/ded5a4a0af6f60d7ce8cfc98eda779a26e7664b8))
+* fixed wrong variable names ([d85a8c7](https://github.com/syntasso/kratix-cli/commit/d85a8c73a8925aa4be40110868a4ef8e7866ddaa))
+* fixing jobs to run from Makefiles on stages locations ([92f3360](https://github.com/syntasso/kratix-cli/commit/92f3360416bf292641c060a11523170084af07c2))
+* **main:** release crossplane-promise 0.2.0 ([27b82a1](https://github.com/syntasso/kratix-cli/commit/27b82a15cdc42e201cc200db67b68e6efc90a008))
+* **main:** release crossplane-promise 0.2.0 ([6b44225](https://github.com/syntasso/kratix-cli/commit/6b44225dbbffa02caded1f0f9bff456d82274595))
+* **main:** release crossplane-promise 0.2.0 ([3234df9](https://github.com/syntasso/kratix-cli/commit/3234df97697ce3a4eed2456ce8bee9bca1861b60))
+* **main:** release crossplane-promise 0.2.0 ([8adef0a](https://github.com/syntasso/kratix-cli/commit/8adef0aa224804cdb3dd0f8cd339ae837397410c))
+* **main:** release crossplane-promise 0.2.0 ([c1fe883](https://github.com/syntasso/kratix-cli/commit/c1fe88377acbdfae8d8d152a5da6e3cec2162e16))
+* **main:** release crossplane-promise 0.2.0 ([6062dd9](https://github.com/syntasso/kratix-cli/commit/6062dd9ebf42dce0197c9b86f9519ea3d96f60d2))
+* **main:** release crossplane-promise 0.2.0 ([4897205](https://github.com/syntasso/kratix-cli/commit/489720596ba810d10a31abdebb10148bcacc50fb))
+* **main:** release crossplane-promise 0.2.0 ([43de305](https://github.com/syntasso/kratix-cli/commit/43de30563015d082dde23dc087d6e962c7686579))
+* **main:** release crossplane-promise 0.2.0 ([#176](https://github.com/syntasso/kratix-cli/issues/176)) ([42117c7](https://github.com/syntasso/kratix-cli/commit/42117c798e6e0027c47095c62fd8e8308c5741dc))
+* **main:** release helm-promise 0.3.0 ([#172](https://github.com/syntasso/kratix-cli/issues/172)) ([2cf409d](https://github.com/syntasso/kratix-cli/commit/2cf409d856516633ed79bf76aae034efbb1b41b6))
+* **main:** release operator-promise 0.3.0 ([fe95627](https://github.com/syntasso/kratix-cli/commit/fe9562708c92de42999b4b4617212c5cf749f506))
+* **main:** release operator-promise 0.3.0 ([90e7a66](https://github.com/syntasso/kratix-cli/commit/90e7a66ed474587b1f730ec718966b63e5fbc9fe))
+* release-please configuration for operator-promise ([a796eb9](https://github.com/syntasso/kratix-cli/commit/a796eb9a09c14ea9eb0abd276cbea4ddbda6f8c4))
+* remove unnecessary test annotation ([4a7f825](https://github.com/syntasso/kratix-cli/commit/4a7f825467159a534ae08dc7d03a4149c0d92b97))
+* removed version pinning ([bc9c93e](https://github.com/syntasso/kratix-cli/commit/bc9c93e5f4240c9aba8ce1efc5fe6bfe39077b8d))
+* removed version pinning for operator-promise release ([2716131](https://github.com/syntasso/kratix-cli/commit/271613152bda8916129b9f6ce10c7a8f9cd7c751))
+* reverting release-please configuration ([07c694b](https://github.com/syntasso/kratix-cli/commit/07c694be9334630a6b871a5a104d3046385bd2da))
+* set initial version of helm-promise to 0.3.0 ([49bbdb6](https://github.com/syntasso/kratix-cli/commit/49bbdb659d51d5e961090699597a2b18227b3766))
+* set the current version of the helm-promise to 0.0.0 ([f8da4eb](https://github.com/syntasso/kratix-cli/commit/f8da4eb77f19d2e1d9467b63c7bf8aea94f31313))
+* speed up cross-arch compilation ([0882954](https://github.com/syntasso/kratix-cli/commit/0882954bd30ade5cac329c5adbf23a667290db04))
+* unpin helm-promise from v0.3.0 ([16a5e2d](https://github.com/syntasso/kratix-cli/commit/16a5e2d4dd7870f76c1c06583d935f3cce2d917b))
+* update release please config to uopen separate PRs for each component ([285be29](https://github.com/syntasso/kratix-cli/commit/285be29430bb77a8d5a5463aa4dc694280bd2d28))
+* validate files scanned by govulncheck ([560ff11](https://github.com/syntasso/kratix-cli/commit/560ff11faae77e37983bff5745a30551b8385646))
+
+
+### Build System
+
+* **deps:** bump golang.org/x/crypto from 0.41.0 to 0.45.0 ([#177](https://github.com/syntasso/kratix-cli/issues/177)) ([c36e577](https://github.com/syntasso/kratix-cli/commit/c36e57748d56a1b547fe20a66b032110a9b2b6ad))
+
 ## [0.11.0](https://github.com/syntasso/kratix-cli/compare/v0.10.0...v0.11.0) (2025-12-03)
 
 
