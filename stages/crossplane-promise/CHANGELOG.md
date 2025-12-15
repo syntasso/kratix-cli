@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/syntasso/kratix-cli/compare/crossplane-promise-v0.2.0...crossplane-promise-v0.2.1) (2025-12-15)
+
+
+### Chores
+
+* speed up cross-arch compilation ([0882954](https://github.com/syntasso/kratix-cli/commit/0882954bd30ade5cac329c5adbf23a667290db04))
+
 ## [0.2.0](https://github.com/syntasso/kratix-cli/compare/crossplane-promise-v0.2.0...crossplane-promise-v0.2.0) (2025-12-04)
 
 
