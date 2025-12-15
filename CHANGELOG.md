@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.11.2](https://github.com/syntasso/kratix-cli/compare/v0.11.1...v0.11.2) (2025-12-15)
+
+
+### Chores
+
+* **main:** release crossplane-promise 0.2.1 ([0027919](https://github.com/syntasso/kratix-cli/commit/00279196cf2cc918452bf52b602cd6fbad79fc56))
+* **main:** release crossplane-promise 0.2.1 ([d341dcf](https://github.com/syntasso/kratix-cli/commit/d341dcf098ebc7aa35cb176826959e9383009ab5))
+* **main:** release helm-promise 0.3.1 ([dc8a152](https://github.com/syntasso/kratix-cli/commit/dc8a152a2eeedad4b622d8f14e1b3a64ce17027f))
+* **main:** release helm-promise 0.3.1 ([8235ffa](https://github.com/syntasso/kratix-cli/commit/8235ffa93146c01b07c5b73e4690ea60efbdbe05))
+
 ## [0.11.1](https://github.com/syntasso/kratix-cli/compare/v0.11.0...v0.11.1) (2025-12-08)
 
 
