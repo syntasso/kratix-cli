@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.3](https://github.com/syntasso/kratix-cli/compare/v0.11.2...v0.11.3) (2025-12-16)
+
+
+### Chores
+
+* **main:** release terraform-module-promise 0.3.1 ([#175](https://github.com/syntasso/kratix-cli/issues/175)) ([ed88957](https://github.com/syntasso/kratix-cli/commit/ed8895796a6c0106329238a4aa650bcffc40abc6))
+
 ## [0.11.2](https://github.com/syntasso/kratix-cli/compare/v0.11.1...v0.11.2) (2025-12-15)
 
 
