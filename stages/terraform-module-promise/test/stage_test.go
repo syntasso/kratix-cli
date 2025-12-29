@@ -105,3 +105,36 @@ var _ = Describe("From TF module to Promise Stage", func() {
 		Expect(string(output)).To(MatchJSON(expectedOutputNoSpec))
 	})
 })
+
+var _ = Describe("Different variable inputs", func() {
+	var (
+		envVars map[string]string
+		tmpDir  string
+	)
+
+	BeforeEach(func() {
+		var err error
+		tmpDir, err = os.MkdirTemp("", "kratix")
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		os.RemoveAll(tmpDir)
+	})
+
+	It("No version provided", func() {
+		envVars = map[string]string{
+			"KRATIX_INPUT_FILE": "assets/test-object.yaml",
+			"KRATIX_OUTPUT_DIR": tmpDir,
+			"MODULE_SOURCE":     "git::example.com?ref=1.0.0",
+		}
+
+		session := runWithEnv(envVars)
+		Eventually(session).Should(gexec.Exit())
+		Expect(session.Buffer()).To(gbytes.Say("Terraform JSON configuration written to %s/testobject_non-default_test-object.tf.json", tmpDir))
+		Expect(session).To(gexec.Exit(0))
+		output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(output)).To(MatchJSON(expectedOutput))
+	})
+})

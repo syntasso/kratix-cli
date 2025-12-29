@@ -15,8 +15,8 @@ func main() {
 	yamlFile := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	outputDir := GetEnv("KRATIX_OUTPUT_DIR", "/kratix/output")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
-	moduleVersion := MustHaveEnv("MODULE_VERSION")
-	modulePath := os.Getenv("MODULE_PATH") // optional
+	moduleVersion := os.Getenv("MODULE_VERSION") // optional as can be set with ?ref= in source
+	modulePath := os.Getenv("MODULE_PATH")       // optional
 
 	yamlContent, err := os.ReadFile(yamlFile)
 	if err != nil {
@@ -44,9 +44,14 @@ func main() {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	source := fmt.Sprintf("%s//%s?ref=%s", moduleSource, modulePath, moduleVersion)
+	version := ""
+	if moduleVersion != "" {
+		version = fmt.Sprintf("?ref=%s", moduleVersion)
+	}
+
+	source := fmt.Sprintf("%s//%s%s", moduleSource, modulePath, version)
 	if modulePath == "" {
-		source = fmt.Sprintf("%s?ref=%s", moduleSource, moduleVersion)
+		source = fmt.Sprintf("%s%s", moduleSource, version)
 	}
 
 	module := map[string]map[string]map[string]any{
