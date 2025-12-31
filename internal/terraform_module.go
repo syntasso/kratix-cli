@@ -29,10 +29,6 @@ var (
 )
 
 func GetVariablesFromModule(moduleSource, moduleRegistryVersion string) ([]TerraformVariable, error) {
-	if testVarsFile := os.Getenv("KRATIX_TEST_TF_VARS_FILE"); testVarsFile != "" {
-		return extractVariablesFromVarsFile(testVarsFile)
-	}
-
 	tempDir, err := mkdirTemp("", "terraform-module")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)

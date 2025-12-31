@@ -1,7 +1,9 @@
 package integration_test
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -11,8 +13,63 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var _ = Describe("InitTerraformPromise module sources", func() {
-	const testVarsFile = "assets/terraform/vars/simple.hcl"
+type moduleTestCase struct {
+	name               string
+	moduleSource       string
+	moduleRegistryVer  string
+	expectRegistryEnv  bool
+	expectedProperties []string
+	expectFailure      bool
+	skip               bool
+}
+
+var _ = Describe("InitTerraformPromise source integration", func() {
+	if _, err := exec.LookPath("terraform"); err != nil {
+		Skip("terraform binary not found in PATH; skipping module source integration tests")
+	}
+
+	cwd, err := os.Getwd()
+	Expect(err).NotTo(HaveOccurred())
+	localModulePath := filepath.Join(cwd, "assets", "terraform", "modules", "local", "basic")
+
+	cases := []moduleTestCase{
+		{
+			name:               "open source git repo with ref",
+			moduleSource:       "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git?ref=v5.7.0",
+			expectedProperties: []string{"name", "cidr"},
+		},
+		{
+			name:               "private git repo placeholder",
+			moduleSource:       "git::ssh://git@github.com/example/private-repo.git?ref=v0.1.0",
+			expectedProperties: []string{},
+			expectFailure:      true,
+			skip:               true, // enable once credentials/repo exist
+		},
+		{
+			name:               "registry with version",
+			moduleSource:       "terraform-aws-modules/s3-bucket/aws",
+			moduleRegistryVer:  "4.1.2",
+			expectRegistryEnv:  true,
+			expectedProperties: []string{"bucket"},
+		},
+		{
+			name:               "nested registry module path with version",
+			moduleSource:       "terraform-aws-modules/vpc/aws//modules/vpc-endpoints",
+			moduleRegistryVer:  "5.7.0",
+			expectRegistryEnv:  true,
+			expectedProperties: []string{"vpc_id"},
+		},
+		{
+			name:               "registry without version",
+			moduleSource:       "terraform-aws-modules/vpc/aws",
+			expectedProperties: []string{"name", "cidr"},
+		},
+		{
+			name:               "local filesystem module",
+			moduleSource:       localModulePath,
+			expectedProperties: []string{"name", "size", "tags"},
+		},
+	}
 
 	var (
 		r          *runner
@@ -25,7 +82,7 @@ var _ = Describe("InitTerraformPromise module sources", func() {
 		workingDir, err = os.MkdirTemp("", "kratix-test-sources")
 		Expect(err).NotTo(HaveOccurred())
 
-		r = &runner{exitCode: 0}
+		r = &runner{exitCode: 0, Path: os.Getenv("PATH")}
 		flags = map[string]string{
 			"--group":   "example.com",
 			"--kind":    "Example",
@@ -36,70 +93,108 @@ var _ = Describe("InitTerraformPromise module sources", func() {
 	})
 
 	AfterEach(func() {
-		os.Unsetenv("KRATIX_TEST_TF_VARS_FILE")
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
 	})
 
-	getWorkflowEnvs := func() map[string]string {
-		workflowsPath := filepath.Join(workingDir, "workflows", "resource", "configure", "workflow.yaml")
-		bytes, err := os.ReadFile(workflowsPath)
-		Expect(err).NotTo(HaveOccurred())
+	for _, tc := range cases {
+		tc := tc
+		It(fmt.Sprintf("handles %s", tc.name), func() {
+			if tc.skip {
+				Skip("pending setup for private repo")
+			}
 
-		var pipelines []map[string]any
-		Expect(yaml.Unmarshal(bytes, &pipelines)).To(Succeed())
-		Expect(pipelines).ToNot(BeEmpty())
-
-		spec, ok := pipelines[0]["spec"].(map[string]any)
-		Expect(ok).To(BeTrue())
-		containers, ok := spec["containers"].([]any)
-		Expect(ok).To(BeTrue())
-		Expect(containers).ToNot(BeEmpty())
-		firstContainer, ok := containers[0].(map[string]any)
-		Expect(ok).To(BeTrue())
-		envList, ok := firstContainer["env"].([]any)
-		Expect(ok).To(BeTrue())
-
-		envs := map[string]string{}
-		for _, item := range envList {
-			entry, ok := item.(map[string]any)
-			Expect(ok).To(BeTrue())
-			name, _ := entry["name"].(string)
-			value, _ := entry["value"].(string)
-			envs[name] = value
-		}
-		return envs
-	}
-
-	DescribeTable("supports module sources and registry versions",
-		func(source, registryVersion string, expectVersion bool) {
-			absVarsFile, err := filepath.Abs(testVarsFile)
-			Expect(err).NotTo(HaveOccurred())
-			os.Setenv("KRATIX_TEST_TF_VARS_FILE", absVarsFile)
-
-			flags["--module-source"] = source
-			if registryVersion != "" {
-				flags["--module-registry-version"] = registryVersion
+			flags["--module-source"] = tc.moduleSource
+			if tc.moduleRegistryVer != "" {
+				flags["--module-registry-version"] = tc.moduleRegistryVer
 			} else {
 				delete(flags, "--module-registry-version")
 			}
-
 			r.flags = flags
-			session := r.run("init", "tf-module-promise", "example")
+			runnerArgs := []string{"init", "tf-module-promise", "example"}
+
+			session := r.run(runnerArgs...)
+			if tc.expectFailure {
+				Expect(session.ExitCode()).NotTo(Equal(0))
+				return
+			}
+
 			Expect(session).To(gexec.Exit(0))
 			Expect(session.Out).To(gbytes.Say("Promise generated successfully"))
 
-			envs := getWorkflowEnvs()
-			Expect(envs["MODULE_SOURCE"]).To(Equal(source))
-			if expectVersion {
-				Expect(envs).To(HaveKeyWithValue("MODULE_REGISTRY_VERSION", registryVersion))
+			envs := readWorkflowEnvs(workingDir)
+			Expect(envs["MODULE_SOURCE"]).To(Equal(tc.moduleSource))
+			if tc.expectRegistryEnv {
+				Expect(envs).To(HaveKeyWithValue("MODULE_REGISTRY_VERSION", tc.moduleRegistryVer))
 			} else {
 				Expect(envs).NotTo(HaveKey("MODULE_REGISTRY_VERSION"))
 			}
-		},
-		Entry("open source git repo with embedded ref", "git::https://github.com/example/open.git?ref=v1.0.0", "", false),
-		Entry("private git repo placeholder with ref", "git::ssh://git@github.com/example/private.git?ref=v0.1.0", "", false),
-		Entry("registry with version", "terraform-aws-modules/vpc/aws", "5.0.0", true),
-		Entry("nested registry with version", "acme/networking/vpc/aws", "3.2.1", true),
-		Entry("registry without version", "terraform-providers/random/aws", "", false),
-	)
+
+			specProps := readSpecProperties(workingDir)
+			for _, prop := range tc.expectedProperties {
+				Expect(specProps).To(HaveKey(prop))
+			}
+		})
+	}
 })
+
+func readWorkflowEnvs(workingDir string) map[string]string {
+	workflowsPath := filepath.Join(workingDir, "workflows", "resource", "configure", "workflow.yaml")
+	bytes, err := os.ReadFile(workflowsPath)
+	Expect(err).NotTo(HaveOccurred())
+
+	var pipelines []map[string]any
+	Expect(yaml.Unmarshal(bytes, &pipelines)).To(Succeed())
+	Expect(pipelines).ToNot(BeEmpty())
+
+	spec, ok := pipelines[0]["spec"].(map[string]any)
+	Expect(ok).To(BeTrue())
+	containers, ok := spec["containers"].([]any)
+	Expect(ok).To(BeTrue())
+	Expect(containers).ToNot(BeEmpty())
+	firstContainer, ok := containers[0].(map[string]any)
+	Expect(ok).To(BeTrue())
+	envList, ok := firstContainer["env"].([]any)
+	Expect(ok).To(BeTrue())
+
+	envs := map[string]string{}
+	for _, item := range envList {
+		entry, ok := item.(map[string]any)
+		Expect(ok).To(BeTrue())
+		name, _ := entry["name"].(string)
+		value, _ := entry["value"].(string)
+		envs[name] = value
+	}
+	return envs
+}
+
+func readSpecProperties(workingDir string) map[string]any {
+	apiPath := filepath.Join(workingDir, "api.yaml")
+	contents, err := os.ReadFile(apiPath)
+	if err != nil {
+		// fallback to promise.yaml when split not used
+		contents, err = os.ReadFile(filepath.Join(workingDir, "promise.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	var doc map[string]any
+	Expect(yaml.Unmarshal(contents, &doc)).To(Succeed())
+
+	// If promise.yaml, drill into spec.api
+	if kind, _ := doc["kind"].(string); kind == "Promise" {
+		spec, _ := doc["spec"].(map[string]any)
+		api, _ := spec["api"].(map[string]any)
+		doc = api
+	}
+
+	spec, _ := doc["spec"].(map[string]any)
+	versions, _ := spec["versions"].([]any)
+	Expect(versions).ToNot(BeEmpty())
+	firstVersion, _ := versions[0].(map[string]any)
+	schema, _ := firstVersion["schema"].(map[string]any)
+	openAPISchema, _ := schema["openAPIV3Schema"].(map[string]any)
+	properties, _ := openAPISchema["properties"].(map[string]any)
+	specProps, _ := properties["spec"].(map[string]any)
+	propMap, _ := specProps["properties"].(map[string]any)
+	Expect(propMap).ToNot(BeNil())
+	return propMap
+}
