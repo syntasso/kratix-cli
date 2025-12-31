@@ -56,7 +56,7 @@ func main() {
 		},
 	}
 
-	if moduleRegistryVersion != "" && internal.IsTerraformRegistrySource(moduleSource) {
+	if moduleRegistryVersion != "" {
 		module["module"][uniqueFileName]["version"] = moduleRegistryVersion
 	}
 

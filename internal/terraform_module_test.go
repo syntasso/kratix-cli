@@ -246,7 +246,7 @@ var _ = Describe("IsTerraformRegistrySource", func() {
 			Expect(internal.IsTerraformRegistrySource(source)).To(Equal(expected))
 		},
 		Entry("registry path", "namespace/name/provider", true),
-		Entry("nested registry path", "foo/bar/baz", true),
+		Entry("nested registry path", "foo/bar/baz//bob/banana", true),
 		Entry("git URL", "git::https://github.com/org/repo.git?ref=v1.0.0", false),
 		Entry("local path", "./modules/vpc", false),
 		Entry("absolute path", "/tmp/module", false),

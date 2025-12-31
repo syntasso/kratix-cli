@@ -110,14 +110,17 @@ func resolveModuleDir(workDir string) (string, error) {
 }
 
 func IsTerraformRegistrySource(moduleSource string) bool {
+	// Local filepaths
 	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") || strings.HasPrefix(moduleSource, "/") {
 		return false
 	}
 
+	// URLs and other schemes
 	if strings.Contains(moduleSource, "://") || strings.Contains(moduleSource, "::") {
 		return false
 	}
 
+	// Otherwise assume it's a registry source if it has at least two slashes
 	return strings.Count(moduleSource, "/") >= 2
 }
 
