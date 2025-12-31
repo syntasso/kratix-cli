@@ -84,7 +84,7 @@ var _ = Describe("InitTerraformPromise source integration", func() {
 		Entry("private git repo placeholder with subdir (mono-repo style)",
 			moduleTestCase{
 				name:            "git subdir",
-				moduleSource:    "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git//modules/vpc-endpoints?ref=v5.7.0",
+				moduleSource:    "git::https://github.com/syntasso/kratix-cli-private-tf-module-test-fixture.git//modules/vpc-endpoints?ref=v5.7.0",
 				expectedAPIPath: vpcSubdirAPI,
 			},
 		),
