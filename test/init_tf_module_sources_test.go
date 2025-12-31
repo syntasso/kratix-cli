@@ -39,7 +39,6 @@ var _ = Describe("InitTerraformPromise source integration", func() {
 
 			r := &runner{
 				exitCode: 0,
-				Path:     "/opt/homebrew/bin:" + os.Getenv("PATH"),
 				flags: map[string]string{
 					"--group":   "example.com",
 					"--kind":    "Example",
