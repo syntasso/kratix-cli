@@ -1,123 +1,58 @@
 package integration_test
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/syntasso/kratix-cli/internal"
 	"sigs.k8s.io/yaml"
 )
 
 type moduleTestCase struct {
-	name               string
-	moduleSource       string
-	moduleRegistryVer  string
-	expectRegistryEnv  bool
-	expectedProperties []string
-	expectFailure      bool
-	skip               bool
+	name              string
+	moduleSource      string
+	moduleRegistryVer string
+	expectRegistryEnv bool
+	expectedTypesFile string
 }
 
 var _ = Describe("InitTerraformPromise source integration", func() {
-	if _, err := exec.LookPath("terraform"); err != nil {
-		Skip("terraform binary not found in PATH; skipping module source integration tests")
-	}
-
 	cwd, err := os.Getwd()
 	Expect(err).NotTo(HaveOccurred())
+
 	localModulePath := filepath.Join(cwd, "assets", "terraform", "modules", "local", "basic")
+	vpcFixture := filepath.Join(cwd, "assets", "terraform", "vars", "vpc-variables.tf")
+	s3Fixture := filepath.Join(cwd, "assets", "terraform", "vars", "registry-variables.tf")
+	nestedFixture := filepath.Join(cwd, "assets", "terraform", "vars", "nested-registry-variables.tf")
 
-	cases := []moduleTestCase{
-		{
-			name:               "open source git repo with ref",
-			moduleSource:       "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git?ref=v5.7.0",
-			expectedProperties: []string{"name", "cidr"},
-		},
-		{
-			name:               "private git repo placeholder",
-			moduleSource:       "git::ssh://git@github.com/example/private-repo.git?ref=v0.1.0",
-			expectedProperties: []string{},
-			expectFailure:      true,
-			skip:               true, // enable once credentials/repo exist
-		},
-		{
-			name:               "registry with version",
-			moduleSource:       "terraform-aws-modules/s3-bucket/aws",
-			moduleRegistryVer:  "4.1.2",
-			expectRegistryEnv:  true,
-			expectedProperties: []string{"bucket"},
-		},
-		{
-			name:               "nested registry module path with version",
-			moduleSource:       "terraform-aws-modules/vpc/aws//modules/vpc-endpoints",
-			moduleRegistryVer:  "5.7.0",
-			expectRegistryEnv:  true,
-			expectedProperties: []string{"vpc_id"},
-		},
-		{
-			name:               "registry without version",
-			moduleSource:       "terraform-aws-modules/vpc/aws",
-			expectedProperties: []string{"name", "cidr"},
-		},
-		{
-			name:               "local filesystem module",
-			moduleSource:       localModulePath,
-			expectedProperties: []string{"name", "size", "tags"},
-		},
-	}
+	DescribeTable("generates promise schema and workflow envs",
+		func(tc moduleTestCase) {
+			workingDir, err := os.MkdirTemp("", "kratix-test-sources")
+			Expect(err).NotTo(HaveOccurred())
+			defer os.RemoveAll(workingDir)
 
-	var (
-		r          *runner
-		workingDir string
-		flags      map[string]string
-	)
-
-	BeforeEach(func() {
-		var err error
-		workingDir, err = os.MkdirTemp("", "kratix-test-sources")
-		Expect(err).NotTo(HaveOccurred())
-
-		r = &runner{exitCode: 0, Path: os.Getenv("PATH")}
-		flags = map[string]string{
-			"--group":   "example.com",
-			"--kind":    "Example",
-			"--version": "v1alpha1",
-			"--dir":     workingDir,
-			"--split":   "",
-		}
-	})
-
-	AfterEach(func() {
-		Expect(os.RemoveAll(workingDir)).To(Succeed())
-	})
-
-	for _, tc := range cases {
-		tc := tc
-		It(fmt.Sprintf("handles %s", tc.name), func() {
-			if tc.skip {
-				Skip("pending setup for private repo")
+			r := &runner{
+				exitCode: 0,
+				Path:     os.Getenv("PATH"),
+				flags: map[string]string{
+					"--group":   "example.com",
+					"--kind":    "Example",
+					"--version": "v1alpha1",
+					"--dir":     workingDir,
+					"--split":   "",
+				},
 			}
 
-			flags["--module-source"] = tc.moduleSource
+			r.flags["--module-source"] = tc.moduleSource
 			if tc.moduleRegistryVer != "" {
-				flags["--module-registry-version"] = tc.moduleRegistryVer
-			} else {
-				delete(flags, "--module-registry-version")
-			}
-			r.flags = flags
-			runnerArgs := []string{"init", "tf-module-promise", "example"}
-
-			session := r.run(runnerArgs...)
-			if tc.expectFailure {
-				Expect(session.ExitCode()).NotTo(Equal(0))
-				return
+				r.flags["--module-registry-version"] = tc.moduleRegistryVer
 			}
 
+			session := r.run("init", "tf-module-promise", "example")
 			Expect(session).To(gexec.Exit(0))
 			Expect(session.Out).To(gbytes.Say("Promise generated successfully"))
 
@@ -129,12 +64,57 @@ var _ = Describe("InitTerraformPromise source integration", func() {
 				Expect(envs).NotTo(HaveKey("MODULE_REGISTRY_VERSION"))
 			}
 
-			specProps := readSpecProperties(workingDir)
-			for _, prop := range tc.expectedProperties {
-				Expect(specProps).To(HaveKey(prop))
-			}
-		})
-	}
+			actual := readSpecTypes(workingDir)
+			expected := expectedTypesFromFixture(tc.expectedTypesFile)
+			Expect(actual).To(Equal(expected))
+		},
+		Entry("open source git repo with ref",
+			moduleTestCase{
+				name:              "git vpc",
+				moduleSource:      "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git?ref=v5.7.0",
+				expectedTypesFile: vpcFixture,
+			},
+		),
+		Entry("git repo subdir (mono-repo style)",
+			moduleTestCase{
+				name:              "git subdir",
+				moduleSource:      "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git//modules/vpc-endpoints?ref=v5.7.0",
+				expectedTypesFile: nestedFixture,
+			},
+		),
+		Entry("registry with version",
+			moduleTestCase{
+				name:              "registry s3 bucket",
+				moduleSource:      "terraform-aws-modules/s3-bucket/aws",
+				moduleRegistryVer: "4.1.2",
+				expectRegistryEnv: true,
+				expectedTypesFile: s3Fixture,
+			},
+		),
+		Entry("nested registry with version",
+			moduleTestCase{
+				name:              "nested registry vpc endpoints",
+				moduleSource:      "terraform-aws-modules/vpc/aws//modules/vpc-endpoints",
+				moduleRegistryVer: "5.7.0",
+				expectRegistryEnv: true,
+				expectedTypesFile: nestedFixture,
+			},
+		),
+		Entry("registry without version",
+			moduleTestCase{
+				name:              "registry without version",
+				moduleSource:      "terraform-aws-modules/vpc/aws",
+				expectedTypesFile: vpcFixture,
+			},
+		),
+		Entry("local filesystem module",
+			moduleTestCase{
+				name:              "local module",
+				moduleSource:      localModulePath,
+				expectedTypesFile: filepath.Join(localModulePath, "variables.tf"),
+			},
+		),
+	)
 })
 
 func readWorkflowEnvs(workingDir string) map[string]string {
@@ -167,11 +147,10 @@ func readWorkflowEnvs(workingDir string) map[string]string {
 	return envs
 }
 
-func readSpecProperties(workingDir string) map[string]any {
+func readSpecTypes(workingDir string) map[string]string {
 	apiPath := filepath.Join(workingDir, "api.yaml")
 	contents, err := os.ReadFile(apiPath)
 	if err != nil {
-		// fallback to promise.yaml when split not used
 		contents, err = os.ReadFile(filepath.Join(workingDir, "promise.yaml"))
 		Expect(err).NotTo(HaveOccurred())
 	}
@@ -179,7 +158,6 @@ func readSpecProperties(workingDir string) map[string]any {
 	var doc map[string]any
 	Expect(yaml.Unmarshal(contents, &doc)).To(Succeed())
 
-	// If promise.yaml, drill into spec.api
 	if kind, _ := doc["kind"].(string); kind == "Promise" {
 		spec, _ := doc["spec"].(map[string]any)
 		api, _ := spec["api"].(map[string]any)
@@ -196,5 +174,26 @@ func readSpecProperties(workingDir string) map[string]any {
 	specProps, _ := properties["spec"].(map[string]any)
 	propMap, _ := specProps["properties"].(map[string]any)
 	Expect(propMap).ToNot(BeNil())
-	return propMap
+
+	result := map[string]string{}
+	for name, raw := range propMap {
+		rawMap, _ := raw.(map[string]any)
+		typ, _ := rawMap["type"].(string)
+		result[name] = typ
+	}
+
+	return result
+}
+
+func expectedTypesFromFixture(fixturePath string) map[string]string {
+	vars, err := internal.GetVariablesFromModule(fixturePath, "")
+	Expect(err).NotTo(HaveOccurred())
+	schema, warnings := internal.VariablesToCRDSpecSchema(vars)
+	Expect(warnings).To(BeEmpty())
+
+	result := map[string]string{}
+	for name, prop := range schema.Properties {
+		result[name] = prop.Type
+	}
+	return result
 }
