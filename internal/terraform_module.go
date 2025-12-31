@@ -59,7 +59,7 @@ func GetVariablesFromModule(moduleSource, moduleRegistryVersion string) ([]Terra
 
 func writeTerraformModuleConfig(workDir, moduleSource, moduleRegistryVersion string) error {
 	config := fmt.Sprintf("module \"%s\" {\n  source = \"%s\"\n", kratixModuleName, moduleSource)
-	if moduleRegistryVersion != "" {
+	if moduleRegistryVersion != "" && IsTerraformRegistrySource(moduleSource) {
 		config += fmt.Sprintf("  version = \"%s\"\n", moduleRegistryVersion)
 	}
 	config += "}\n"
@@ -107,6 +107,18 @@ func resolveModuleDir(workDir string) (string, error) {
 	}
 
 	return "", fmt.Errorf("module %s not found in terraform module manifest", kratixModuleName)
+}
+
+func IsTerraformRegistrySource(moduleSource string) bool {
+	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") || strings.HasPrefix(moduleSource, "/") {
+		return false
+	}
+
+	if strings.Contains(moduleSource, "://") || strings.Contains(moduleSource, "::") {
+		return false
+	}
+
+	return strings.Count(moduleSource, "/") >= 2
 }
 
 func extractVariablesFromVarsFile(filePath string) ([]TerraformVariable, error) {

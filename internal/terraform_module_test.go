@@ -240,6 +240,20 @@ variable "example_var" {
 	})
 })
 
+var _ = Describe("IsTerraformRegistrySource", func() {
+	DescribeTable("registry source detection",
+		func(source string, expected bool) {
+			Expect(internal.IsTerraformRegistrySource(source)).To(Equal(expected))
+		},
+		Entry("registry path", "namespace/name/provider", true),
+		Entry("nested registry path", "foo/bar/baz", true),
+		Entry("git URL", "git::https://github.com/org/repo.git?ref=v1.0.0", false),
+		Entry("local path", "./modules/vpc", false),
+		Entry("absolute path", "/tmp/module", false),
+		Entry("module with scheme", "https://example.com/archive.tgz", false),
+	)
+})
+
 func expectManifest(manifestPath, moduleDir string) {
 	manifest := fmt.Sprintf(`{"Modules":[{"Key":"module.%s","Dir":"%s"}]}`, "kratix_target", moduleDir)
 	Expect(os.MkdirAll(filepath.Dir(manifestPath), 0o755)).To(Succeed())

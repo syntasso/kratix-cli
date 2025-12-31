@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/syntasso/kratix-cli/internal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,13 +55,8 @@ func main() {
 		},
 	}
 
-	if moduleRegistryVersion != "" {
-		if isRegistrySource(moduleSource) {
-			module["module"][uniqueFileName]["version"] = moduleRegistryVersion
-		} else if !strings.Contains(source, "?") {
-			sourceWithRef := fmt.Sprintf("%s?ref=%s", source, moduleRegistryVersion)
-			module["module"][uniqueFileName]["source"] = sourceWithRef
-		}
+	if moduleRegistryVersion != "" && internal.IsTerraformRegistrySource(moduleSource) {
+		module["module"][uniqueFileName]["version"] = moduleRegistryVersion
 	}
 
 	// Handle spec if it exists
@@ -129,16 +125,4 @@ func buildModuleSource(moduleSource, modulePath string) string {
 	}
 
 	return sourceWithPath
-}
-
-func isRegistrySource(moduleSource string) bool {
-	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") || strings.HasPrefix(moduleSource, "/") {
-		return false
-	}
-
-	if strings.Contains(moduleSource, "://") || strings.Contains(moduleSource, "::") {
-		return false
-	}
-
-	return strings.Count(moduleSource, "/") >= 2
 }

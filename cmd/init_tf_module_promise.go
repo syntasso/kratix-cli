@@ -64,6 +64,12 @@ func init() {
 
 func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	fmt.Println("Fetching terraform module variables, this might take up to a minute...")
+
+	if moduleRegistryVersion != "" && !internal.IsTerraformRegistrySource(moduleSource) {
+		fmt.Println("Error: --module-registry-version can only be used with Terraform registry module sources (e.g., namespace/name/provider)")
+		return nil
+	}
+
 	variables, err := internal.GetVariablesFromModule(moduleSource, moduleRegistryVersion)
 	if err != nil {
 		fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)
