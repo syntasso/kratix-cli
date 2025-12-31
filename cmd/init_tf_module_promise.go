@@ -47,7 +47,7 @@ To pull modules from private registries, ensure your system is logged in to the 
 		Args: cobra.ExactArgs(1),
 	}
 
-	moduleSource, moduleRegistryVersion, deprecatedModuleVersionFlag string
+	moduleSource, moduleRegistryVersion string
 )
 
 func init() {
@@ -59,18 +59,11 @@ func init() {
 	terraformModuleCmd.Flags().StringVarP(&moduleRegistryVersion, "module-registry-version", "r", "", "(Optional) version of the Terraform module from a registry; "+
 		"only use when pulling modules from Terraform registry",
 	)
-	terraformModuleCmd.Flags().StringVar(&deprecatedModuleVersionFlag, "module-version", "", "(Deprecated) use --module-registry-version instead")
-	terraformModuleCmd.Flags().MarkHidden("module-version")
-	terraformModuleCmd.Flags().MarkDeprecated("module-version", "use --module-registry-version instead")
 	terraformModuleCmd.MarkFlagRequired("module-source")
 }
 
 func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	fmt.Println("Fetching terraform module variables, this might take up to a minute...")
-	if moduleRegistryVersion == "" && deprecatedModuleVersionFlag != "" {
-		moduleRegistryVersion = deprecatedModuleVersionFlag
-	}
-
 	variables, err := internal.GetVariablesFromModule(moduleSource, moduleRegistryVersion)
 	if err != nil {
 		fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)

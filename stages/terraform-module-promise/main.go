@@ -16,9 +16,6 @@ func main() {
 	outputDir := GetEnv("KRATIX_OUTPUT_DIR", "/kratix/output")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
 	moduleRegistryVersion := os.Getenv("MODULE_REGISTRY_VERSION")
-	if moduleRegistryVersion == "" {
-		moduleRegistryVersion = os.Getenv("MODULE_VERSION")
-	}
 	modulePath := os.Getenv("MODULE_PATH") // optional
 
 	yamlContent, err := os.ReadFile(yamlFile)
