@@ -15,7 +15,10 @@ func main() {
 	yamlFile := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	outputDir := GetEnv("KRATIX_OUTPUT_DIR", "/kratix/output")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
-	moduleVersion := MustHaveEnv("MODULE_VERSION")
+	moduleRegistryVersion := os.Getenv("MODULE_REGISTRY_VERSION")
+	if moduleRegistryVersion == "" {
+		moduleRegistryVersion = os.Getenv("MODULE_VERSION")
+	}
 	modulePath := os.Getenv("MODULE_PATH") // optional
 
 	yamlContent, err := os.ReadFile(yamlFile)
@@ -44,10 +47,7 @@ func main() {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	source := fmt.Sprintf("%s//%s?ref=%s", moduleSource, modulePath, moduleVersion)
-	if modulePath == "" {
-		source = fmt.Sprintf("%s?ref=%s", moduleSource, moduleVersion)
-	}
+	source := buildModuleSource(moduleSource, modulePath)
 
 	module := map[string]map[string]map[string]any{
 		"module": {
@@ -55,6 +55,15 @@ func main() {
 				"source": source,
 			},
 		},
+	}
+
+	if moduleRegistryVersion != "" {
+		if isRegistrySource(moduleSource) {
+			module["module"][uniqueFileName]["version"] = moduleRegistryVersion
+		} else if !strings.Contains(source, "?") {
+			sourceWithRef := fmt.Sprintf("%s?ref=%s", source, moduleRegistryVersion)
+			module["module"][uniqueFileName]["source"] = sourceWithRef
+		}
 	}
 
 	// Handle spec if it exists
@@ -102,4 +111,37 @@ func MustHaveEnv(key string) string {
 		return value
 	}
 	panic(fmt.Sprintf("Error: %s environment variable is not set", key))
+}
+
+func buildModuleSource(moduleSource, modulePath string) string {
+	if modulePath == "" {
+		return moduleSource
+	}
+
+	trimmedPath := strings.Trim(modulePath, "/")
+	if trimmedPath == "" {
+		return moduleSource
+	}
+
+	sourceParts := strings.SplitN(moduleSource, "?", 2)
+	baseSource := strings.TrimSuffix(sourceParts[0], "/")
+	sourceWithPath := fmt.Sprintf("%s//%s", baseSource, trimmedPath)
+
+	if len(sourceParts) == 2 && sourceParts[1] != "" {
+		return fmt.Sprintf("%s?%s", sourceWithPath, sourceParts[1])
+	}
+
+	return sourceWithPath
+}
+
+func isRegistrySource(moduleSource string) bool {
+	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") || strings.HasPrefix(moduleSource, "/") {
+		return false
+	}
+
+	if strings.Contains(moduleSource, "://") || strings.Contains(moduleSource, "::") {
+		return false
+	}
+
+	return strings.Count(moduleSource, "/") >= 2
 }

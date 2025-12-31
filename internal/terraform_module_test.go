@@ -132,8 +132,7 @@ variable "list_object_var" {
 				mainContent, err := os.ReadFile(filepath.Join(tempDir, "main.tf"))
 				Expect(err).NotTo(HaveOccurred())
 				expectContent := `module "kratix_target" {
-  source = "git::mock-source.git//subdir"
-  version = "v1.0.0"
+  source = "git::mock-source.git//subdir?ref=v1.0.0"
 }
 `
 				Expect(string(mainContent)).To(Equal(expectContent))
@@ -161,7 +160,7 @@ variable "bool_var" {
 `), 0o644)
 			})
 
-			variables, err := internal.GetVariablesFromModule("git::mock-source.git", "v1.0.0")
+			variables, err := internal.GetVariablesFromModule("git::mock-source.git//subdir?ref=v1.0.0", "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(variables).To(HaveLen(4))
 
@@ -180,6 +179,37 @@ variable "bool_var" {
 			Expect(variables[3].Name).To(Equal("bool_var"))
 			Expect(variables[3].Type).To(Equal("bool"))
 			Expect(variables[3].Description).To(BeEmpty())
+		})
+	})
+
+	Context("when a registry module version is provided separately", func() {
+		BeforeEach(func() {
+			internal.SetTerraformInitFunc(func(dir string) error {
+				mainContent, err := os.ReadFile(filepath.Join(tempDir, "main.tf"))
+				Expect(err).NotTo(HaveOccurred())
+				expectContent := `module "kratix_target" {
+  source = "terraform-aws-modules/iam/aws"
+  version = "6.2.3"
+}
+`
+				Expect(string(mainContent)).To(Equal(expectContent))
+
+				variablesPath := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "variables.tf")
+				expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+				return os.WriteFile(variablesPath, []byte(`
+variable "example_var" {
+  type        = string
+}
+`), 0o644)
+			})
+		})
+
+		It("adds the version to the terraform config", func() {
+			variables, err := internal.GetVariablesFromModule("terraform-aws-modules/iam/aws", "6.2.3")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(variables).To(HaveLen(1))
+			Expect(variables[0].Name).To(Equal("example_var"))
 		})
 	})
 
