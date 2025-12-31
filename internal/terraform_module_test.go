@@ -254,6 +254,20 @@ var _ = Describe("IsTerraformRegistrySource", func() {
 	)
 })
 
+var _ = Describe("BuildModuleSource", func() {
+	DescribeTable("appends module path while preserving query params",
+		func(source, path, expected string) {
+			Expect(internal.BuildModuleSource(source, path)).To(Equal(expected))
+		},
+		Entry("no path provided", "git::example.com/repo.git?ref=v1.0.0", "", "git::example.com/repo.git?ref=v1.0.0"),
+		Entry("path with slashes trimmed", "git::example.com/repo.git?ref=v1.0.0", "/modules/vpc/", "git::example.com/repo.git//modules/vpc?ref=v1.0.0"),
+		Entry("source without query", "terraform-aws-modules/vpc/aws", "modules/vpc", "terraform-aws-modules/vpc/aws//modules/vpc"),
+		Entry("source with trailing slash", "terraform-aws-modules/vpc/aws/", "modules/vpc", "terraform-aws-modules/vpc/aws//modules/vpc"),
+		Entry("empty path after trim", "terraform-aws-modules/vpc/aws", "/", "terraform-aws-modules/vpc/aws"),
+		Entry("query preserved", "git::https://github.com/org/repo.git?ref=v1.2.3&depth=1", "nested/path", "git::https://github.com/org/repo.git//nested/path?ref=v1.2.3&depth=1"),
+	)
+})
+
 func expectManifest(manifestPath, moduleDir string) {
 	manifest := fmt.Sprintf(`{"Modules":[{"Key":"module.%s","Dir":"%s"}]}`, "kratix_target", moduleDir)
 	Expect(os.MkdirAll(filepath.Dir(manifestPath), 0o755)).To(Succeed())

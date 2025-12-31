@@ -66,7 +66,7 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	fmt.Println("Fetching terraform module variables, this might take up to a minute...")
 
 	if moduleRegistryVersion != "" && !internal.IsTerraformRegistrySource(moduleSource) {
-		fmt.Println("Error: --module-registry-version can only be used with Terraform registry module sources (e.g., namespace/name/provider)")
+		fmt.Println("Error: --module-registry-version is only valid for Terraform registry sources like 'namespace/name/provider'. For git URLs (e.g., 'git::https://github.com/org/repo.git?ref=v1.0.0') or local paths, embed the ref directly in --module-source instead.")
 		return nil
 	}
 

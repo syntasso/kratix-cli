@@ -45,7 +45,7 @@ func main() {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	source := buildModuleSource(moduleSource, modulePath)
+	source := internal.BuildModuleSource(moduleSource, modulePath)
 
 	module := map[string]map[string]map[string]any{
 		"module": {
@@ -104,25 +104,4 @@ func MustHaveEnv(key string) string {
 		return value
 	}
 	panic(fmt.Sprintf("Error: %s environment variable is not set", key))
-}
-
-func buildModuleSource(moduleSource, modulePath string) string {
-	if modulePath == "" {
-		return moduleSource
-	}
-
-	trimmedPath := strings.Trim(modulePath, "/")
-	if trimmedPath == "" {
-		return moduleSource
-	}
-
-	sourceParts := strings.SplitN(moduleSource, "?", 2)
-	baseSource := strings.TrimSuffix(sourceParts[0], "/")
-	sourceWithPath := fmt.Sprintf("%s//%s", baseSource, trimmedPath)
-
-	if len(sourceParts) == 2 && sourceParts[1] != "" {
-		return fmt.Sprintf("%s?%s", sourceWithPath, sourceParts[1])
-	}
-
-	return sourceWithPath
 }
