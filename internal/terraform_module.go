@@ -121,39 +121,6 @@ func IsTerraformRegistrySource(moduleSource string) bool {
 	return strings.Count(moduleSource, "/") >= 2
 }
 
-// BuildModuleSource appends a modulePath to a moduleSource while preserving query parameters.
-// Examples:
-//   - BuildModuleSource("git::https://github.com/org/repo.git?ref=v1.0.0", "modules/vpc")
-//     -> "git::https://github.com/org/repo.git//modules/vpc?ref=v1.0.0"
-//   - BuildModuleSource("terraform-aws-modules/vpc/aws", "modules/vpc")
-//     -> "terraform-aws-modules/vpc/aws//modules/vpc"
-//
-// If modulePath is empty or only slashes, moduleSource is returned unchanged.
-func BuildModuleSource(moduleSource, modulePath string) string {
-	trimmedPath := strings.Trim(modulePath, "/")
-	if trimmedPath == "" {
-		return moduleSource
-	}
-
-	baseSource, query := splitSourceAndQuery(moduleSource)
-	sourceWithPath := fmt.Sprintf("%s//%s", baseSource, trimmedPath)
-
-	if query == "" {
-		return sourceWithPath
-	}
-
-	return fmt.Sprintf("%s?%s", sourceWithPath, query)
-}
-
-func splitSourceAndQuery(moduleSource string) (base, query string) {
-	parts := strings.SplitN(moduleSource, "?", 2)
-	base = strings.TrimSuffix(parts[0], "/")
-	if len(parts) == 2 {
-		query = parts[1]
-	}
-	return base, query
-}
-
 func extractVariablesFromVarsFile(filePath string) ([]TerraformVariable, error) {
 	fileContent, err := readFileContent(filePath)
 	if err != nil {

@@ -17,7 +17,6 @@ func main() {
 	outputDir := GetEnv("KRATIX_OUTPUT_DIR", "/kratix/output")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
 	moduleRegistryVersion := os.Getenv("MODULE_REGISTRY_VERSION")
-	modulePath := os.Getenv("MODULE_PATH") // optional
 
 	yamlContent, err := os.ReadFile(yamlFile)
 	if err != nil {
@@ -45,7 +44,7 @@ func main() {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	source := internal.BuildModuleSource(moduleSource, modulePath)
+	source := moduleSource
 
 	module := map[string]map[string]map[string]any{
 		"module": {
