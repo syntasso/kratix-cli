@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/syntasso/kratix-cli/internal"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -17,7 +17,7 @@ type moduleTestCase struct {
 	moduleSource      string
 	moduleRegistryVer string
 	expectRegistryEnv bool
-	expectedTypesFile string
+	expectedAPIPath   string
 }
 
 var _ = Describe("InitTerraformPromise source integration", func() {
@@ -25,9 +25,11 @@ var _ = Describe("InitTerraformPromise source integration", func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	localModulePath := filepath.Join(cwd, "assets", "terraform", "modules", "local", "basic")
-	vpcFixture := filepath.Join(cwd, "assets", "terraform", "vars", "vpc-variables.tf")
-	s3Fixture := filepath.Join(cwd, "assets", "terraform", "vars", "registry-variables.tf")
-	nestedFixture := filepath.Join(cwd, "assets", "terraform", "vars", "nested-registry-variables.tf")
+	vpcAPI := filepath.Join(cwd, "assets", "terraform", "api", "git.yaml")
+	vpcSubdirAPI := filepath.Join(cwd, "assets", "terraform", "api", "git-subdir.yaml")
+	s3API := filepath.Join(cwd, "assets", "terraform", "api", "registry.yaml")
+	nestedAPI := filepath.Join(cwd, "assets", "terraform", "api", "nested-registry.yaml")
+	localAPI := filepath.Join(cwd, "assets", "terraform", "api", "local.yaml")
 
 	DescribeTable("generates promise schema and workflow envs",
 		func(tc moduleTestCase) {
@@ -37,7 +39,7 @@ var _ = Describe("InitTerraformPromise source integration", func() {
 
 			r := &runner{
 				exitCode: 0,
-				Path:     os.Getenv("PATH"),
+				Path:     "/opt/homebrew/bin:" + os.Getenv("PATH"),
 				flags: map[string]string{
 					"--group":   "example.com",
 					"--kind":    "Example",
@@ -65,21 +67,25 @@ var _ = Describe("InitTerraformPromise source integration", func() {
 			}
 
 			actual := readSpecTypes(workingDir)
-			expected := expectedTypesFromFixture(tc.expectedTypesFile)
+			expected := readCRDTypes(tc.expectedAPIPath)
 			Expect(actual).To(Equal(expected))
+
+			actualCRD := readCRD(workingDir)
+			expectedCRD := readCRDFromPath(tc.expectedAPIPath)
+			Expect(actualCRD).To(Equal(expectedCRD))
 		},
 		Entry("open source git repo with ref",
 			moduleTestCase{
-				name:              "git vpc",
-				moduleSource:      "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git?ref=v5.7.0",
-				expectedTypesFile: vpcFixture,
+				name:            "git vpc",
+				moduleSource:    "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git?ref=v5.7.0",
+				expectedAPIPath: vpcAPI,
 			},
 		),
-		Entry("git repo subdir (mono-repo style)",
+		Entry("private git repo placeholder with subdir (mono-repo style)",
 			moduleTestCase{
-				name:              "git subdir",
-				moduleSource:      "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git//modules/vpc-endpoints?ref=v5.7.0",
-				expectedTypesFile: nestedFixture,
+				name:            "git subdir",
+				moduleSource:    "git::https://github.com/terraform-aws-modules/terraform-aws-vpc.git//modules/vpc-endpoints?ref=v5.7.0",
+				expectedAPIPath: vpcSubdirAPI,
 			},
 		),
 		Entry("registry with version",
@@ -88,7 +94,7 @@ var _ = Describe("InitTerraformPromise source integration", func() {
 				moduleSource:      "terraform-aws-modules/s3-bucket/aws",
 				moduleRegistryVer: "4.1.2",
 				expectRegistryEnv: true,
-				expectedTypesFile: s3Fixture,
+				expectedAPIPath:   s3API,
 			},
 		),
 		Entry("nested registry with version",
@@ -97,21 +103,14 @@ var _ = Describe("InitTerraformPromise source integration", func() {
 				moduleSource:      "terraform-aws-modules/vpc/aws//modules/vpc-endpoints",
 				moduleRegistryVer: "5.7.0",
 				expectRegistryEnv: true,
-				expectedTypesFile: nestedFixture,
-			},
-		),
-		Entry("registry without version",
-			moduleTestCase{
-				name:              "registry without version",
-				moduleSource:      "terraform-aws-modules/vpc/aws",
-				expectedTypesFile: vpcFixture,
+				expectedAPIPath:   nestedAPI,
 			},
 		),
 		Entry("local filesystem module",
 			moduleTestCase{
-				name:              "local module",
-				moduleSource:      localModulePath,
-				expectedTypesFile: filepath.Join(localModulePath, "variables.tf"),
+				name:            "local module",
+				moduleSource:    localModulePath,
+				expectedAPIPath: localAPI,
 			},
 		),
 	)
@@ -148,52 +147,39 @@ func readWorkflowEnvs(workingDir string) map[string]string {
 }
 
 func readSpecTypes(workingDir string) map[string]string {
-	apiPath := filepath.Join(workingDir, "api.yaml")
-	contents, err := os.ReadFile(apiPath)
-	if err != nil {
-		contents, err = os.ReadFile(filepath.Join(workingDir, "promise.yaml"))
-		Expect(err).NotTo(HaveOccurred())
-	}
-
-	var doc map[string]any
-	Expect(yaml.Unmarshal(contents, &doc)).To(Succeed())
-
-	if kind, _ := doc["kind"].(string); kind == "Promise" {
-		spec, _ := doc["spec"].(map[string]any)
-		api, _ := spec["api"].(map[string]any)
-		doc = api
-	}
-
-	spec, _ := doc["spec"].(map[string]any)
-	versions, _ := spec["versions"].([]any)
-	Expect(versions).ToNot(BeEmpty())
-	firstVersion, _ := versions[0].(map[string]any)
-	schema, _ := firstVersion["schema"].(map[string]any)
-	openAPISchema, _ := schema["openAPIV3Schema"].(map[string]any)
-	properties, _ := openAPISchema["properties"].(map[string]any)
-	specProps, _ := properties["spec"].(map[string]any)
-	propMap, _ := specProps["properties"].(map[string]any)
-	Expect(propMap).ToNot(BeNil())
+	crd := readCRD(workingDir)
+	specProps := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties
 
 	result := map[string]string{}
-	for name, raw := range propMap {
-		rawMap, _ := raw.(map[string]any)
-		typ, _ := rawMap["type"].(string)
-		result[name] = typ
-	}
-
-	return result
-}
-
-func expectedTypesFromFixture(fixturePath string) map[string]string {
-	vars, err := internal.GetVariablesFromModule(fixturePath, "")
-	Expect(err).NotTo(HaveOccurred())
-	schema, warnings := internal.VariablesToCRDSpecSchema(vars)
-	Expect(warnings).To(BeEmpty())
-
-	result := map[string]string{}
-	for name, prop := range schema.Properties {
+	for name, prop := range specProps {
 		result[name] = prop.Type
 	}
 	return result
+}
+
+func readCRDTypes(fixturePath string) map[string]string {
+	expected := readCRDFromPath(fixturePath)
+	specProps := expected.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"].Properties
+
+	result := map[string]string{}
+	for name, prop := range specProps {
+		result[name] = prop.Type
+	}
+	return result
+}
+
+func readCRD(workingDir string) apiextensionsv1.CustomResourceDefinition {
+	path := filepath.Join(workingDir, "api.yaml")
+	if _, err := os.Stat(path); err != nil {
+		path = filepath.Join(workingDir, "promise.yaml")
+	}
+	return readCRDFromPath(path)
+}
+
+func readCRDFromPath(path string) apiextensionsv1.CustomResourceDefinition {
+	data, err := os.ReadFile(path)
+	Expect(err).NotTo(HaveOccurred())
+	crd := apiextensionsv1.CustomResourceDefinition{}
+	Expect(yaml.Unmarshal(data, &crd)).To(Succeed())
+	return crd
 }
