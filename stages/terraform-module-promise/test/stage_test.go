@@ -147,4 +147,12 @@ var _ = Describe("From TF module to Promise Stage", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(output)).To(MatchJSON(expectedRegistryOutput))
 	})
+
+	It("errors when registry version is used with a non-registry source", func() {
+		envVars["MODULE_REGISTRY_VERSION"] = "9.9.9"
+		session := runWithEnv(envVars)
+		Eventually(session).Should(gexec.Exit())
+		Expect(session.ExitCode()).NotTo(Equal(0))
+		Expect(session.Err).To(gbytes.Say("MODULE_REGISTRY_VERSION is only valid for Terraform registry sources"))
+	})
 })
