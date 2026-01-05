@@ -36,9 +36,17 @@ To pull modules from private registries, ensure your system is logged in to the 
 	--kind Gateway \
 	--version v1alpha1 
 
-  # Initialize a Promise from a Terraform Module in Terraform registry
+  # Initialize a Promise from a Terraform Module in Terraform registry with a dedicated repository
+  kratix init tf-module-promise s3-bucket \
+    --module-source "terraform-aws-modules/s3-bucket/aws" \
+    --module-registry-version 3.7.0 \
+    --group syntasso.io \
+    --kind S3Bucket \
+    --version v1alpha1
+
+  # Initialize a Promise from a Terraform Module in Terraform registry in a monorepo
   kratix init tf-module-promise iam \
-  	--module-source terraform-aws-modules/iam/aws \
+  	--module-source terraform-aws-modules/iam/aws//modules/iam-account \
   	--module-registry-version 6.2.3 \
   	--group syntasso.io \
 	--kind IAM \
