@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.3.1...terraform-module-promise-v0.3.2) (2026-01-05)
+
+
+### Bug Fixes
+
+* Ensure Version field is handled correctly when bootstrapping TF module Promise ([#191](https://github.com/syntasso/kratix-cli/issues/191)) ([cbcfa51](https://github.com/syntasso/kratix-cli/commit/cbcfa514a18c1d15abee2813164ceb58676e97ad))
+
 ## [0.3.1](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.3.0...terraform-module-promise-v0.3.1) (2025-12-16)
 
 
