@@ -38,3 +38,4 @@ changelog:
       - "^.github"
       - "^.circleci"
       - "^test"
+      - "^chore:"
