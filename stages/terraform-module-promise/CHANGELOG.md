@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.2](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.3.1...terraform-module-promise-v0.3.2) (2026-01-05)
+## [0.4.0](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.3.1...terraform-module-promise-v0.3.2) (2026-01-05)
 
 
 ### Bug Fixes
