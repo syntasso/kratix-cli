@@ -10,7 +10,6 @@
 
 ### Chores
 
-* **main:** release terraform-module-promise 0.3.1 ([#175](https://github.com/syntasso/kratix-cli/issues/175)) ([ed88957](https://github.com/syntasso/kratix-cli/commit/ed8895796a6c0106329238a4aa650bcffc40abc6))
 * **main:** release terraform-module-promise 0.4.0 ([#192](https://github.com/syntasso/kratix-cli/issues/192)) ([0b894dd](https://github.com/syntasso/kratix-cli/commit/0b894ddb1e1d4794b5ebcdd23f25971932ba2d17))
 
 ## [0.11.2](https://github.com/syntasso/kratix-cli/compare/v0.11.1...v0.11.2) (2025-12-15)
