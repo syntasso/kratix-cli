@@ -8,10 +8,6 @@
 * document correct examples in init tf-module-promise command ([#198](https://github.com/syntasso/kratix-cli/issues/198)) ([e83d67d](https://github.com/syntasso/kratix-cli/commit/e83d67dccca74cab915e8e9f158e9fd7e8f7b3f1))
 
 
-### Chores
-
-* make release regex simpler ([a0b8bd3](https://github.com/syntasso/kratix-cli/commit/a0b8bd301680906016b8a758e8fe9ee52fe4e941))
-
 ## [0.12.0](https://github.com/syntasso/kratix-cli/compare/v0.11.2...v0.12.0) (2026-01-05)
 
 
