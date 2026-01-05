@@ -19,7 +19,7 @@ func main() {
 	moduleRegistryVersion := os.Getenv("MODULE_REGISTRY_VERSION")
 
 	if moduleRegistryVersion != "" && !internal.IsTerraformRegistrySource(moduleSource) {
-		log.Fatalf("MODULE_REGISTRY_VERSION is only valid for Terraform registry sources (e.g., \"namespace/name/provider\"). For git or local sources, embed the ref directly in MODULE_SOURCE (e.g., \"git::https://github.com/org/repo.git?ref=v1.2.3\"). Provided module_source=%q", moduleSource)
+		log.Fatalf("MODULE_REGISTRY_VERSION is only valid for Terraform registry sources (e.g., \"namespace/name/provider\"). For git or local sources, embed the version ref directly in MODULE_SOURCE (e.g., \"git::https://github.com/org/repo.git?ref=v1.2.3\"). Provided module_source=%q", moduleSource)
 	}
 
 	yamlContent, err := os.ReadFile(yamlFile)
