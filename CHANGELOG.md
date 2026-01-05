@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.2](https://github.com/syntasso/kratix-cli/compare/v0.12.1...v0.12.2) (2026-01-05)
+
+
+### Chores
+
+* dont include chores in release notes, use simpler regex for releasing ([93a90b3](https://github.com/syntasso/kratix-cli/commit/93a90b3444770034a30f913af02c405aa440872a))
+
 ## [0.12.1](https://github.com/syntasso/kratix-cli/compare/v0.12.0...v0.12.1) (2026-01-05)
 
 
