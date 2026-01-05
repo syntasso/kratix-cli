@@ -1,0 +1,75 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: examples.example.com
+spec:
+  group: example.com
+  names:
+    kind: Example
+    plural: examples
+    singular: example
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              default: {}
+              properties:
+                create:
+                  default: true
+                  description: Determines whether resources will be created
+                  type: boolean
+                create_security_group:
+                  default: false
+                  description: Determines if a security group is created
+                  type: boolean
+                security_group_description:
+                  description: Description of the security group created
+                  type: string
+                security_group_ids:
+                  default: []
+                  description: Default security group IDs to associate with the VPC endpoints
+                  items:
+                    type: string
+                  type: array
+                security_group_name:
+                  description: Name to use on security group created. Conflicts with `security_group_name_prefix`
+                  type: string
+                security_group_name_prefix:
+                  description: Name prefix to use on security group created. Conflicts with `security_group_name`
+                  type: string
+                security_group_tags:
+                  additionalProperties:
+                    type: string
+                  default: {}
+                  description: A map of additional tags to add to the security group created
+                  type: object
+                subnet_ids:
+                  default: []
+                  description: Default subnets IDs to associate with the VPC endpoints
+                  items:
+                    type: string
+                  type: array
+                tags:
+                  additionalProperties:
+                    type: string
+                  default: {}
+                  description: A map of tags to use on all resources
+                  type: object
+                timeouts:
+                  additionalProperties:
+                    type: string
+                  default: {}
+                  description: Define maximum timeout for creating, updating, and deleting VPC endpoint
+                    resources
+                  type: object
+                vpc_id:
+                  description: The ID of the VPC in which the endpoint will be used
+                  type: string
+              type: object
+
+      served: true
+      storage: true

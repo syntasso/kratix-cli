@@ -39,7 +39,7 @@ To pull modules from private registries, ensure your system is logged in to the 
   # Initialize a Promise from a Terraform Module in Terraform registry
   kratix init tf-module-promise iam \
   	--module-source terraform-aws-modules/iam/aws \
-  	--module-version 6.2.3 \
+  	--module-registry-version 6.2.3 \
   	--group syntasso.io \
 	--kind IAM \
 	--version v1alpha1`,
@@ -47,7 +47,7 @@ To pull modules from private registries, ensure your system is logged in to the 
 		Args: cobra.ExactArgs(1),
 	}
 
-	moduleSource, moduleVersion string
+	moduleSource, moduleRegistryVersion string
 )
 
 func init() {
@@ -56,7 +56,7 @@ func init() {
 		"This can be a Git URL, Terraform registry path, or a local directory path. \n"+
 		"It follows the same format as the `source` argument in the Terraform module block.",
 	)
-	terraformModuleCmd.Flags().StringVarP(&moduleVersion, "module-version", "m", "", "(Optional) version of the terraform module; "+
+	terraformModuleCmd.Flags().StringVarP(&moduleRegistryVersion, "module-registry-version", "r", "", "(Optional) version of the Terraform module from a registry; "+
 		"only use when pulling modules from Terraform registry",
 	)
 	terraformModuleCmd.MarkFlagRequired("module-source")
@@ -64,7 +64,13 @@ func init() {
 
 func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	fmt.Println("Fetching terraform module variables, this might take up to a minute...")
-	variables, err := internal.GetVariablesFromModule(moduleSource, moduleVersion)
+
+	if moduleRegistryVersion != "" && !internal.IsTerraformRegistrySource(moduleSource) {
+		fmt.Println("Error: --module-registry-version is only valid for Terraform registry sources like 'namespace/name/provider'. For git URLs (e.g., 'git::https://github.com/org/repo.git?ref=v1.0.0') or local paths, embed the ref directly in --module-source instead.")
+		return fmt.Errorf("invalid use of --module-registry-version with non-registry source")
+	}
+
+	variables, err := internal.GetVariablesFromModule(moduleSource, moduleRegistryVersion)
 	if err != nil {
 		fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)
 		return nil
@@ -82,7 +88,7 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	resourceConfigure, err := generateTerraformModuleResourceConfigurePipeline()
+	resourceConfigure, err := generateTerraformModuleResourceConfigurePipeline(moduleRegistryVersion)
 	if err != nil {
 		fmt.Printf("Error: failed to generate promise pipelines: %s\n", err)
 		return nil
@@ -90,8 +96,8 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 
 	promiseName := args[0]
 	extraFlags := fmt.Sprintf("--module-source %s", moduleSource)
-	if moduleVersion != "" {
-		extraFlags = fmt.Sprintf("%s --module-version %s", extraFlags, moduleVersion)
+	if moduleRegistryVersion != "" {
+		extraFlags = fmt.Sprintf("%s --module-registry-version %s", extraFlags, moduleRegistryVersion)
 	}
 	templateValues, err := generateTemplateValues(promiseName, "tf-module-promise", extraFlags, resourceConfigure, string(crdSchema))
 	if err != nil {
@@ -123,7 +129,7 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateTerraformModuleResourceConfigurePipeline() (string, error) {
+func generateTerraformModuleResourceConfigurePipeline(moduleRegistryVersion string) (string, error) {
 	envs := []corev1.EnvVar{
 		{
 			Name:  "MODULE_SOURCE",
@@ -131,10 +137,10 @@ func generateTerraformModuleResourceConfigurePipeline() (string, error) {
 		},
 	}
 
-	if moduleVersion != "" {
+	if moduleRegistryVersion != "" {
 		envs = append(envs, corev1.EnvVar{
-			Name:  "MODULE_VERSION",
-			Value: moduleVersion,
+			Name:  "MODULE_REGISTRY_VERSION",
+			Value: moduleRegistryVersion,
 		})
 	}
 
@@ -150,7 +156,7 @@ func generateTerraformModuleResourceConfigurePipeline() (string, error) {
 					"containers": []any{
 						v1alpha1.Container{
 							Name:  "terraform-generate",
-							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.2.0",
+							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.4.0",
 							Env:   envs,
 						},
 					},

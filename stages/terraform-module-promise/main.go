@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/syntasso/kratix-cli/internal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -15,8 +16,11 @@ func main() {
 	yamlFile := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	outputDir := GetEnv("KRATIX_OUTPUT_DIR", "/kratix/output")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
-	moduleVersion := MustHaveEnv("MODULE_VERSION")
-	modulePath := os.Getenv("MODULE_PATH") // optional
+	moduleRegistryVersion := os.Getenv("MODULE_REGISTRY_VERSION")
+
+	if moduleRegistryVersion != "" && !internal.IsTerraformRegistrySource(moduleSource) {
+		log.Fatalf("MODULE_REGISTRY_VERSION is only valid for Terraform registry sources (e.g., \"namespace/name/provider\"). For git or local sources, embed the version ref directly in MODULE_SOURCE (e.g., \"git::https://github.com/org/repo.git?ref=v1.2.3\"). Provided module_source=%q", moduleSource)
+	}
 
 	yamlContent, err := os.ReadFile(yamlFile)
 	if err != nil {
@@ -44,17 +48,16 @@ func main() {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	source := fmt.Sprintf("%s//%s?ref=%s", moduleSource, modulePath, moduleVersion)
-	if modulePath == "" {
-		source = fmt.Sprintf("%s?ref=%s", moduleSource, moduleVersion)
-	}
-
 	module := map[string]map[string]map[string]any{
 		"module": {
 			uniqueFileName: {
-				"source": source,
+				"source": moduleSource,
 			},
 		},
+	}
+
+	if moduleRegistryVersion != "" {
+		module["module"][uniqueFileName]["version"] = moduleRegistryVersion
 	}
 
 	// Handle spec if it exists

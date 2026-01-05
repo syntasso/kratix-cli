@@ -28,14 +28,14 @@ var (
 	terraformInit func(dir string) error                    = runTerraformInit
 )
 
-func GetVariablesFromModule(moduleSource, moduleVersion string) ([]TerraformVariable, error) {
+func GetVariablesFromModule(moduleSource, moduleRegistryVersion string) ([]TerraformVariable, error) {
 	tempDir, err := mkdirTemp("", "terraform-module")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	if err := writeTerraformModuleConfig(tempDir, moduleSource, moduleVersion); err != nil {
+	if err := writeTerraformModuleConfig(tempDir, moduleSource, moduleRegistryVersion); err != nil {
 		return nil, err
 	}
 
@@ -57,10 +57,10 @@ func GetVariablesFromModule(moduleSource, moduleVersion string) ([]TerraformVari
 	return variables, nil
 }
 
-func writeTerraformModuleConfig(workDir, moduleSource, moduleVersion string) error {
+func writeTerraformModuleConfig(workDir, moduleSource, moduleRegistryVersion string) error {
 	config := fmt.Sprintf("module \"%s\" {\n  source = \"%s\"\n", kratixModuleName, moduleSource)
-	if moduleVersion != "" {
-		config += fmt.Sprintf("  version = \"%s\"\n", moduleVersion)
+	if moduleRegistryVersion != "" && IsTerraformRegistrySource(moduleSource) {
+		config += fmt.Sprintf("  version = \"%s\"\n", moduleRegistryVersion)
 	}
 	config += "}\n"
 	if err := os.WriteFile(filepath.Join(workDir, "main.tf"), []byte(config), 0o644); err != nil {
@@ -107,6 +107,21 @@ func resolveModuleDir(workDir string) (string, error) {
 	}
 
 	return "", fmt.Errorf("module %s not found in terraform module manifest", kratixModuleName)
+}
+
+func IsTerraformRegistrySource(moduleSource string) bool {
+	// Local filepaths
+	if strings.HasPrefix(moduleSource, "./") || strings.HasPrefix(moduleSource, "../") || strings.HasPrefix(moduleSource, "/") {
+		return false
+	}
+
+	// URLs and other schemes
+	if strings.Contains(moduleSource, "://") || strings.Contains(moduleSource, "::") {
+		return false
+	}
+
+	// Otherwise assume it's a registry source if it has at least two slashes
+	return strings.Count(moduleSource, "/") >= 2
 }
 
 func extractVariablesFromVarsFile(filePath string) ([]TerraformVariable, error) {
