@@ -13,8 +13,31 @@ import (
 )
 
 func main() {
-	yamlFile := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	outputDir := GetEnv("KRATIX_OUTPUT_DIR", "/kratix/output")
+	workflowType := GetEnv("KRATIX_WORKFLOW_TYPE", "/kratix/input/object.yaml")
+
+	if workflowType == "resource" {
+		resource_workflow_configuration(outputDir)
+	}
+}
+
+// GetEnv retrieves an environment variable or returns a default value if not set
+func GetEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
+}
+
+func MustHaveEnv(key string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	panic(fmt.Sprintf("Error: %s environment variable is not set", key))
+}
+
+func resource_workflow_configuration(outputDir string) {
+	yamlFile := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
 	moduleRegistryVersion := os.Getenv("MODULE_REGISTRY_VERSION")
 
@@ -90,19 +113,4 @@ func main() {
 	}
 
 	fmt.Printf("Terraform JSON configuration written to %s\n", path)
-}
-
-// GetEnv retrieves an environment variable or returns a default value if not set
-func GetEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
-}
-
-func MustHaveEnv(key string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	panic(fmt.Sprintf("Error: %s environment variable is not set", key))
 }
