@@ -56,6 +56,7 @@ To pull modules from private registries, ensure your system is logged in to the 
 	}
 
 	moduleSource, moduleRegistryVersion string
+	moduleProviders                     []string
 )
 
 func init() {
@@ -67,6 +68,9 @@ func init() {
 	terraformModuleCmd.Flags().StringVarP(&moduleRegistryVersion, "module-registry-version", "r", "", "(Optional) version of the Terraform module from a registry; "+
 		"only use when pulling modules from Terraform registry",
 	)
+	terraformModuleCmd.Flags().StringSliceVarP(&moduleProviders, "module-providers", "", []string{}, "(Optional) the names of any files containing Terraform provider block; "+
+		"defaults to versions.tf and providers.tf",
+	)
 	terraformModuleCmd.MarkFlagRequired("module-source")
 }
 
@@ -75,7 +79,6 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 
 	if moduleRegistryVersion != "" && !internal.IsTerraformRegistrySource(moduleSource) {
 		fmt.Println("Error: --module-registry-version is only valid for Terraform registry sources like 'namespace/name/provider'. For git URLs (e.g., 'git::https://github.com/org/repo.git?ref=v1.0.0') or local paths, embed the ref directly in --module-source instead.")
-		return fmt.Errorf("invalid use of --module-registry-version with non-registry source")
 	}
 
 	variables, err := internal.GetVariablesFromModule(moduleSource, moduleRegistryVersion)
@@ -83,6 +86,12 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)
 		return nil
 	}
+
+	// _, _, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleRegistryVersion.moduleProviders)
+	// if err != nil {
+	// 	fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)
+	// 	return nil
+	// }
 
 	crdSpecSchema, warnings := internal.VariablesToCRDSpecSchema(variables)
 

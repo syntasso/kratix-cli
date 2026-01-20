@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hashicorp/hcl/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -13,7 +14,7 @@ import (
 )
 
 var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
-	var tempDir, variablesPath string
+	var tempDir, variablesPath, versionsPath string
 
 	BeforeEach(func() {
 		var err error
@@ -21,6 +22,7 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		variablesPath = filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "variables.tf")
+		versionsPath = filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "versions.tf")
 
 		internal.SetMkdirTempFunc(func(dir, pattern string) (string, error) {
 			return tempDir, nil
@@ -39,7 +41,7 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
 				manifestPath := filepath.Join(tempDir, ".terraform", "modules", "modules.json")
 				expectManifest(manifestPath, ".terraform/modules/kratix_target")
-				return os.WriteFile(variablesPath, []byte(`
+				err := os.WriteFile(variablesPath, []byte(`
 variable "example_var" {
   type        = string
   description = "An example variable"
@@ -74,6 +76,34 @@ variable "list_object_var" {
         ]
 }
 `), 0o644)
+				if err != nil {
+					return err
+				}
+
+				err = os.WriteFile(versionsPath, []byte(`
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+provider "random" {
+	source  = "hashicorp/random"
+}
+`), 0o644)
+
+				if err != nil {
+					return err
+				}
+
+				return nil
 			})
 		})
 
@@ -121,6 +151,46 @@ variable "list_object_var" {
 			Expect(ok).To(BeTrue())
 			Expect(listObjectVarDefaultObj).To(Equal(map[string]any{"key1": "value1", "key2": float64(100)}))
 			Expect(variables[5].Description).To(BeEmpty())
+		})
+
+		It("returns the versions", func() {
+			versionSchema := &hcl.BodySchema{
+				Blocks: []hcl.BlockHeaderSchema{
+					{Type: "required_providers"},
+				},
+			}
+			versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", "", []string{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(versions.Type).To(Equal("terraform"))
+			content, _ := versions.Body.Content(versionSchema)
+			Expect(content.Blocks).To(HaveLen(1))
+			Expect(content.Blocks[0].Type).To(Equal("required_providers"))
+
+			attributes, _ := content.Blocks[0].Body.JustAttributes()
+			Expect(attributes).To(HaveLen(1))
+			awsAttribute, ok := attributes["aws"]
+			Expect(ok).To(BeTrue())
+			val, _ := awsAttribute.Expr.Value(&hcl.EvalContext{})
+			Expect(val.Type().HasAttribute("version")).To(BeTrue())
+			Expect(val.GetAttr("version").AsString()).To(Equal("~> 6.0"))
+
+			Expect(providers).To(HaveLen(2))
+			Expect(providers[0].Type).To(Equal("provider"))
+			provider_1_attributes, _ := providers[0].Body.JustAttributes()
+			Expect(provider_1_attributes).To(HaveLen(1))
+
+			region, ok := provider_1_attributes["region"]
+			Expect(ok).To(BeTrue())
+			region_val, _ := region.Expr.Value(&hcl.EvalContext{})
+			Expect(region_val.AsString()).To(Equal("us-east-1"))
+
+			provider_2_attributes, _ := providers[1].Body.JustAttributes()
+			Expect(provider_2_attributes).To(HaveLen(1))
+
+			source, ok := provider_2_attributes["source"]
+			Expect(ok).To(BeTrue())
+			source_val, _ := source.Expr.Value(&hcl.EvalContext{})
+			Expect(source_val.AsString()).To(Equal("hashicorp/random"))
 		})
 	})
 
@@ -180,6 +250,22 @@ variable "bool_var" {
 			Expect(variables[3].Type).To(Equal("bool"))
 			Expect(variables[3].Description).To(BeEmpty())
 		})
+	})
+
+	When("one of the user-specified module provider cannot be found", func() {
+
+	})
+
+	When("the user-defined module provider files can be found", func() {
+
+	})
+
+	When("either of the default module provider files cannot be found", func() {
+
+	})
+
+	When("neither of the default module provider files cannot be found", func() {
+
 	})
 
 	Context("when a registry module version is provided separately", func() {

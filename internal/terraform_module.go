@@ -24,8 +24,9 @@ type terraformModuleManifest struct {
 }
 
 var (
-	mkdirTemp     func(dir, pattern string) (string, error) = os.MkdirTemp
-	terraformInit func(dir string) error                    = runTerraformInit
+	mkdirTemp                func(dir, pattern string) (string, error) = os.MkdirTemp
+	terraformInit            func(dir string) error                    = runTerraformInit
+	defaultProviderFilenames                                           = []string{"versions.tf", "providers.tf"}
 )
 
 func GetVariablesFromModule(moduleSource, moduleRegistryVersion string) ([]TerraformVariable, error) {
@@ -55,6 +56,60 @@ func GetVariablesFromModule(moduleSource, moduleRegistryVersion string) ([]Terra
 	}
 
 	return variables, nil
+}
+
+func GetVersionsAndProvidersFromModule(moduleSource, moduleRegistryVersion string, moduleProviderFilenames []string) (version *hcl.Block, providers []*hcl.Block, err error) {
+	tempDir, err := mkdirTemp("", "terraform-module")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	if err := writeTerraformModuleConfig(tempDir, moduleSource, moduleRegistryVersion); err != nil {
+		return nil, nil, err
+	}
+
+	if err := terraformInit(tempDir); err != nil {
+		return nil, nil, fmt.Errorf("failed to initialize terraform: %w", err)
+	}
+
+	moduleDir, err := resolveModuleDir(tempDir)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	providerFilepaths, err := fetchModuleProviders(moduleDir, moduleProviderFilenames)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	version, providers, err = extractVersionsAndProvidersFromFiles(providerFilepaths)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse versions: %w", err)
+	}
+
+	return version, providers, nil
+}
+
+func fetchModuleProviders(moduleDir string, moduleProviderFilenames []string) ([]string, error) {
+	var versionProviderFilepaths []string
+	for _, filename := range moduleProviderFilenames {
+		_, err := os.Stat(filepath.Join(moduleDir, filename))
+		if err != nil {
+			return nil, fmt.Errorf("unable to fetch provider file: %s", err)
+		}
+		versionProviderFilepaths = append(versionProviderFilepaths, filepath.Join(moduleDir, filename))
+	}
+
+	if len(moduleProviderFilenames) == 0 {
+		for _, filename := range defaultProviderFilenames {
+			_, err := os.Stat(filepath.Join(moduleDir, filename))
+			if err == nil {
+				versionProviderFilepaths = append(versionProviderFilepaths, filepath.Join(moduleDir, filename))
+			}
+		}
+	}
+	return versionProviderFilepaths, nil
 }
 
 func writeTerraformModuleConfig(workDir, moduleSource, moduleRegistryVersion string) error {
@@ -138,6 +193,31 @@ func extractVariablesFromVarsFile(filePath string) ([]TerraformVariable, error) 
 	return extractVariables(blocks, fileContent), nil
 }
 
+func extractVersionsAndProvidersFromFiles(filePaths []string) (version *hcl.Block, providers []*hcl.Block, err error) {
+	var versionProviderBlocks []*hcl.Block
+
+	for _, path := range filePaths {
+		blocks, err := parseHCLVersionsAndProviders(path)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		versionProviderBlocks = append(versionProviderBlocks, blocks...)
+	}
+
+	for _, block := range versionProviderBlocks {
+		if block.Type == "terraform" {
+			version = block
+		}
+
+		if block.Type == "provider" {
+			providers = append(providers, block)
+		}
+	}
+
+	return version, providers, nil
+}
+
 func readFileContent(filePath string) (string, error) {
 	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {
@@ -163,6 +243,40 @@ func parseHCLVariables(filePath string) ([]*hcl.Block, error) {
 	}
 
 	return content.Blocks, nil
+}
+
+func parseHCLVersionsAndProviders(filePath string) ([]*hcl.Block, error) {
+	parser := hclparse.NewParser()
+	file, diags := parser.ParseHCLFile(filePath)
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("failed to parse HCL file: %s", diags.Error())
+	}
+
+	content, diags := file.Body.Content(&hcl.BodySchema{
+		Blocks: []hcl.BlockHeaderSchema{
+			{Type: "terraform"},
+			{Type: "provider", LabelNames: []string{"*"}},
+		},
+	})
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("failed to parse body content: %s", diags.Error())
+	}
+
+	return content.Blocks, nil
+}
+
+func extractVersionBlock(blocks []*hcl.Block) (version *hcl.Block, providers []*hcl.Block) {
+	for _, block := range blocks {
+		if block.Type == "terraform" {
+			version = block
+		}
+
+		if block.Type == "provider" {
+			providers = append(providers, block)
+		}
+	}
+
+	return version, providers
 }
 
 func extractVariables(blocks []*hcl.Block, fileContent string) []TerraformVariable {
