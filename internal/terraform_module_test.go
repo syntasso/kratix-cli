@@ -40,6 +40,7 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 			internal.SetTerraformInitFunc(func(dir string) error {
 				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
 				manifestPath := filepath.Join(tempDir, ".terraform", "modules", "modules.json")
+				fmt.Printf("manifestPath %s\n", manifestPath)
 				expectManifest(manifestPath, ".terraform/modules/kratix_target")
 				err := os.WriteFile(variablesPath, []byte(`
 variable "example_var" {
@@ -108,7 +109,10 @@ provider "random" {
 		})
 
 		It("returns a list of variables with correct types and descriptions", func() {
-			variables, err := internal.GetVariablesFromModule("mock-source", "")
+			moduleDir, err := internal.SetupModule("mock-source", "")
+			Expect(err).ToNot(HaveOccurred())
+
+			variables, err := internal.GetVariablesFromModule("mock-source", moduleDir, "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(variables).To(HaveLen(6))
 
@@ -159,7 +163,9 @@ provider "random" {
 					{Type: "required_providers"},
 				},
 			}
-			versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", "", []string{})
+			moduleDir, err := internal.SetupModule("mock-source", "")
+			Expect(err).ToNot(HaveOccurred())
+			versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(versions.Type).To(Equal("terraform"))
 			content, _ := versions.Body.Content(versionSchema)
@@ -229,8 +235,9 @@ variable "bool_var" {
 }
 `), 0o644)
 			})
-
-			variables, err := internal.GetVariablesFromModule("git::mock-source.git//subdir?ref=v1.0.0", "")
+			moduleDir, err := internal.SetupModule("mock-source", "")
+			Expect(err).ToNot(HaveOccurred())
+			variables, err := internal.GetVariablesFromModule("git::mock-source.git//subdir?ref=v1.0.0", moduleDir, "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(variables).To(HaveLen(4))
 
@@ -292,7 +299,9 @@ variable "example_var" {
 		})
 
 		It("adds the version to the terraform config", func() {
-			variables, err := internal.GetVariablesFromModule("terraform-aws-modules/iam/aws", "6.2.3")
+			moduleDir, err := internal.SetupModule("terraform-aws-modules/iam/aws", "6.2.3")
+			Expect(err).ToNot(HaveOccurred())
+			variables, err := internal.GetVariablesFromModule("terraform-aws-modules/iam/aws", moduleDir, "6.2.3")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(variables).To(HaveLen(1))
 			Expect(variables[0].Name).To(Equal("example_var"))
@@ -304,8 +313,7 @@ variable "example_var" {
 			internal.SetTerraformInitFunc(func(dir string) error {
 				return errors.New("mock init failure")
 			})
-
-			_, err := internal.GetVariablesFromModule("mock-source", "")
+			_, err := internal.SetupModule("mock-source", "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to initialize terraform"))
 		})
@@ -319,7 +327,10 @@ variable "example_var" {
 				return os.WriteFile(variablesPath, []byte(`invalid hcl`), 0o644)
 			})
 
-			_, err := internal.GetVariablesFromModule("mock-source", "")
+			moduleDir, err := internal.SetupModule("mock-source", "")
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = internal.GetVariablesFromModule("mock-source", moduleDir, "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to parse variables"))
 		})

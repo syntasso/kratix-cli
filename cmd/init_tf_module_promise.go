@@ -81,13 +81,20 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		fmt.Println("Error: --module-registry-version is only valid for Terraform registry sources like 'namespace/name/provider'. For git URLs (e.g., 'git::https://github.com/org/repo.git?ref=v1.0.0') or local paths, embed the ref directly in --module-source instead.")
 	}
 
-	variables, err := internal.GetVariablesFromModule(moduleSource, moduleRegistryVersion)
+	moduleDir, err := internal.SetupModule(moduleSource, moduleRegistryVersion)
+	if err != nil {
+		fmt.Printf("Error: failed to setup module : %s\n", err)
+		return nil
+	}
+	// defer os.RemoveAll(tempDir)
+
+	variables, err := internal.GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion)
 	if err != nil {
 		fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)
 		return nil
 	}
 
-	// _, _, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleRegistryVersion.moduleProviders)
+	// _, _, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion.moduleProviders)
 	// if err != nil {
 	// 	fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)
 	// 	return nil
