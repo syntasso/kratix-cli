@@ -82,7 +82,7 @@ func fetchModuleProviders(moduleDir string, moduleProviderFilenames []string) ([
 	for _, filename := range moduleProviderFilenames {
 		_, err := os.Stat(filepath.Join(moduleDir, filename))
 		if err != nil {
-			return nil, fmt.Errorf("unable to fetch provider file: %s", err)
+			return nil, fmt.Errorf("unable to fetch provider file %q: %s", filename, err)
 		}
 		versionProviderFilepaths = append(versionProviderFilepaths, filepath.Join(moduleDir, filename))
 	}

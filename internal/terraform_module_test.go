@@ -157,48 +157,161 @@ provider "random" {
 			Expect(variables[5].Description).To(BeEmpty())
 		})
 
-		It("returns the versions", func() {
-			versionSchema := &hcl.BodySchema{
-				Blocks: []hcl.BlockHeaderSchema{
-					{Type: "required_providers"},
-				},
-			}
-			moduleDir, err := internal.SetupModule("mock-source", "")
-			Expect(err).ToNot(HaveOccurred())
-			versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(versions.Type).To(Equal("terraform"))
-			content, _ := versions.Body.Content(versionSchema)
-			Expect(content.Blocks).To(HaveLen(1))
-			Expect(content.Blocks[0].Type).To(Equal("required_providers"))
+		When("a versions.tf file exists in the module", func() {
+			It("returns the versions", func() {
+				versionSchema := &hcl.BodySchema{
+					Blocks: []hcl.BlockHeaderSchema{
+						{Type: "required_providers"},
+					},
+				}
+				moduleDir, err := internal.SetupModule("mock-source", "")
+				Expect(err).ToNot(HaveOccurred())
+				versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(versions.Type).To(Equal("terraform"))
+				content, _ := versions.Body.Content(versionSchema)
+				Expect(content.Blocks).To(HaveLen(1))
+				Expect(content.Blocks[0].Type).To(Equal("required_providers"))
 
-			attributes, _ := content.Blocks[0].Body.JustAttributes()
-			Expect(attributes).To(HaveLen(1))
-			awsAttribute, ok := attributes["aws"]
-			Expect(ok).To(BeTrue())
-			val, _ := awsAttribute.Expr.Value(&hcl.EvalContext{})
-			Expect(val.Type().HasAttribute("version")).To(BeTrue())
-			Expect(val.GetAttr("version").AsString()).To(Equal("~> 6.0"))
+				attributes, _ := content.Blocks[0].Body.JustAttributes()
+				Expect(attributes).To(HaveLen(1))
+				awsAttribute, ok := attributes["aws"]
+				Expect(ok).To(BeTrue())
+				val, _ := awsAttribute.Expr.Value(&hcl.EvalContext{})
+				Expect(val.Type().HasAttribute("version")).To(BeTrue())
+				Expect(val.GetAttr("version").AsString()).To(Equal("~> 6.0"))
 
-			Expect(providers).To(HaveLen(2))
-			Expect(providers[0].Type).To(Equal("provider"))
-			provider_1_attributes, _ := providers[0].Body.JustAttributes()
-			Expect(provider_1_attributes).To(HaveLen(1))
+				Expect(providers).To(HaveLen(2))
+				Expect(providers[0].Type).To(Equal("provider"))
+				provider_1_attributes, _ := providers[0].Body.JustAttributes()
+				Expect(provider_1_attributes).To(HaveLen(1))
 
-			region, ok := provider_1_attributes["region"]
-			Expect(ok).To(BeTrue())
-			region_val, _ := region.Expr.Value(&hcl.EvalContext{})
-			Expect(region_val.AsString()).To(Equal("us-east-1"))
+				region, ok := provider_1_attributes["region"]
+				Expect(ok).To(BeTrue())
+				region_val, _ := region.Expr.Value(&hcl.EvalContext{})
+				Expect(region_val.AsString()).To(Equal("us-east-1"))
 
-			provider_2_attributes, _ := providers[1].Body.JustAttributes()
-			Expect(provider_2_attributes).To(HaveLen(1))
+				provider_2_attributes, _ := providers[1].Body.JustAttributes()
+				Expect(provider_2_attributes).To(HaveLen(1))
 
-			source, ok := provider_2_attributes["source"]
-			Expect(ok).To(BeTrue())
-			source_val, _ := source.Expr.Value(&hcl.EvalContext{})
-			Expect(source_val.AsString()).To(Equal("hashicorp/random"))
+				source, ok := provider_2_attributes["source"]
+				Expect(ok).To(BeTrue())
+				source_val, _ := source.Expr.Value(&hcl.EvalContext{})
+				Expect(source_val.AsString()).To(Equal("hashicorp/random"))
+			})
+		})
+
+		When("neither of the default module provider files cannot be found", func() {
+			BeforeEach(func() {
+				internal.SetTerraformInitFunc(func(dir string) error {
+					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+					return nil
+				})
+			})
+
+			It("returns a nil version and empty list of providers", func() {
+
+			})
+		})
+
+		When("there are user-defined module provider files", func() {
+			When("one of the user-specified module provider cannot be found", func() {
+				It("raises and error", func() {
+					moduleDir, err := internal.SetupModule("mock-source", "")
+					Expect(err).ToNot(HaveOccurred())
+					_, _, err = internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{"non-existent.tf"})
+					Expect(err).To(MatchError(ContainSubstring("unable to fetch provider file \"non-existent.tf\"")))
+				})
+			})
+
+			When("the user-defined module provider files can be found", func() {
+				BeforeEach(func() {
+					internal.SetTerraformInitFunc(func(dir string) error {
+						providerPath := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "another-provider.tf")
+						versionsPath := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "more-versions.tf")
+						expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+						Expect(os.MkdirAll(filepath.Dir(providerPath), 0o755)).To(Succeed())
+						Expect(os.MkdirAll(filepath.Dir(versionsPath), 0o755)).To(Succeed())
+						err := os.WriteFile(providerPath, []byte(`
+	provider "random" {
+		source  = "hashicorp/random"
+	}
+	`), 0o644)
+						if err != nil {
+							return err
+						}
+
+						err = os.WriteFile(versionsPath, []byte(`
+	terraform {
+	  required_providers {
+		aws = {
+		  source  = "hashicorp/aws"
+		  version = "~> 6.0"
+		}
+	  }
+	}
+	`), 0o644)
+
+						if err != nil {
+							return err
+						}
+
+						return nil
+					})
+				})
+
+				It("returns the version and providers", func() {
+					versionSchema := &hcl.BodySchema{
+						Blocks: []hcl.BlockHeaderSchema{
+							{Type: "required_providers"},
+						},
+					}
+					moduleDir, err := internal.SetupModule("mock-source", "")
+					Expect(err).ToNot(HaveOccurred())
+					versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{"another-provider.tf", "more-versions.tf"})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(versions.Type).To(Equal("terraform"))
+					content, _ := versions.Body.Content(versionSchema)
+					Expect(content.Blocks).To(HaveLen(1))
+					Expect(content.Blocks[0].Type).To(Equal("required_providers"))
+
+					Expect(providers).To(HaveLen(1))
+					Expect(providers[0].Type).To(Equal("provider"))
+					provider, _ := providers[0].Body.JustAttributes()
+					Expect(provider).To(HaveLen(1))
+
+					region, ok := provider["source"]
+					Expect(ok).To(BeTrue())
+					region_val, _ := region.Expr.Value(&hcl.EvalContext{})
+					Expect(region_val.AsString()).To(Equal("hashicorp/random"))
+				})
+			})
 		})
 	})
+
+	// When("there are no user-provider files", func() {
+	// versionSchema := &hcl.BodySchema{
+	// 	Blocks: []hcl.BlockHeaderSchema{
+	// 		{Type: "required_providers"},
+	// 	},
+	// }
+	// moduleDir, err := internal.SetupModule("mock-source", "")
+	// Expect(err).ToNot(HaveOccurred())
+	// versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
+	// Expect(err).ToNot(HaveOccurred())
+
+	// })
+	// When("either of the default module provider files cannot be found", func() {
+	// versionSchema := &hcl.BodySchema{
+	// 	Blocks: []hcl.BlockHeaderSchema{
+	// 		{Type: "required_providers"},
+	// 	},
+	// }
+	// moduleDir, err := internal.SetupModule("mock-source", "")
+	// Expect(err).ToNot(HaveOccurred())
+	// versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
+	// Expect(err).ToNot(HaveOccurred())
+	// })
 
 	Context("when the variables.tf file is not at the root of the module", func() {
 		BeforeEach(func() {
@@ -257,22 +370,6 @@ variable "bool_var" {
 			Expect(variables[3].Type).To(Equal("bool"))
 			Expect(variables[3].Description).To(BeEmpty())
 		})
-	})
-
-	When("one of the user-specified module provider cannot be found", func() {
-
-	})
-
-	When("the user-defined module provider files can be found", func() {
-
-	})
-
-	When("either of the default module provider files cannot be found", func() {
-
-	})
-
-	When("neither of the default module provider files cannot be found", func() {
-
 	})
 
 	Context("when a registry module version is provided separately", func() {
