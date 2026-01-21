@@ -35,7 +35,322 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 		internal.SetTerraformInitFunc(internal.RunTerraformInit)
 	})
 
-	Context("when the module is successfully downloaded and parsed", func() {
+	Describe("#SetupModule", func() {
+		BeforeEach(func() {
+			internal.SetTerraformInitFunc(func(dir string) error {
+				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+				manifestPath := filepath.Join(tempDir, ".terraform", "modules", "modules.json")
+				expectManifest(manifestPath, ".terraform/modules/kratix_target")
+
+				return nil
+			})
+		})
+
+		It("returns a path to the terraform module of the filesystem", func() {
+			modulePath, err := internal.SetupModule("mock-source", "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(modulePath).To(ContainSubstring(".terraform/modules/kratix_target"))
+
+		})
+
+		When("the temporary directory cannot be created", func() {
+			BeforeEach(func() {
+				internal.SetMkdirTempFunc(func(dir, pattern string) (string, error) {
+					return "", fmt.Errorf("an error!")
+				})
+			})
+
+			It("raises an error", func() {
+				modulePath, err := internal.SetupModule("mock-source", "")
+				Expect(err).ToNot(MatchError("an error!"))
+				Expect(modulePath).To(BeEmpty())
+			})
+		})
+
+		When("the manifest cannot be parsed as json", func() {
+			BeforeEach(func() {
+				internal.SetTerraformInitFunc(func(dir string) error {
+					Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+					manifestPath := filepath.Join(tempDir, ".terraform", "modules", "modules.json")
+					manifest := `func notJson(){}`
+					Expect(os.MkdirAll(filepath.Dir(manifestPath), 0o755)).To(Succeed())
+					Expect(os.WriteFile(manifestPath, []byte(manifest), 0o644)).To(Succeed())
+					return nil
+				})
+			})
+
+			It("raises a json unmarshalling error", func() {
+				_, err := internal.SetupModule("mock-source", "")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to unmarshal terraform module manifest"))
+			})
+		})
+
+		When("the kratix_target is not found", func() {
+			BeforeEach(func() {
+				internal.SetTerraformInitFunc(func(dir string) error {
+					Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+					manifestPath := filepath.Join(tempDir, ".terraform", "modules", "modules.json")
+					manifest := fmt.Sprintf(`{"Modules":[{"Key":"module.%s","Dir":"%s"}]}`, "other_target", "moduleDir")
+					Expect(os.MkdirAll(filepath.Dir(manifestPath), 0o755)).To(Succeed())
+					Expect(os.WriteFile(manifestPath, []byte(manifest), 0o644)).To(Succeed())
+					return nil
+				})
+			})
+
+			It("returns an error", func() {
+				_, err := internal.SetupModule("mock-source", "")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("module kratix_target not found in terraform module manifest"))
+			})
+		})
+
+		Context("when terraform init fails", func() {
+			It("errors", func() {
+				internal.SetTerraformInitFunc(func(dir string) error {
+					return errors.New("mock init failure")
+				})
+				_, err := internal.SetupModule("mock-source", "")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to initialize terraform"))
+			})
+		})
+	})
+
+	Describe("#GetVariablesFromModule", func() {
+		Context("when the module is successfully downloaded and parsed", func() {
+			BeforeEach(func() {
+				internal.SetTerraformInitFunc(func(dir string) error {
+					Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+					manifestPath := filepath.Join(tempDir, ".terraform", "modules", "modules.json")
+					expectManifest(manifestPath, ".terraform/modules/kratix_target")
+					err := os.WriteFile(variablesPath, []byte(`
+variable "example_var" {
+  type        = string
+  description = "An example variable"
+}
+
+variable "complex_var" {
+  type        = list(map(string))
+  description = "A complex variable"
+}
+
+variable "number_var" {
+  type        = number
+  default     = 10
+}
+
+variable "bool_var" {
+  type        = bool
+}
+
+variable "list_string_var" {
+  type        = list(string)
+  default     = ["stringValue"]
+}
+
+variable "list_object_var" {
+        type      = list(map(string))
+         default = [
+                {
+                        key1 = "value1"
+                        key2 = 100
+                }
+        ]
+}
+`), 0o644)
+					if err != nil {
+						return err
+					}
+
+					err = os.WriteFile(versionsPath, []byte(`
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+provider "random" {
+	source  = "hashicorp/random"
+}
+`), 0o644)
+
+					if err != nil {
+						return err
+					}
+
+					return nil
+				})
+			})
+
+			It("returns a list of variables with correct types and descriptions", func() {
+				moduleDir, err := internal.SetupModule("mock-source", "")
+				Expect(err).ToNot(HaveOccurred())
+
+				variables, err := internal.GetVariablesFromModule("mock-source", moduleDir, "")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(variables).To(HaveLen(6))
+
+				Expect(variables[0].Name).To(Equal("example_var"))
+				Expect(variables[0].Type).To(Equal("string"))
+				Expect(variables[0].Description).To(Equal("An example variable"))
+
+				Expect(variables[1].Name).To(Equal("complex_var"))
+				Expect(variables[1].Type).To(Equal("list(map(string))"))
+				Expect(variables[1].Description).To(Equal("A complex variable"))
+
+				Expect(variables[2].Name).To(Equal("number_var"))
+				Expect(variables[2].Type).To(Equal("number"))
+				Expect(variables[2].Default).To(BeAssignableToTypeOf(float64(0)))
+				numberVarDefault, ok := variables[2].Default.(float64)
+				Expect(ok).To(BeTrue())
+				Expect(numberVarDefault).To(Equal(10.0))
+				Expect(variables[2].Description).To(BeEmpty())
+
+				Expect(variables[3].Name).To(Equal("bool_var"))
+				Expect(variables[3].Type).To(Equal("bool"))
+				Expect(variables[3].Description).To(BeEmpty())
+
+				Expect(variables[4].Name).To(Equal("list_string_var"))
+				Expect(variables[4].Type).To(Equal("list(string)"))
+				Expect(variables[4].Default).To(BeAssignableToTypeOf([]string{"stringValue"}))
+				listStringVarDefault, ok := variables[4].Default.([]string)
+				Expect(ok).To(BeTrue())
+				Expect(listStringVarDefault).To(Equal([]string{"stringValue"}))
+				Expect(variables[4].Description).To(BeEmpty())
+
+				Expect(variables[5].Name).To(Equal("list_object_var"))
+				Expect(variables[5].Type).To(Equal("list(map(string))"))
+				Expect(variables[5].Default).To(BeAssignableToTypeOf([]any{}))
+				listObjectVarDefault, ok := variables[5].Default.([]any)
+				Expect(ok).To(BeTrue())
+				Expect(len(listObjectVarDefault)).To(Equal(1))
+				Expect(listObjectVarDefault[0]).To(BeAssignableToTypeOf(map[string]any{}))
+				listObjectVarDefaultObj, ok := listObjectVarDefault[0].(map[string]any)
+				Expect(ok).To(BeTrue())
+				Expect(listObjectVarDefaultObj).To(Equal(map[string]any{"key1": "value1", "key2": float64(100)}))
+				Expect(variables[5].Description).To(BeEmpty())
+			})
+
+			Context("when the module is downloaded but variable parsing fails", func() {
+				It("errors", func() {
+					internal.SetTerraformInitFunc(func(dir string) error {
+						Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+						expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+						return os.WriteFile(variablesPath, []byte(`invalid hcl`), 0o644)
+					})
+
+					moduleDir, err := internal.SetupModule("mock-source", "")
+					Expect(err).ToNot(HaveOccurred())
+
+					_, err = internal.GetVariablesFromModule("mock-source", moduleDir, "")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to parse variables"))
+				})
+			})
+		})
+
+		Context("when a registry module version is provided separately", func() {
+			BeforeEach(func() {
+				internal.SetTerraformInitFunc(func(dir string) error {
+					mainContent, err := os.ReadFile(filepath.Join(tempDir, "main.tf"))
+					Expect(err).NotTo(HaveOccurred())
+					expectContent := `module "kratix_target" {
+  source = "terraform-aws-modules/iam/aws"
+  version = "6.2.3"
+}
+`
+					Expect(string(mainContent)).To(Equal(expectContent))
+
+					variablesPath := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "variables.tf")
+					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+					Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+					return os.WriteFile(variablesPath, []byte(`
+variable "example_var" {
+  type        = string
+}
+`), 0o644)
+				})
+			})
+
+			It("adds the version to the terraform config", func() {
+				moduleDir, err := internal.SetupModule("terraform-aws-modules/iam/aws", "6.2.3")
+				Expect(err).ToNot(HaveOccurred())
+				variables, err := internal.GetVariablesFromModule("terraform-aws-modules/iam/aws", moduleDir, "6.2.3")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(variables).To(HaveLen(1))
+				Expect(variables[0].Name).To(Equal("example_var"))
+			})
+		})
+
+		Context("when the variables.tf file is not at the root of the module", func() {
+			BeforeEach(func() {
+				expectDir := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "subdir")
+				variablesPath = filepath.Join(expectDir, "variables.tf")
+				internal.SetTerraformInitFunc(func(dir string) error {
+					mainContent, err := os.ReadFile(filepath.Join(tempDir, "main.tf"))
+					Expect(err).NotTo(HaveOccurred())
+					expectContent := `module "kratix_target" {
+  source = "git::mock-source.git//subdir?ref=v1.0.0"
+}
+`
+					Expect(string(mainContent)).To(Equal(expectContent))
+
+					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), expectDir)
+					Expect(os.MkdirAll(expectDir, 0o755)).To(Succeed())
+					return os.WriteFile(variablesPath, []byte(`
+variable "example_var" {
+  type        = string
+  description = "An example variable"
+}
+
+variable "complex_var" {
+  type        = list(map(string))
+  description = "A complex variable"
+}
+
+variable "number_var" {
+  type        = number
+}
+
+variable "bool_var" {
+  type        = bool
+}
+`), 0o644)
+				})
+				moduleDir, err := internal.SetupModule("mock-source", "")
+				Expect(err).ToNot(HaveOccurred())
+				variables, err := internal.GetVariablesFromModule("git::mock-source.git//subdir?ref=v1.0.0", moduleDir, "")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(variables).To(HaveLen(4))
+
+				Expect(variables[0].Name).To(Equal("example_var"))
+				Expect(variables[0].Type).To(Equal("string"))
+				Expect(variables[0].Description).To(Equal("An example variable"))
+
+				Expect(variables[1].Name).To(Equal("complex_var"))
+				Expect(variables[1].Type).To(Equal("list(map(string))"))
+				Expect(variables[1].Description).To(Equal("A complex variable"))
+
+				Expect(variables[2].Name).To(Equal("number_var"))
+				Expect(variables[2].Type).To(Equal("number"))
+				Expect(variables[2].Description).To(BeEmpty())
+
+				Expect(variables[3].Name).To(Equal("bool_var"))
+				Expect(variables[3].Type).To(Equal("bool"))
+				Expect(variables[3].Description).To(BeEmpty())
+			})
+		})
+	})
+
+	Describe("#GetVersionsAndProvidersFromModule", func() {
 		BeforeEach(func() {
 			internal.SetTerraformInitFunc(func(dir string) error {
 				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
@@ -108,56 +423,7 @@ provider "random" {
 			})
 		})
 
-		It("returns a list of variables with correct types and descriptions", func() {
-			moduleDir, err := internal.SetupModule("mock-source", "")
-			Expect(err).ToNot(HaveOccurred())
-
-			variables, err := internal.GetVariablesFromModule("mock-source", moduleDir, "")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(variables).To(HaveLen(6))
-
-			Expect(variables[0].Name).To(Equal("example_var"))
-			Expect(variables[0].Type).To(Equal("string"))
-			Expect(variables[0].Description).To(Equal("An example variable"))
-
-			Expect(variables[1].Name).To(Equal("complex_var"))
-			Expect(variables[1].Type).To(Equal("list(map(string))"))
-			Expect(variables[1].Description).To(Equal("A complex variable"))
-
-			Expect(variables[2].Name).To(Equal("number_var"))
-			Expect(variables[2].Type).To(Equal("number"))
-			Expect(variables[2].Default).To(BeAssignableToTypeOf(float64(0)))
-			numberVarDefault, ok := variables[2].Default.(float64)
-			Expect(ok).To(BeTrue())
-			Expect(numberVarDefault).To(Equal(10.0))
-			Expect(variables[2].Description).To(BeEmpty())
-
-			Expect(variables[3].Name).To(Equal("bool_var"))
-			Expect(variables[3].Type).To(Equal("bool"))
-			Expect(variables[3].Description).To(BeEmpty())
-
-			Expect(variables[4].Name).To(Equal("list_string_var"))
-			Expect(variables[4].Type).To(Equal("list(string)"))
-			Expect(variables[4].Default).To(BeAssignableToTypeOf([]string{"stringValue"}))
-			listStringVarDefault, ok := variables[4].Default.([]string)
-			Expect(ok).To(BeTrue())
-			Expect(listStringVarDefault).To(Equal([]string{"stringValue"}))
-			Expect(variables[4].Description).To(BeEmpty())
-
-			Expect(variables[5].Name).To(Equal("list_object_var"))
-			Expect(variables[5].Type).To(Equal("list(map(string))"))
-			Expect(variables[5].Default).To(BeAssignableToTypeOf([]any{}))
-			listObjectVarDefault, ok := variables[5].Default.([]any)
-			Expect(ok).To(BeTrue())
-			Expect(len(listObjectVarDefault)).To(Equal(1))
-			Expect(listObjectVarDefault[0]).To(BeAssignableToTypeOf(map[string]any{}))
-			listObjectVarDefaultObj, ok := listObjectVarDefault[0].(map[string]any)
-			Expect(ok).To(BeTrue())
-			Expect(listObjectVarDefaultObj).To(Equal(map[string]any{"key1": "value1", "key2": float64(100)}))
-			Expect(variables[5].Description).To(BeEmpty())
-		})
-
-		When("a versions.tf file exists in the module", func() {
+		When("a versions.tf file exists in the module and no providers.tf file exists", func() {
 			It("returns the versions", func() {
 				versionSchema := &hcl.BodySchema{
 					Blocks: []hcl.BlockHeaderSchema{
@@ -201,7 +467,7 @@ provider "random" {
 			})
 		})
 
-		When("neither of the default module provider files cannot be found", func() {
+		When("neither of the default module provider files can be found", func() {
 			BeforeEach(func() {
 				internal.SetTerraformInitFunc(func(dir string) error {
 					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
@@ -210,13 +476,30 @@ provider "random" {
 			})
 
 			It("returns a nil version and empty list of providers", func() {
-
+				moduleDir, err := internal.SetupModule("mock-source", "")
+				Expect(err).ToNot(HaveOccurred())
+				versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(versions).To(BeNil())
+				Expect(providers).To(BeEmpty())
 			})
 		})
 
 		When("there are user-defined module provider files", func() {
 			When("one of the user-specified module provider cannot be found", func() {
-				It("raises and error", func() {
+				BeforeEach(func() {
+					internal.SetTerraformInitFunc(func(dir string) error {
+						providerPath := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "another-provider.tf")
+						expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+						Expect(os.MkdirAll(filepath.Dir(providerPath), 0o755)).To(Succeed())
+						return os.WriteFile(providerPath, []byte(`
+	provider "random" {
+		source  = "hashicorp/random"
+	}
+	`), 0o644)
+					})
+				})
+				It("raises an error", func() {
 					moduleDir, err := internal.SetupModule("mock-source", "")
 					Expect(err).ToNot(HaveOccurred())
 					_, _, err = internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{"non-existent.tf"})
@@ -286,150 +569,6 @@ provider "random" {
 					Expect(region_val.AsString()).To(Equal("hashicorp/random"))
 				})
 			})
-		})
-	})
-
-	// When("there are no user-provider files", func() {
-	// versionSchema := &hcl.BodySchema{
-	// 	Blocks: []hcl.BlockHeaderSchema{
-	// 		{Type: "required_providers"},
-	// 	},
-	// }
-	// moduleDir, err := internal.SetupModule("mock-source", "")
-	// Expect(err).ToNot(HaveOccurred())
-	// versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
-	// Expect(err).ToNot(HaveOccurred())
-
-	// })
-	// When("either of the default module provider files cannot be found", func() {
-	// versionSchema := &hcl.BodySchema{
-	// 	Blocks: []hcl.BlockHeaderSchema{
-	// 		{Type: "required_providers"},
-	// 	},
-	// }
-	// moduleDir, err := internal.SetupModule("mock-source", "")
-	// Expect(err).ToNot(HaveOccurred())
-	// versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
-	// Expect(err).ToNot(HaveOccurred())
-	// })
-
-	Context("when the variables.tf file is not at the root of the module", func() {
-		BeforeEach(func() {
-			expectDir := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "subdir")
-			variablesPath = filepath.Join(expectDir, "variables.tf")
-			internal.SetTerraformInitFunc(func(dir string) error {
-				mainContent, err := os.ReadFile(filepath.Join(tempDir, "main.tf"))
-				Expect(err).NotTo(HaveOccurred())
-				expectContent := `module "kratix_target" {
-  source = "git::mock-source.git//subdir?ref=v1.0.0"
-}
-`
-				Expect(string(mainContent)).To(Equal(expectContent))
-
-				expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), expectDir)
-				Expect(os.MkdirAll(expectDir, 0o755)).To(Succeed())
-				return os.WriteFile(variablesPath, []byte(`
-variable "example_var" {
-  type        = string
-  description = "An example variable"
-}
-
-variable "complex_var" {
-  type        = list(map(string))
-  description = "A complex variable"
-}
-
-variable "number_var" {
-  type        = number
-}
-
-variable "bool_var" {
-  type        = bool
-}
-`), 0o644)
-			})
-			moduleDir, err := internal.SetupModule("mock-source", "")
-			Expect(err).ToNot(HaveOccurred())
-			variables, err := internal.GetVariablesFromModule("git::mock-source.git//subdir?ref=v1.0.0", moduleDir, "")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(variables).To(HaveLen(4))
-
-			Expect(variables[0].Name).To(Equal("example_var"))
-			Expect(variables[0].Type).To(Equal("string"))
-			Expect(variables[0].Description).To(Equal("An example variable"))
-
-			Expect(variables[1].Name).To(Equal("complex_var"))
-			Expect(variables[1].Type).To(Equal("list(map(string))"))
-			Expect(variables[1].Description).To(Equal("A complex variable"))
-
-			Expect(variables[2].Name).To(Equal("number_var"))
-			Expect(variables[2].Type).To(Equal("number"))
-			Expect(variables[2].Description).To(BeEmpty())
-
-			Expect(variables[3].Name).To(Equal("bool_var"))
-			Expect(variables[3].Type).To(Equal("bool"))
-			Expect(variables[3].Description).To(BeEmpty())
-		})
-	})
-
-	Context("when a registry module version is provided separately", func() {
-		BeforeEach(func() {
-			internal.SetTerraformInitFunc(func(dir string) error {
-				mainContent, err := os.ReadFile(filepath.Join(tempDir, "main.tf"))
-				Expect(err).NotTo(HaveOccurred())
-				expectContent := `module "kratix_target" {
-  source = "terraform-aws-modules/iam/aws"
-  version = "6.2.3"
-}
-`
-				Expect(string(mainContent)).To(Equal(expectContent))
-
-				variablesPath := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "variables.tf")
-				expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
-				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
-				return os.WriteFile(variablesPath, []byte(`
-variable "example_var" {
-  type        = string
-}
-`), 0o644)
-			})
-		})
-
-		It("adds the version to the terraform config", func() {
-			moduleDir, err := internal.SetupModule("terraform-aws-modules/iam/aws", "6.2.3")
-			Expect(err).ToNot(HaveOccurred())
-			variables, err := internal.GetVariablesFromModule("terraform-aws-modules/iam/aws", moduleDir, "6.2.3")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(variables).To(HaveLen(1))
-			Expect(variables[0].Name).To(Equal("example_var"))
-		})
-	})
-
-	Context("when terraform init fails", func() {
-		It("errors", func() {
-			internal.SetTerraformInitFunc(func(dir string) error {
-				return errors.New("mock init failure")
-			})
-			_, err := internal.SetupModule("mock-source", "")
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to initialize terraform"))
-		})
-	})
-
-	Context("when the module is downloaded but variable parsing fails", func() {
-		It("errors", func() {
-			internal.SetTerraformInitFunc(func(dir string) error {
-				Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
-				expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
-				return os.WriteFile(variablesPath, []byte(`invalid hcl`), 0o644)
-			})
-
-			moduleDir, err := internal.SetupModule("mock-source", "")
-			Expect(err).ToNot(HaveOccurred())
-
-			_, err = internal.GetVariablesFromModule("mock-source", moduleDir, "")
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to parse variables"))
 		})
 	})
 })

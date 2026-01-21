@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix-cli/internal"
@@ -86,7 +87,8 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Error: failed to setup module : %s\n", err)
 		return nil
 	}
-	// defer os.RemoveAll(tempDir)
+
+	defer os.RemoveAll(moduleDir)
 
 	variables, err := internal.GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion)
 	if err != nil {

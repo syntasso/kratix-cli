@@ -29,13 +29,11 @@ var (
 	defaultProviderFilenames                                           = []string{"versions.tf", "providers.tf"}
 )
 
-// TODO Add test coverage for this
 func SetupModule(moduleSource, moduleRegistryVersion string) (string, error) {
 	tempDir, err := mkdirTemp("", "terraform-module")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	// defer os.RemoveAll(tempDir)
 
 	if err := writeTerraformModuleConfig(tempDir, moduleSource, moduleRegistryVersion); err != nil {
 		return "", err
