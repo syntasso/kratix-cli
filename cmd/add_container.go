@@ -83,7 +83,7 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := generateWorkflow(containerArgs, containerName, image, false); err != nil {
+	if err := generateWorkflow(containerArgs, containerName, image, "", false); err != nil {
 		return err
 	}
 
@@ -93,7 +93,11 @@ func AddContainer(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateWorkflow(c *pipelineutils.PipelineCmdArgs, containerName, image string, overwrite bool) error {
+func generateWorkflow(c *pipelineutils.PipelineCmdArgs, containerName, image, promiseDir string, overwrite bool) error {
+	if promiseDir == "" {
+		promiseDir = dir
+	}
+
 	if c.Lifecycle != "promise" && c.Lifecycle != "resource" {
 		return fmt.Errorf("invalid lifecycle: %s, expected one of: promise, resource", c.Lifecycle)
 	}
@@ -114,13 +118,13 @@ func generateWorkflow(c *pipelineutils.PipelineCmdArgs, containerName, image str
 	workflowPath := filepath.Join("workflows", c.Lifecycle, c.Action)
 	var promise v1alpha1.Promise
 
-	splitFiles := filesGeneratedWithSplit(dir)
+	splitFiles := filesGeneratedWithSplit(promiseDir)
 
 	var filePath string
 	if splitFiles {
-		filePath = filepath.Join(dir, workflowPath, "workflow.yaml")
+		filePath = filepath.Join(promiseDir, workflowPath, "workflow.yaml")
 	} else {
-		filePath = filepath.Join(dir, "promise.yaml")
+		filePath = filepath.Join(promiseDir, "promise.yaml")
 	}
 
 	var pipelines []v1alpha1.Pipeline
@@ -212,7 +216,7 @@ func generateWorkflow(c *pipelineutils.PipelineCmdArgs, containerName, image str
 			return err
 		}
 	}
-	if err := generatePipelineDirFiles(dir, workflowPath, c.Pipeline, containerName, language); err != nil {
+	if err := generatePipelineDirFiles(promiseDir, workflowPath, c.Pipeline, containerName, language); err != nil {
 		return err
 	}
 

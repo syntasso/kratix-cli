@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
+	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
 	"github.com/syntasso/kratix-cli/internal"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -56,8 +60,8 @@ To pull modules from private registries, ensure your system is logged in to the 
 		Args: cobra.ExactArgs(1),
 	}
 
-	moduleSource, moduleRegistryVersion string
-	moduleProviders                     []string
+	moduleSource, moduleRegistryVersion, dependenciesWorkflowPath string
+	moduleProviders                                               []string
 )
 
 func init() {
@@ -96,14 +100,14 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// _, _, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion.moduleProviders)
-	// if err != nil {
-	// 	fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)
-	// 	return nil
-	// }
+	// versions, providers, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion, moduleProviders)
+	versionProviderFilepaths, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion, moduleProviders)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return nil
+	}
 
 	crdSpecSchema, warnings := internal.VariablesToCRDSpecSchema(variables)
-
 	for _, warning := range warnings {
 		fmt.Println(warning)
 	}
@@ -120,12 +124,22 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	var promiseConfigure string
+	// if versions != nil || len(providers) != 0 {
+	if len(versionProviderFilepaths) > 1 {
+		promiseConfigure, err = generateTerraformModulePromiseConfigurePipeline()
+		if err != nil {
+			fmt.Printf("Error: failed to generate promise configure pipelines: %s\n", err)
+			return nil
+		}
+	}
+
 	promiseName := args[0]
 	extraFlags := fmt.Sprintf("--module-source %s", moduleSource)
 	if moduleRegistryVersion != "" {
 		extraFlags = fmt.Sprintf("%s --module-registry-version %s", extraFlags, moduleRegistryVersion)
 	}
-	templateValues, err := generateTemplateValues(promiseName, "tf-module-promise", extraFlags, resourceConfigure, string(crdSchema))
+	templateValues, err := generateTemplateValues(promiseName, "tf-module-promise", extraFlags, resourceConfigure, promiseConfigure, string(crdSchema))
 	if err != nil {
 		fmt.Printf("Error: failed to generate template values: %s\n", err)
 		return nil
@@ -148,6 +162,12 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	err = templateFiles(promiseTemplates, outputDir, templates, templateValues)
 	if err != nil {
 		fmt.Printf("Error: failed to template files: %s\n", err)
+		return nil
+	}
+
+	err = writeDependencyFiles(versionProviderFilepaths)
+	if err != nil {
+		fmt.Printf("error writing promise dependencies: %s\n", err)
 		return nil
 	}
 
@@ -194,5 +214,73 @@ func generateTerraformModuleResourceConfigurePipeline(moduleRegistryVersion stri
 	if err != nil {
 		return "", err
 	}
-	return string(pipelineBytes), nil
+	return strings.TrimSuffix(string(pipelineBytes), "\n"), nil
+}
+
+func generateTerraformModulePromiseConfigurePipeline() (string, error) {
+	pipelines := []unstructured.Unstructured{
+		{
+			Object: map[string]any{
+				"apiVersion": "platform.kratix.io/v1alpha1",
+				"kind":       "Pipeline",
+				"metadata": map[string]any{
+					"name": "dependencies",
+				},
+				"spec": map[string]any{
+					"containers": []any{
+						v1alpha1.Container{
+							Name:  "add-tf-dependencies",
+							Image: "my-registry.io/my-org/kratix/terraform-dependencies:v0.0.1",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pipelineBytes, err := yaml.Marshal(pipelines)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSuffix(string(pipelineBytes), "\n"), nil
+}
+
+// func writeDependencyFiles(dependenciesDir string, versions *hcl.Block, providers []*hcl.Block) error {
+func writeDependencyFiles(versionProviderFilepaths []string) error {
+	pipelineCmdArgs := &pipelineutils.PipelineCmdArgs{
+		Lifecycle: "promise",
+		Action:    "configure",
+		Pipeline:  "dependencies",
+	}
+
+	containerName := "add-tf-dependencies"
+	containerImage := "my-registry.io/my-org/kratix/terraform-dependencies:v0.0.1"
+
+	err := generateWorkflow(pipelineCmdArgs, containerName, containerImage, outputDir, true)
+	if err != nil {
+		// todo: fix error
+		return fmt.Errorf("error generating workflows for %s/%s/%s: %s DIR: %s OUTPUT_DIR %s", pipelineCmdArgs.Lifecycle, pipelineCmdArgs.Action, pipelineCmdArgs.Pipeline, err, dir, outputDir)
+	}
+
+	resourcesDir := filepath.Join(dir, "workflows", pipelineCmdArgs.Lifecycle, pipelineCmdArgs.Action, pipelineCmdArgs.Pipeline, containerName, "resources")
+	for _, providerFilepath := range versionProviderFilepaths {
+		sourceFile, err := os.Open(providerFilepath)
+		if err != nil {
+			return fmt.Errorf("error opening provider file: %s", err)
+		}
+		defer sourceFile.Close()
+
+		baseFileName := filepath.Base(providerFilepath)
+		destFile, err := os.Create(filepath.Join(outputDir, resourcesDir, baseFileName))
+		if err != nil {
+			return fmt.Errorf("error creating provider file: %s", err)
+		}
+		defer destFile.Close()
+
+		_, err = io.Copy(destFile, sourceFile)
+		if err != nil {
+			return fmt.Errorf("error copying provider file: %s", err)
+		}
+	}
+	return nil
 }

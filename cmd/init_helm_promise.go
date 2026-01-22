@@ -53,7 +53,7 @@ func InitHelmPromise(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	templateValues, err := generateTemplateValues(promiseName, "helm-promise", flags(), resourceConfigure, crdSchema)
+	templateValues, err := generateTemplateValues(promiseName, "helm-promise", flags(), resourceConfigure, "[]", crdSchema)
 	if err != nil {
 		return err
 	}

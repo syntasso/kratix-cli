@@ -61,18 +61,22 @@ func GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion strin
 	return variables, nil
 }
 
-func GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion string, moduleProviderFilenames []string) (version *hcl.Block, providers []*hcl.Block, err error) {
+// func GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion string, moduleProviderFilenames []string) (versions *hcl.Block, providers []*hcl.Block, err error) {
+func GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion string, moduleProviderFilenames []string) (filepaths []string, err error) {
 	providerFilepaths, err := fetchModuleProviders(moduleDir, moduleProviderFilenames)
 	if err != nil {
-		return nil, nil, err
+		// return nil, nil, err
+		return nil, err
 	}
 
-	version, providers, err = extractVersionsAndProvidersFromFiles(providerFilepaths)
+	_, _, err = extractVersionsAndProvidersFromFiles(providerFilepaths)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse versions: %w", err)
+		// return nil, nil, fmt.Errorf("failed to parse versions: %w", err)
+		return nil, fmt.Errorf("failed to parse versions: %w", err)
 	}
-
-	return version, providers, nil
+	// we have validate the files for required_providers and providers block we can return their paths
+	// return versions, providers, nil
+	return providerFilepaths, err
 }
 
 func fetchModuleProviders(moduleDir string, moduleProviderFilenames []string) ([]string, error) {
@@ -94,6 +98,31 @@ func fetchModuleProviders(moduleDir string, moduleProviderFilenames []string) ([
 		}
 	}
 	return versionProviderFilepaths, nil
+}
+
+func extractVersionsAndProvidersFromFiles(filePaths []string) (version *hcl.Block, providers []*hcl.Block, err error) {
+	var versionProviderBlocks []*hcl.Block
+
+	for _, path := range filePaths {
+		blocks, err := parseHCLVersionsAndProviders(path)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		versionProviderBlocks = append(versionProviderBlocks, blocks...)
+	}
+
+	for _, block := range versionProviderBlocks {
+		if block.Type == "terraform" {
+			version = block
+		}
+
+		if block.Type == "provider" {
+			providers = append(providers, block)
+		}
+	}
+
+	return version, providers, nil
 }
 
 func writeTerraformModuleConfig(workDir, moduleSource, moduleRegistryVersion string) error {
@@ -175,31 +204,6 @@ func extractVariablesFromVarsFile(filePath string) ([]TerraformVariable, error) 
 	}
 
 	return extractVariables(blocks, fileContent), nil
-}
-
-func extractVersionsAndProvidersFromFiles(filePaths []string) (version *hcl.Block, providers []*hcl.Block, err error) {
-	var versionProviderBlocks []*hcl.Block
-
-	for _, path := range filePaths {
-		blocks, err := parseHCLVersionsAndProviders(path)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		versionProviderBlocks = append(versionProviderBlocks, blocks...)
-	}
-
-	for _, block := range versionProviderBlocks {
-		if block.Type == "terraform" {
-			version = block
-		}
-
-		if block.Type == "provider" {
-			providers = append(providers, block)
-		}
-	}
-
-	return version, providers, nil
 }
 
 func readFileContent(filePath string) (string, error) {

@@ -6,6 +6,6 @@
     containers:
     - env:
       - name: MODULE_SOURCE
-        value: git::https://github.com/GoogleCloudPlatform/terraform-google-cloud-run?ref=v0.16.4
+        value: git::https://github.com/syntasso/terraform-google-cloud-run?ref=v0.16.4
       image: ghcr.io/syntasso/kratix-cli/terraform-generate:v0.4.0
       name: terraform-generate

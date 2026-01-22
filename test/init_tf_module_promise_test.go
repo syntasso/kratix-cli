@@ -15,11 +15,13 @@ var _ = Describe("InitTerraformPromise", func() {
 	var r *runner
 	var workingDir string
 	var initPromiseCmd []string
+	var dependenciesWorkflowPath string
 	var session *gexec.Session
 
 	BeforeEach(func() {
 		var err error
 		workingDir, err = os.MkdirTemp("", "kratix-test")
+		dependenciesWorkflowPath = filepath.Join(workingDir, "workflows", "promise", "configure", "dependencies", "add-tf-dependencies")
 		Expect(err).NotTo(HaveOccurred())
 		r = &runner{exitCode: 0}
 		r.flags = map[string]string{
@@ -27,13 +29,13 @@ var _ = Describe("InitTerraformPromise", func() {
 			"--kind":          "GoogleCloudRun",
 			"--version":       "v2",
 			"--dir":           workingDir,
-			"--module-source": "git::https://github.com/GoogleCloudPlatform/terraform-google-cloud-run?ref=v0.16.4",
+			"--module-source": "git::https://github.com/syntasso/terraform-google-cloud-run?ref=v0.16.4",
 		}
 		initPromiseCmd = []string{"init", "tf-module-promise", "googlecloudrun"}
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(workingDir)).To(Succeed())
+		// Expect(os.RemoveAll(workingDir)).To(Succeed())
 	})
 
 	When("called without required flags", func() {
@@ -67,18 +69,24 @@ var _ = Describe("InitTerraformPromise", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("generates the expected files", func() {
-				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
+			FIt("generates the expected files", func() {
+				files := []string{"promise.yaml", "example-resource.yaml", "README.md", "workflows"}
 				Expect(generatedFiles).To(ConsistOf(files))
 				Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/terraform/expected-output/promise.yaml")))
 				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/terraform/expected-output/example-resource.yaml")))
 				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output/README.md")))
+				Expect(cat(filepath.Join(dependenciesWorkflowPath, "Dockerfile"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/Dockerfile")))
+				Expect(cat(filepath.Join(dependenciesWorkflowPath, "resources", "providers.tf"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/providers.tf")))
+				// todo this is not producing the content we want
+				Expect(cat(filepath.Join(dependenciesWorkflowPath, "scripts", "pipeline.sh"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/pipeline.sh")))
+
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
 				))
 			})
 		})
 
+		//TODO - update
 		Describe("with the --split flag", func() {
 			BeforeEach(func() {
 				r.flags["--split"] = ""
