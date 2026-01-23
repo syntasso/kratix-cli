@@ -37,6 +37,7 @@ To pull modules from private registries, ensure your system is logged in to the 
   # Initialize a Promise from a Terraform Module in git with a specific path
   kratix init tf-module-promise gateway \
   	--module-source "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric.git//modules/api-gateway?ref=v44.1.0" \
+	--module-providers "versions.tf,providers.tf" \
   	--group syntasso.io \
 	--kind Gateway \
 	--version v1alpha1 
@@ -60,8 +61,8 @@ To pull modules from private registries, ensure your system is logged in to the 
 		Args: cobra.ExactArgs(1),
 	}
 
-	moduleSource, moduleRegistryVersion, dependenciesWorkflowPath string
-	moduleProviders                                               []string
+	moduleSource, moduleRegistryVersion string
+	moduleProviders                     []string
 )
 
 func init() {
@@ -91,7 +92,6 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Error: failed to setup module : %s\n", err)
 		return nil
 	}
-
 	defer os.RemoveAll(moduleDir)
 
 	variables, err := internal.GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion)
@@ -100,7 +100,6 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// versions, providers, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion, moduleProviders)
 	versionProviderFilepaths, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion, moduleProviders)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
@@ -125,7 +124,6 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	}
 
 	var promiseConfigure string
-	// if versions != nil || len(providers) != 0 {
 	if len(versionProviderFilepaths) > 1 {
 		promiseConfigure, err = generateTerraformModulePromiseConfigurePipeline()
 		if err != nil {
@@ -245,7 +243,6 @@ func generateTerraformModulePromiseConfigurePipeline() (string, error) {
 	return strings.TrimSuffix(string(pipelineBytes), "\n"), nil
 }
 
-// func writeDependencyFiles(dependenciesDir string, versions *hcl.Block, providers []*hcl.Block) error {
 func writeDependencyFiles(versionProviderFilepaths []string) error {
 	pipelineCmdArgs := &pipelineutils.PipelineCmdArgs{
 		Lifecycle: "promise",
@@ -258,11 +255,11 @@ func writeDependencyFiles(versionProviderFilepaths []string) error {
 
 	err := generateWorkflow(pipelineCmdArgs, containerName, containerImage, outputDir, true)
 	if err != nil {
-		// todo: fix error
-		return fmt.Errorf("error generating workflows for %s/%s/%s: %s DIR: %s OUTPUT_DIR %s", pipelineCmdArgs.Lifecycle, pipelineCmdArgs.Action, pipelineCmdArgs.Pipeline, err, dir, outputDir)
+		return fmt.Errorf("error generating workflows for %s/%s/%s: %s", pipelineCmdArgs.Lifecycle, pipelineCmdArgs.Action, pipelineCmdArgs.Pipeline, err)
 	}
 
-	resourcesDir := filepath.Join(dir, "workflows", pipelineCmdArgs.Lifecycle, pipelineCmdArgs.Action, pipelineCmdArgs.Pipeline, containerName, "resources")
+	containerDir := filepath.Join(dir, "workflows", pipelineCmdArgs.Lifecycle, pipelineCmdArgs.Action, pipelineCmdArgs.Pipeline, containerName)
+	resourcesDir := filepath.Join(containerDir, "resources")
 	for _, providerFilepath := range versionProviderFilepaths {
 		sourceFile, err := os.Open(providerFilepath)
 		if err != nil {
@@ -282,5 +279,16 @@ func writeDependencyFiles(versionProviderFilepaths []string) error {
 			return fmt.Errorf("error copying provider file: %s", err)
 		}
 	}
+
+	scriptsDir := filepath.Join(containerDir, "scripts")
+	pipelineScriptContent := "#!/usr/bin/env sh\n\ncp /resources/* /kratix/output"
+	if err := os.WriteFile(filepath.Join(outputDir, scriptsDir, "pipeline.sh"), []byte(pipelineScriptContent), filePerm); err != nil {
+		return err
+	}
+
+	fmt.Println("Dependencies added as a Promise workflow.")
+	fmt.Println("Run the following command to build the dependencies image:")
+	fmt.Printf("\n  docker build -t %s %s\n\n", image, containerDir)
+	fmt.Println("Don't forget to push the image to a registry!")
 	return nil
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hashicorp/hcl/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -424,46 +423,13 @@ provider "random" {
 		})
 
 		When("a versions.tf file exists in the module and no providers.tf file exists", func() {
-			It("returns the versions", func() {
-				versionSchema := &hcl.BodySchema{
-					Blocks: []hcl.BlockHeaderSchema{
-						{Type: "required_providers"},
-					},
-				}
+			It("returns the versions.tf filepath", func() {
 				moduleDir, err := internal.SetupModule("mock-source", "")
 				Expect(err).ToNot(HaveOccurred())
-				versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
+				providerFilePaths, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(versions.Type).To(Equal("terraform"))
-				content, _ := versions.Body.Content(versionSchema)
-				Expect(content.Blocks).To(HaveLen(1))
-				Expect(content.Blocks[0].Type).To(Equal("required_providers"))
-
-				attributes, _ := content.Blocks[0].Body.JustAttributes()
-				Expect(attributes).To(HaveLen(1))
-				awsAttribute, ok := attributes["aws"]
-				Expect(ok).To(BeTrue())
-				val, _ := awsAttribute.Expr.Value(&hcl.EvalContext{})
-				Expect(val.Type().HasAttribute("version")).To(BeTrue())
-				Expect(val.GetAttr("version").AsString()).To(Equal("~> 6.0"))
-
-				Expect(providers).To(HaveLen(2))
-				Expect(providers[0].Type).To(Equal("provider"))
-				provider_1_attributes, _ := providers[0].Body.JustAttributes()
-				Expect(provider_1_attributes).To(HaveLen(1))
-
-				region, ok := provider_1_attributes["region"]
-				Expect(ok).To(BeTrue())
-				region_val, _ := region.Expr.Value(&hcl.EvalContext{})
-				Expect(region_val.AsString()).To(Equal("us-east-1"))
-
-				provider_2_attributes, _ := providers[1].Body.JustAttributes()
-				Expect(provider_2_attributes).To(HaveLen(1))
-
-				source, ok := provider_2_attributes["source"]
-				Expect(ok).To(BeTrue())
-				source_val, _ := source.Expr.Value(&hcl.EvalContext{})
-				Expect(source_val.AsString()).To(Equal("hashicorp/random"))
+				Expect(providerFilePaths).To(HaveLen(1))
+				Expect(providerFilePaths[0]).To(Equal(versionsPath))
 			})
 		})
 
@@ -478,10 +444,9 @@ provider "random" {
 			It("returns a nil version and empty list of providers", func() {
 				moduleDir, err := internal.SetupModule("mock-source", "")
 				Expect(err).ToNot(HaveOccurred())
-				versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
+				providerFilePaths, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(versions).To(BeNil())
-				Expect(providers).To(BeEmpty())
+				Expect(providerFilePaths).To(BeEmpty())
 			})
 		})
 
@@ -502,16 +467,17 @@ provider "random" {
 				It("raises an error", func() {
 					moduleDir, err := internal.SetupModule("mock-source", "")
 					Expect(err).ToNot(HaveOccurred())
-					_, _, err = internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{"non-existent.tf"})
+					_, err = internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{"non-existent.tf"})
 					Expect(err).To(MatchError(ContainSubstring("unable to fetch provider file \"non-existent.tf\"")))
 				})
 			})
 
 			When("the user-defined module provider files can be found", func() {
+				var providerPath, versionsPath string
 				BeforeEach(func() {
 					internal.SetTerraformInitFunc(func(dir string) error {
-						providerPath := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "another-provider.tf")
-						versionsPath := filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "more-versions.tf")
+						providerPath = filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "another-provider.tf")
+						versionsPath = filepath.Join(tempDir, ".terraform", "modules", "kratix_target", "more-versions.tf")
 						expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
 						Expect(os.MkdirAll(filepath.Dir(providerPath), 0o755)).To(Succeed())
 						Expect(os.MkdirAll(filepath.Dir(versionsPath), 0o755)).To(Succeed())
@@ -544,29 +510,12 @@ provider "random" {
 				})
 
 				It("returns the version and providers", func() {
-					versionSchema := &hcl.BodySchema{
-						Blocks: []hcl.BlockHeaderSchema{
-							{Type: "required_providers"},
-						},
-					}
 					moduleDir, err := internal.SetupModule("mock-source", "")
 					Expect(err).ToNot(HaveOccurred())
-					versions, providers, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{"another-provider.tf", "more-versions.tf"})
-					Expect(err).ToNot(HaveOccurred())
-					Expect(versions.Type).To(Equal("terraform"))
-					content, _ := versions.Body.Content(versionSchema)
-					Expect(content.Blocks).To(HaveLen(1))
-					Expect(content.Blocks[0].Type).To(Equal("required_providers"))
+					providerFilePaths, err := internal.GetVersionsAndProvidersFromModule("mock-source", moduleDir, "", []string{"another-provider.tf", "more-versions.tf"})
+					Expect(providerFilePaths).To(HaveLen(2))
+					Expect(providerFilePaths).To(ConsistOf(providerPath, versionsPath))
 
-					Expect(providers).To(HaveLen(1))
-					Expect(providers[0].Type).To(Equal("provider"))
-					provider, _ := providers[0].Body.JustAttributes()
-					Expect(provider).To(HaveLen(1))
-
-					region, ok := provider["source"]
-					Expect(ok).To(BeTrue())
-					region_val, _ := region.Expr.Value(&hcl.EvalContext{})
-					Expect(region_val.AsString()).To(Equal("hashicorp/random"))
 				})
 			})
 		})

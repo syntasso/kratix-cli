@@ -35,7 +35,7 @@ var _ = Describe("InitTerraformPromise", func() {
 	})
 
 	AfterEach(func() {
-		// Expect(os.RemoveAll(workingDir)).To(Succeed())
+		Expect(os.RemoveAll(workingDir)).To(Succeed())
 	})
 
 	When("called without required flags", func() {
@@ -69,7 +69,7 @@ var _ = Describe("InitTerraformPromise", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			FIt("generates the expected files", func() {
+			It("generates the expected files", func() {
 				files := []string{"promise.yaml", "example-resource.yaml", "README.md", "workflows"}
 				Expect(generatedFiles).To(ConsistOf(files))
 				Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/terraform/expected-output/promise.yaml")))
@@ -77,7 +77,6 @@ var _ = Describe("InitTerraformPromise", func() {
 				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output/README.md")))
 				Expect(cat(filepath.Join(dependenciesWorkflowPath, "Dockerfile"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/Dockerfile")))
 				Expect(cat(filepath.Join(dependenciesWorkflowPath, "resources", "providers.tf"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/providers.tf")))
-				// todo this is not producing the content we want
 				Expect(cat(filepath.Join(dependenciesWorkflowPath, "scripts", "pipeline.sh"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/pipeline.sh")))
 
 				Expect(session.Out).To(SatisfyAll(
@@ -85,14 +84,13 @@ var _ = Describe("InitTerraformPromise", func() {
 				))
 			})
 		})
-
-		//TODO - update
 		Describe("with the --split flag", func() {
 			BeforeEach(func() {
 				r.flags["--split"] = ""
 				r.timeout = time.Minute
 				session = r.run(initPromiseCmd...)
 				fileEntries, err := os.ReadDir(workingDir)
+				dependenciesWorkflowPath = filepath.Join(workingDir, "workflows", "promise", "configure", "dependencies", "add-tf-dependencies")
 				generatedFiles = []string{}
 				for _, fileEntry := range fileEntries {
 					generatedFiles = append(generatedFiles, fileEntry.Name())
@@ -106,10 +104,20 @@ var _ = Describe("InitTerraformPromise", func() {
 				actualApi := cat(filepath.Join(workingDir, "api.yaml"))
 				api := cat("assets/terraform/expected-output-with-split/api.yaml")
 				Expect(actualApi).To(Equal(api), "actual api %s\n expected api %s\n", actualApi, api)
-				Expect(cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
-				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/example-resource.yaml")))
-				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output-with-split/README.md")))
-				Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/dependencies.yaml")))
+				By("validating promise.configure files", func() {
+					Expect(cat(filepath.Join(workingDir, "workflows/promise/configure/workflow.yaml"))).To(
+						Equal(cat("assets/terraform/expected-output-with-split/workflows/promise/configure/workflow.yaml")))
+					Expect(cat(filepath.Join(dependenciesWorkflowPath, "Dockerfile"))).To(Equal(cat("assets/terraform/expected-output-with-split/workflows/promise/configure/dependencies/tf-dependencies/Dockerfile")))
+					Expect(cat(filepath.Join(dependenciesWorkflowPath, "resources", "providers.tf"))).To(Equal(cat("assets/terraform/expected-output-with-split/workflows/promise/configure/dependencies/tf-dependencies/resources/providers.tf")))
+					Expect(cat(filepath.Join(dependenciesWorkflowPath, "scripts", "pipeline.sh"))).To(Equal(cat("assets/terraform/expected-output-with-split/workflows/promise/configure/dependencies/tf-dependencies/scripts/pipeline.sh")))
+				})
+				By("validating resource.configure files", func() {
+					Expect(cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
+					Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/example-resource.yaml")))
+					Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output-with-split/README.md")))
+					Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/dependencies.yaml")))
+				})
+
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
 				))
@@ -127,6 +135,7 @@ var _ = Describe("InitTerraformPromise", func() {
 					"--module-source": "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric.git//modules/api-gateway?ref=v49.1.0",
 				}
 				vpcCmd = []string{"init", "tf-module-promise", "vpc"}
+				dependenciesWorkflowPath = filepath.Join(workingDir, "workflows", "promise", "configure", "dependencies", "add-tf-dependencies")
 				r.timeout = time.Minute
 				session = r.run(vpcCmd...)
 			})
@@ -140,8 +149,12 @@ var _ = Describe("InitTerraformPromise", func() {
 				}
 
 				// Adjust if your fixture has different files
-				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
+				files := []string{"promise.yaml", "example-resource.yaml", "README.md", "workflows"}
 				Expect(generatedFiles).To(ConsistOf(files))
+
+				Expect(filepath.Join(dependenciesWorkflowPath, "Dockerfile")).To(BeAnExistingFile())
+				Expect(filepath.Join(dependenciesWorkflowPath, "resources", "versions.tf")).To(BeAnExistingFile())
+				Expect(filepath.Join(dependenciesWorkflowPath, "scripts", "pipeline.sh")).To(BeAnExistingFile())
 
 				// Compare to prepared fixtures for this scenario
 				Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/terraform/expected-output-vpc/promise.yaml")))

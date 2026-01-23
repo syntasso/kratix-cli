@@ -61,25 +61,7 @@ func GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion strin
 	return variables, nil
 }
 
-// func GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion string, moduleProviderFilenames []string) (versions *hcl.Block, providers []*hcl.Block, err error) {
 func GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion string, moduleProviderFilenames []string) (filepaths []string, err error) {
-	providerFilepaths, err := fetchModuleProviders(moduleDir, moduleProviderFilenames)
-	if err != nil {
-		// return nil, nil, err
-		return nil, err
-	}
-
-	_, _, err = extractVersionsAndProvidersFromFiles(providerFilepaths)
-	if err != nil {
-		// return nil, nil, fmt.Errorf("failed to parse versions: %w", err)
-		return nil, fmt.Errorf("failed to parse versions: %w", err)
-	}
-	// we have validate the files for required_providers and providers block we can return their paths
-	// return versions, providers, nil
-	return providerFilepaths, err
-}
-
-func fetchModuleProviders(moduleDir string, moduleProviderFilenames []string) ([]string, error) {
 	var versionProviderFilepaths []string
 	for _, filename := range moduleProviderFilenames {
 		_, err := os.Stat(filepath.Join(moduleDir, filename))
@@ -98,31 +80,6 @@ func fetchModuleProviders(moduleDir string, moduleProviderFilenames []string) ([
 		}
 	}
 	return versionProviderFilepaths, nil
-}
-
-func extractVersionsAndProvidersFromFiles(filePaths []string) (version *hcl.Block, providers []*hcl.Block, err error) {
-	var versionProviderBlocks []*hcl.Block
-
-	for _, path := range filePaths {
-		blocks, err := parseHCLVersionsAndProviders(path)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		versionProviderBlocks = append(versionProviderBlocks, blocks...)
-	}
-
-	for _, block := range versionProviderBlocks {
-		if block.Type == "terraform" {
-			version = block
-		}
-
-		if block.Type == "provider" {
-			providers = append(providers, block)
-		}
-	}
-
-	return version, providers, nil
 }
 
 func writeTerraformModuleConfig(workDir, moduleSource, moduleRegistryVersion string) error {
@@ -231,40 +188,6 @@ func parseHCLVariables(filePath string) ([]*hcl.Block, error) {
 	}
 
 	return content.Blocks, nil
-}
-
-func parseHCLVersionsAndProviders(filePath string) ([]*hcl.Block, error) {
-	parser := hclparse.NewParser()
-	file, diags := parser.ParseHCLFile(filePath)
-	if diags.HasErrors() {
-		return nil, fmt.Errorf("failed to parse HCL file: %s", diags.Error())
-	}
-
-	content, diags := file.Body.Content(&hcl.BodySchema{
-		Blocks: []hcl.BlockHeaderSchema{
-			{Type: "terraform"},
-			{Type: "provider", LabelNames: []string{"*"}},
-		},
-	})
-	if diags.HasErrors() {
-		return nil, fmt.Errorf("failed to parse body content: %s", diags.Error())
-	}
-
-	return content.Blocks, nil
-}
-
-func extractVersionBlock(blocks []*hcl.Block) (version *hcl.Block, providers []*hcl.Block) {
-	for _, block := range blocks {
-		if block.Type == "terraform" {
-			version = block
-		}
-
-		if block.Type == "provider" {
-			providers = append(providers, block)
-		}
-	}
-
-	return version, providers
 }
 
 func extractVariables(blocks []*hcl.Block, fileContent string) []TerraformVariable {
