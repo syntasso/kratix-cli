@@ -22,7 +22,7 @@ var (
 		Use:   "tf-module-promise",
 		Short: "Initialize a Promise from a Terraform module",
 		Long: `Initialize a Promise from a Terraform module.
-  
+
 This commands relies on the Terraform CLI being installed and available in your PATH. It can be used
 to pull modules from Git, Terraform registry, or a local directory.
 
@@ -40,7 +40,7 @@ To pull modules from private registries, ensure your system is logged in to the 
 	--module-providers "versions.tf,providers.tf" \
   	--group syntasso.io \
 	--kind Gateway \
-	--version v1alpha1 
+	--version v1alpha1
 
   # Initialize a Promise from a Terraform Module in Terraform registry with a dedicated repository
   kratix init tf-module-promise s3-bucket \
@@ -288,7 +288,7 @@ func writeDependencyFiles(versionProviderFilepaths []string) error {
 
 	fmt.Println("Dependencies added as a Promise workflow.")
 	fmt.Println("Run the following command to build the dependencies image:")
-	fmt.Printf("\n  docker build -t %s %s\n\n", image, containerDir)
-	fmt.Println("Don't forget to push the image to a registry!")
+	fmt.Printf("\n  docker build -t %s %s\n\n", containerImage, containerDir)
+	fmt.Println("Don't forget to update the image tag in the Promise and push your image to a registry!")
 	return nil
 }
