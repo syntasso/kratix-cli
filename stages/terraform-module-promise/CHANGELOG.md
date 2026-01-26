@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.4.0...terraform-module-promise-v0.5.0) (2026-01-26)
+
+
+### Features
+
+* terraform init promise includes providers block ([ee49fe2](https://github.com/syntasso/kratix-cli/commit/ee49fe298c7ac101a414d71222f2087d51dc83c1))
+
 ## [0.4.0](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.3.1...terraform-module-promise-v0.3.2) (2026-01-05)
 
 
