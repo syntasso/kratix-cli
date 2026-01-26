@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     branches-ignore:
-      - 'release-please--*'
+      - release-please--branches--main
 
 jobs:
   unit-test:
