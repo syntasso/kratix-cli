@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.0](https://github.com/syntasso/kratix-cli/compare/v0.12.1...v0.13.0) (2026-01-26)
+
+
+### Features
+
+* terraform init promise includes providers block ([ee49fe2](https://github.com/syntasso/kratix-cli/commit/ee49fe298c7ac101a414d71222f2087d51dc83c1))
+
+
+### Chores
+
+* add version alignment check back ([85231af](https://github.com/syntasso/kratix-cli/commit/85231afc339efc5b27706ca91f76312470c50d06))
+* bump cli version to v0.13.0 ([20cb98c](https://github.com/syntasso/kratix-cli/commit/20cb98c52cfaae0c3167464168f39fc3ce1f1103))
+* dont include chores in release notes, use simpler regex for releasing ([93a90b3](https://github.com/syntasso/kratix-cli/commit/93a90b3444770034a30f913af02c405aa440872a))
+* **main:** release terraform-module-promise 0.5.0 ([#203](https://github.com/syntasso/kratix-cli/issues/203)) ([9c66723](https://github.com/syntasso/kratix-cli/commit/9c66723a0da930e898e037f8e480c2421abfbd71))
+
 ## [0.12.1](https://github.com/syntasso/kratix-cli/compare/v0.12.0...v0.12.1) (2026-01-05)
 
 
