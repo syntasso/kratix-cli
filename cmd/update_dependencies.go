@@ -37,7 +37,7 @@ func init() {
 func updateDependencies(cmd *cobra.Command, args []string) error {
 	dependenciesDir := args[0]
 	if image != "" {
-		return addDepsAsWorkflow(dependenciesDir)
+		return addDepsAsWorkflow(dependenciesDir, "")
 	}
 
 	var depBytes []byte
@@ -182,15 +182,18 @@ func updatePromiseDependencies(dependencies []v1alpha1.Dependency) error {
 	return os.WriteFile(filepath.Join(dir, promiseFileName), bytes, filePerm)
 }
 
-func addDepsAsWorkflow(dependenciesDir string) error {
-	containerName = "configure-deps"
+func addDepsAsWorkflow(dependenciesDir, containerName string) error {
+	if containerName == "" {
+		containerName = "configure-deps"
+	}
+
 	c := &pipelineutils.PipelineCmdArgs{
 		Lifecycle: "promise",
 		Action:    "configure",
 		Pipeline:  "dependencies",
 	}
 
-	err := generateWorkflow(c, containerName, image, true)
+	err := generateWorkflow(c, containerName, image, "", true)
 	if err != nil {
 		return err
 	}

@@ -57,7 +57,7 @@ type promiseTemplateValues struct {
 func InitPromise(cmd *cobra.Command, args []string) error {
 	promiseName := args[0]
 
-	templateValues, err := generateTemplateValues(promiseName, "promise", "", "[]", "")
+	templateValues, err := generateTemplateValues(promiseName, "promise", "", "[]", "[]", "")
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func InitPromise(cmd *cobra.Command, args []string) error {
 
 }
 
-func generateTemplateValues(promiseName, subCommand, extraFlags, resourceConfigure, crdSchema string) (promiseTemplateValues, error) {
+func generateTemplateValues(promiseName, subCommand, extraFlags, resourceConfigure, promiseConfigure, crdSchema string) (promiseTemplateValues, error) {
 	if version == "" {
 		version = "v1alpha1"
 	}
@@ -119,7 +119,7 @@ func generateTemplateValues(promiseName, subCommand, extraFlags, resourceConfigu
 		Singular:          strings.ToLower(kind),
 		SubCommand:        subCommand,
 		ResourceConfigure: resourceConfigure,
-		PromiseConfigure:  "[]",
+		PromiseConfigure:  promiseConfigure,
 		CRDSchema:         crdSchema,
 		ExtraFlags:        extraFlags,
 	}, nil

@@ -24,30 +24,34 @@ type terraformModuleManifest struct {
 }
 
 var (
-	mkdirTemp     func(dir, pattern string) (string, error) = os.MkdirTemp
-	terraformInit func(dir string) error                    = runTerraformInit
+	mkdirTemp                func(dir, pattern string) (string, error) = os.MkdirTemp
+	terraformInit            func(dir string) error                    = runTerraformInit
+	defaultProviderFilenames                                           = []string{"versions.tf", "providers.tf"}
 )
 
-func GetVariablesFromModule(moduleSource, moduleRegistryVersion string) ([]TerraformVariable, error) {
+func SetupModule(moduleSource, moduleRegistryVersion string) (string, error) {
 	tempDir, err := mkdirTemp("", "terraform-module")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create temp directory: %w", err)
+		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
 
 	if err := writeTerraformModuleConfig(tempDir, moduleSource, moduleRegistryVersion); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if err := terraformInit(tempDir); err != nil {
-		return nil, fmt.Errorf("failed to initialize terraform: %w", err)
+		return "", fmt.Errorf("failed to initialize terraform: %w", err)
 	}
 
 	moduleDir, err := resolveModuleDir(tempDir)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
+	return moduleDir, nil
+}
+
+func GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion string) ([]TerraformVariable, error) {
 	absPath := filepath.Join(moduleDir, "variables.tf")
 	variables, err := extractVariablesFromVarsFile(absPath)
 	if err != nil {
@@ -55,6 +59,27 @@ func GetVariablesFromModule(moduleSource, moduleRegistryVersion string) ([]Terra
 	}
 
 	return variables, nil
+}
+
+func GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion string, moduleProviderFilenames []string) (filepaths []string, err error) {
+	var versionProviderFilepaths []string
+	for _, filename := range moduleProviderFilenames {
+		_, err := os.Stat(filepath.Join(moduleDir, filename))
+		if err != nil {
+			return nil, fmt.Errorf("unable to fetch provider file %q: %s", filename, err)
+		}
+		versionProviderFilepaths = append(versionProviderFilepaths, filepath.Join(moduleDir, filename))
+	}
+
+	if len(moduleProviderFilenames) == 0 {
+		for _, filename := range defaultProviderFilenames {
+			_, err := os.Stat(filepath.Join(moduleDir, filename))
+			if err == nil {
+				versionProviderFilepaths = append(versionProviderFilepaths, filepath.Join(moduleDir, filename))
+			}
+		}
+	}
+	return versionProviderFilepaths, nil
 }
 
 func writeTerraformModuleConfig(workDir, moduleSource, moduleRegistryVersion string) error {

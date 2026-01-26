@@ -1,0 +1,8 @@
+- apiVersion: platform.kratix.io/v1alpha1
+  kind: Pipeline
+  metadata:
+    name: dependencies
+  spec:
+    containers:
+    - image: my-registry.io/my-org/kratix/terraform-dependencies:v0.0.1
+      name: add-tf-dependencies
