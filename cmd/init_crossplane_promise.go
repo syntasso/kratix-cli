@@ -37,7 +37,9 @@ var (
 	// crossplanePromiseCmd represents the crossplanePromise command
 	crossplanePromiseCmd = &cobra.Command{
 		Use:   "crossplane-promise",
-		Short: "Initialize a new Promise from a Crossplane XRD",
+		Short: "Preview: Initialize a new Promise from a Crossplane XRD",
+		Long: "Preview: Initialize a new Promise from a Crossplane XRD. " +
+			"This command is in preview, not supported under SLAs, and may change or break without notice.",
 		Example: `  # initialize a new promise from a Crossplane XRD and Composition
   kratix init crossplane-promise s3buckets --xrd xrd.yaml --group syntasso.io --kind S3Bucket --dir --compositions composition.yaml
 `,
@@ -60,6 +62,7 @@ func init() {
 }
 
 func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
+	printPreviewWarning()
 	promiseName := args[0]
 	if plural == "" {
 		plural = fmt.Sprintf("%ss", strings.ToLower(kind))

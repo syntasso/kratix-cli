@@ -25,8 +25,9 @@ const (
 
 var operatorPromiseCmd = &cobra.Command{
 	Use:   "operator-promise PROMISE-NAME --group PROMISE-API-GROUP --version PROMISE-API-VERSION --kind PROMISE-API-KIND --operator-manifests OPERATOR-MANIFESTS-DIR --api-schema-from CRD-NAME",
-	Short: "Generate a Promise from a given Kubernetes Operator.",
-	Long:  `Generate a Promise from a given Kubernetes Operator.`,
+	Short: "Preview: Generate a Promise from a given Kubernetes Operator.",
+	Long: "Preview: Generate a Promise from a given Kubernetes Operator. " +
+		"This command is in preview, not supported under SLAs, and may change or break without notice.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  InitPromiseFromOperator,
 }
@@ -46,6 +47,7 @@ func init() {
 }
 
 func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
+	printPreviewWarning()
 	promiseName := args[0]
 
 	if plural == "" {
