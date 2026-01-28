@@ -16,8 +16,9 @@ import (
 
 var intHelmPromiseCmd = &cobra.Command{
 	Use:   "helm-promise PROMISE-NAME --chart-url HELM-CHART-URL --group PROMISE-API-GROUP --kind PROMISE-API-KIND [--chart-version]",
-	Short: "Initialize a new Promise from a Helm chart",
-	Long:  "Initialize a new Promise from a Helm Chart",
+	Short: "Preview: Initialize a new Promise from a Helm chart",
+	Long: "Preview: Initialize a new Promise from a Helm Chart. " +
+		"This command is in preview, not supported under SLAs, and may change or break without notice.",
 	Example: `  # initialize a new promise from an OCI Helm Chart
   kratix init helm-promise jenkins --chart-url oci://ghcr.io/jenkinsci/helm-charts/jenkins [--chart-version] --group syntasso.io --kind cicd
 
@@ -42,6 +43,7 @@ func init() {
 }
 
 func InitHelmPromise(cmd *cobra.Command, args []string) error {
+	printPreviewWarning()
 	promiseName := args[0]
 	resourceConfigure, err := generateHelmResourceConfigurePipeline()
 	if err != nil {
