@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/syntasso/kratix-cli/compare/v0.13.0...v0.13.1) (2026-01-28)
+
+
+### Chores
+
+* Add preview warning to init crossplane/helm/operator ([#204](https://github.com/syntasso/kratix-cli/issues/204)) ([1d4e23f](https://github.com/syntasso/kratix-cli/commit/1d4e23f8ad9d39b56ec8f7b7982f5b128b2419cb))
+
 ## [0.13.0](https://github.com/syntasso/kratix-cli/compare/v0.12.1...v0.13.0) (2026-01-26)
 
 
