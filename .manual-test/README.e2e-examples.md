@@ -7,7 +7,7 @@ This document lists realistic scenarios for running:
 The script always executes the same high-level flow:
 
 1. Extract schema with `pulumi package get-schema`
-2. Run `component-to-crd --in <schema> --component <token>`
+2. Run `component-to-crd --in <schema> --component <token>` (with optional CRD identity flags)
 3. Validate CRD output
 
 ## Prerequisites
@@ -46,6 +46,63 @@ To include these live URL checks in the full manual suite:
 
 ```bash
 RUN_INTERNET_TESTS=1 component-to-crd/.manual-test/99_run_all.sh
+```
+
+## Task 04 CRD Identity Manual Checks
+
+Task 04 adds optional CRD identity flags:
+- `--group`
+- `--version`
+- `--kind`
+- `--plural`
+- `--singular`
+
+Validation notes:
+- `--kind` must match `^[A-Za-z][A-Za-z0-9]*$` (for example `ServiceDeployment`).
+- `--version`, `--plural`, and `--singular` must be DNS-label-like (lowercase alphanumeric with optional internal `-`).
+- `--group` must be DNS-subdomain-like.
+
+Validate default identity values:
+
+```bash
+component-to-crd/.manual-test/component-to-crd \
+  --in component-to-crd/.manual-test/schema.valid.json
+```
+
+Expected identity snippets:
+- `metadata.name: "components.components.pulumi.local"`
+- `spec.group: components.pulumi.local`
+- `spec.names.kind: Component`
+- `spec.names.plural: components`
+- `spec.names.singular: component`
+- `spec.versions[0].name: v1alpha1`
+
+Validate custom identity values:
+
+```bash
+component-to-crd/.manual-test/component-to-crd \
+  --in component-to-crd/.manual-test/schema.valid.json \
+  --group apps.example.com \
+  --version v1 \
+  --kind ServiceDeployment \
+  --plural servicedeployments \
+  --singular servicedeployment
+```
+
+Expected identity snippets:
+- `metadata.name: "servicedeployments.apps.example.com"`
+- `spec.group: apps.example.com`
+- `spec.names.kind: ServiceDeployment`
+- `spec.names.plural: servicedeployments`
+- `spec.names.singular: servicedeployment`
+- `spec.versions[0].name: v1`
+
+Validate invalid identity handling (`exit 2`, single-line `error:`):
+
+```bash
+component-to-crd/.manual-test/component-to-crd \
+  --in component-to-crd/.manual-test/schema.valid.json \
+  --group bad_group
 ```
 
 ## Example 1: Simple Local Component (previous simple case)

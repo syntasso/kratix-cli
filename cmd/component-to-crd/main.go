@@ -54,6 +54,27 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 		return exitUserError
 	}
 
+	identity := emit.DeriveIdentityDefaults(doc, selected)
+	if cfg.group != "" {
+		identity.Group = cfg.group
+	}
+	if cfg.version != "" {
+		identity.Version = cfg.version
+	}
+	if cfg.kind != "" {
+		identity.Kind = cfg.kind
+	}
+	if cfg.plural != "" {
+		identity.Plural = cfg.plural
+	}
+	if cfg.singular != "" {
+		identity.Singular = cfg.singular
+	}
+	if err := identity.Validate(); err != nil {
+		printError(stderr, err)
+		return exitUserError
+	}
+
 	translatedSpec, err := translate.InputPropertiesToOpenAPI(doc, selected, resource)
 	if err != nil {
 		var unsupportedErr *translate.UnsupportedError
@@ -65,7 +86,7 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 		return exitUserError
 	}
 
-	crdYAML, err := emit.RenderCRDYAML(selected, translatedSpec)
+	crdYAML, err := emit.RenderCRDYAML(identity, translatedSpec)
 	if err != nil {
 		printError(stderr, fmt.Errorf("serialize CRD output: %w", err))
 		return exitOutputError
@@ -80,6 +101,11 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 type config struct {
 	inPath    string
 	component string
+	group     string
+	version   string
+	kind      string
+	plural    string
+	singular  string
 }
 
 func parseArgs(args []string) (config, error) {
@@ -89,6 +115,11 @@ func parseArgs(args []string) (config, error) {
 	flagSet.SetOutput(io.Discard)
 	flagSet.StringVar(&cfg.inPath, "in", "", "Path or URL to Pulumi schema JSON file")
 	flagSet.StringVar(&cfg.component, "component", "", "Component token")
+	flagSet.StringVar(&cfg.group, "group", "", "CRD API group")
+	flagSet.StringVar(&cfg.version, "version", "", "CRD API version")
+	flagSet.StringVar(&cfg.kind, "kind", "", "CRD kind")
+	flagSet.StringVar(&cfg.plural, "plural", "", "CRD plural resource name")
+	flagSet.StringVar(&cfg.singular, "singular", "", "CRD singular resource name")
 
 	if err := flagSet.Parse(args); err != nil {
 		return config{}, fmt.Errorf("invalid flags: %w", err)

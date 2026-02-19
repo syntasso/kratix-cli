@@ -13,6 +13,8 @@ import (
 
 // Document is the minimal Pulumi schema representation needed by the converter.
 type Document struct {
+	Name      string                     `json:"name"`
+	Version   string                     `json:"version"`
 	Resources map[string]Resource        `json:"resources"`
 	Types     map[string]json.RawMessage `json:"types"`
 }

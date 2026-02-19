@@ -9,7 +9,7 @@ import (
 )
 
 // RenderCRDYAML emits deterministic CRD YAML with the translated OpenAPI schema under spec.properties.spec.
-func RenderCRDYAML(componentToken string, translatedSpecSchema map[string]any) ([]byte, error) {
+func RenderCRDYAML(identity Identity, translatedSpecSchema map[string]any) ([]byte, error) {
 	if translatedSpecSchema == nil {
 		return nil, fmt.Errorf("translated spec schema is nil")
 	}
@@ -20,17 +20,27 @@ func RenderCRDYAML(componentToken string, translatedSpecSchema map[string]any) (
 	b.WriteString("kind: CustomResourceDefinition\n")
 	b.WriteString("metadata:\n")
 	b.WriteString("  name: ")
-	b.WriteString(yamlQuote(sanitizeDNSLabel(componentToken)))
+	b.WriteString(yamlQuote(identity.MetadataName()))
 	b.WriteByte('\n')
 	b.WriteString("spec:\n")
-	b.WriteString("  group: components.pulumi.local\n")
+	b.WriteString("  group: ")
+	b.WriteString(identity.Group)
+	b.WriteByte('\n')
 	b.WriteString("  names:\n")
-	b.WriteString("    kind: Component\n")
-	b.WriteString("    plural: components\n")
-	b.WriteString("    singular: component\n")
+	b.WriteString("    kind: ")
+	b.WriteString(identity.Kind)
+	b.WriteByte('\n')
+	b.WriteString("    plural: ")
+	b.WriteString(identity.Plural)
+	b.WriteByte('\n')
+	b.WriteString("    singular: ")
+	b.WriteString(identity.Singular)
+	b.WriteByte('\n')
 	b.WriteString("  scope: Namespaced\n")
 	b.WriteString("  versions:\n")
-	b.WriteString("    - name: v1alpha1\n")
+	b.WriteString("    - name: ")
+	b.WriteString(identity.Version)
+	b.WriteByte('\n')
 	b.WriteString("      served: true\n")
 	b.WriteString("      storage: true\n")
 	b.WriteString("      schema:\n")
@@ -201,34 +211,6 @@ func renderYAMLScalar(value any) (string, error) {
 		}
 		return string(encoded), nil
 	}
-}
-
-func sanitizeDNSLabel(token string) string {
-	if token == "" {
-		return "component"
-	}
-
-	var b strings.Builder
-	b.Grow(len(token))
-	lastWasDash := false
-	for _, r := range strings.ToLower(token) {
-		isAlphaNum := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
-		if isAlphaNum {
-			b.WriteRune(r)
-			lastWasDash = false
-			continue
-		}
-		if !lastWasDash {
-			b.WriteByte('-')
-			lastWasDash = true
-		}
-	}
-
-	out := strings.Trim(b.String(), "-")
-	if out == "" {
-		return "component"
-	}
-	return out
 }
 
 func yamlQuote(value string) string {
