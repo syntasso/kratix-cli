@@ -21,8 +21,8 @@ Out of scope:
 
 ## Output Contract
 ### Default mode (no `--verbose`)
-- Write normal command output to `stdout` only.
-- Do not write to `stderr`.
+- Write normal command output to `stdout`.
+- Emit `error: ...` lines to `stderr` when failures occur.
 - Maintain deterministic `stdout` for equivalent input.
 
 ### Verbose mode (`--verbose`)
@@ -44,7 +44,7 @@ Out of scope:
 - Error lines must be `error: ...`.
 
 ## Acceptance Criteria
-1. Default behavior writes only to `stdout`; `stderr` is empty.
+1. Default behavior keeps successful command output on `stdout` and emits failures as `error: ...` on `stderr`.
 2. With `--verbose`, `stderr` includes stage logs (`info:`) and existing diagnostics (`warn:`/`error:`) as applicable.
 3. `stdout` output is byte-identical between verbose and non-verbose runs for the same successful input.
 4. Diagnostics remain single-line parseable (`info:`, `warn:`, `error:`).
@@ -54,9 +54,9 @@ Out of scope:
 ## Validation
 Automated:
 - CLI tests for:
-  - successful run without `--verbose`: non-empty `stdout`, empty `stderr`
+  - successful run without `--verbose`: non-empty `stdout`, no `info:`/`warn:` in `stderr`
   - successful run with `--verbose`: same `stdout` bytes as default + expected `info:`/`warn:` on `stderr`
-  - failing run without `--verbose`: parseable failure behavior on `stdout` only + expected exit code
+  - failing run without `--verbose`: parseable `error:` on `stderr` + expected exit code
   - failing run with `--verbose`: expected `error:` on `stderr` + expected exit code
 
 Manual:

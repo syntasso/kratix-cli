@@ -35,15 +35,15 @@ Build and keep a small adapter CLI with narrow package responsibilities:
 
 ## Current CLI Contract (Implemented)
 Command:
-- `component-to-crd --in <path-or-url> [--component <token>] [--group ... --version ... --kind ... --plural ... --singular ...]`
+- `component-to-crd --in <path-or-url> [--component <token>] [--group ... --version ... --kind ... --plural ... --singular ...] [--verbose]`
 
 Behavior:
 - `--in` is required; supports local files and `http(s)` URLs.
 - `--component` is optional only when exactly one component exists.
 - positional arguments are rejected.
 - generated CRD YAML is written to `stdout` only.
-- all user-facing errors are single-line `error: ...` on `stderr`.
-- skipped untranslatable field paths are emitted as single-line `warn: ...` entries on `stderr`.
+- errors are emitted as parseable single-line `error: ...` entries on `stderr`.
+- `--verbose` emits additional stage logs (`info: ...`) and skipped-path diagnostics (`warn: ...`) on `stderr`.
 
 Exit codes:
 - `0`: success
@@ -78,7 +78,7 @@ Translation (resilient):
     - `x-kubernetes-preserve-unknown-fields: true`
     - required field membership from `requiredInputs` is preserved
   - `enum` and `default` passthrough
-- skips unsupported field paths (for example unsupported keywords/types such as `oneOf`, `anyOf`, `allOf`, `not`, `discriminator`, `patternProperties`, `const`) and logs warnings to `stderr`
+- skips unsupported field paths (for example unsupported keywords/types such as `oneOf`, `anyOf`, `allOf`, `not`, `discriminator`, `patternProperties`, `const`) and, in `--verbose` mode, logs warnings to `stderr`
 - preserves `exit 3` for intentionally non-skippable unsupported constructs
 - required fields are normalized (deduplicated + sorted)
 - required entries for skipped properties are removed to keep emitted schema valid
@@ -128,7 +128,7 @@ Automated tests in `component-to-crd` cover:
 - permissive translation mode (strict-only today)
 - CRD `status` schema generation
 - multi-version CRD emission
-- operational flags like `--verbose` or `--version`
+- operational flags like `--version`
 
 ## Consequences
 Positive:

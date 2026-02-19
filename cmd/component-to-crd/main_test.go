@@ -91,6 +91,7 @@ func TestRun(t *testing.T) {
 		wantExitCode    int
 		wantStdoutParts []string
 		wantStdoutNot   []string
+		wantStdoutLines []string
 		wantStderrParts []string
 		wantStderrNot   []string
 		wantStderrLines []string
@@ -204,7 +205,7 @@ func TestRun(t *testing.T) {
 			wantStderrParts: []string{"error:", "no component resources found in schema"},
 		},
 		{
-			name:         "mixed translatable and untranslatable fields succeeds and logs skipped paths",
+			name:         "mixed translatable and untranslatable fields succeeds in default mode",
 			args:         []string{"--in", mixedSkippableSchemaPath},
 			wantExitCode: exitSuccess,
 			wantStdoutParts: []string{
@@ -213,18 +214,11 @@ func TestRun(t *testing.T) {
 				"settings:",
 				"enabled:",
 			},
-			wantStderrLines: []string{
-				`warn: component="pkg:index:Thing" path="spec.badTop" reason="keyword \"oneOf\""`,
-				`warn: component="pkg:index:Thing" path="spec.settings.badNested" reason="keyword \"anyOf\""`,
-			},
 			wantStdoutNot: []string{
 				"badTop:",
 				"badNested:",
 				"- \"badTop\"",
 				"- \"badNested\"",
-			},
-			wantStderrNot: []string{
-				"error:",
 			},
 		},
 		{
@@ -232,9 +226,11 @@ func TestRun(t *testing.T) {
 			args:         []string{"--in", allSkippableSchemaPath},
 			wantExitCode: exitUserError,
 			wantStderrParts: []string{
-				`warn: component="pkg:index:Thing" path="spec.value" reason="keyword \"oneOf\""`,
 				"error:",
 				`no translatable spec fields remain after skipping unsupported schema paths for component "pkg:index:Thing"`,
+			},
+			wantStderrNot: []string{
+				"warn:",
 			},
 		},
 		{
@@ -275,7 +271,7 @@ func TestRun(t *testing.T) {
 				"apiVersion: apiextensions.k8s.io/v1",
 				"kind: CustomResourceDefinition",
 			},
-			wantStderrNot: []string{
+			wantStdoutNot: []string{
 				"schema preflight path",
 			},
 		},
@@ -376,6 +372,17 @@ func TestRun(t *testing.T) {
 					t.Fatalf("stdout unexpectedly contains %q in %q", part, gotStdout)
 				}
 			}
+			if len(tt.wantStdoutLines) > 0 {
+				gotLines := splitNonEmptyLines(gotStdout)
+				if len(gotLines) < len(tt.wantStdoutLines) {
+					t.Fatalf("stdout has %d lines, want at least %d; stdout = %q", len(gotLines), len(tt.wantStdoutLines), gotStdout)
+				}
+				for i, wantLine := range tt.wantStdoutLines {
+					if gotLines[i] != wantLine {
+						t.Fatalf("stdout line %d mismatch\n got: %q\nwant: %q\nfull stdout: %q", i+1, gotLines[i], wantLine, gotStdout)
+					}
+				}
+			}
 
 			gotStderr := stderr.String()
 			for _, part := range tt.wantStderrParts {
@@ -388,7 +395,6 @@ func TestRun(t *testing.T) {
 					t.Fatalf("stderr unexpectedly contains %q in %q", part, gotStderr)
 				}
 			}
-
 			if len(tt.wantStderrLines) > 0 {
 				gotLines := splitNonEmptyLines(gotStderr)
 				if len(gotLines) < len(tt.wantStderrLines) {
@@ -402,13 +408,98 @@ func TestRun(t *testing.T) {
 			}
 
 			for _, line := range splitNonEmptyLines(gotStderr) {
-				if strings.HasPrefix(line, "error:") || strings.HasPrefix(line, "warn:") {
+				if strings.HasPrefix(line, "error:") || strings.HasPrefix(line, "warn:") || strings.HasPrefix(line, "info:") {
 					if strings.Contains(line, "\n") {
 						t.Fatalf("stderr line should be single-line parseable, got %q", line)
 					}
 				}
 			}
 		})
+	}
+}
+
+func TestRun_VerboseSuccessAddsStderrDiagnostics(t *testing.T) {
+	t.Parallel()
+
+	tempDir := makeWorkspaceTempDir(t)
+	schemaPath := filepath.Join(tempDir, "mixed-skippable.json")
+	if err := os.WriteFile(schemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"},"badTop":{"oneOf":[{"type":"string"},{"type":"number"}]},"settings":{"type":"object","properties":{"enabled":{"type":"boolean"},"badNested":{"anyOf":[{"type":"string"},{"type":"number"}]}}}},"requiredInputs":["name"]}}}`), 0o600); err != nil {
+		t.Fatalf("write mixed skippable fixture: %v", err)
+	}
+
+	var defaultStdout strings.Builder
+	var defaultStderr strings.Builder
+	defaultExit := run([]string{"--in", schemaPath}, &defaultStdout, &defaultStderr)
+	if defaultExit != exitSuccess {
+		t.Fatalf("default run exit code mismatch: got %d want %d", defaultExit, exitSuccess)
+	}
+	if defaultStderr.String() != "" {
+		t.Fatalf("expected empty default stderr, got %q", defaultStderr.String())
+	}
+
+	var verboseStdout strings.Builder
+	var verboseStderr strings.Builder
+	verboseExit := run([]string{"--in", schemaPath, "--verbose"}, &verboseStdout, &verboseStderr)
+	if verboseExit != exitSuccess {
+		t.Fatalf("verbose run exit code mismatch: got %d want %d", verboseExit, exitSuccess)
+	}
+	if defaultStdout.String() != verboseStdout.String() {
+		t.Fatalf("stdout mismatch between default and verbose runs\ndefault:\n%s\nverbose:\n%s", defaultStdout.String(), verboseStdout.String())
+	}
+
+	verboseErr := verboseStderr.String()
+	requiredStderrParts := []string{
+		"info: loading schema",
+		"info: selecting component",
+		"info: preflight validation",
+		"info: translating schema",
+		"info: rendering CRD",
+		`warn: component="pkg:index:Thing" path="spec.badTop" reason="keyword \"oneOf\""`,
+		`warn: component="pkg:index:Thing" path="spec.settings.badNested" reason="keyword \"anyOf\""`,
+	}
+	for _, part := range requiredStderrParts {
+		if !strings.Contains(verboseErr, part) {
+			t.Fatalf("verbose stderr missing %q in %q", part, verboseErr)
+		}
+	}
+}
+
+func TestRun_VerboseFailureMirrorsErrorToStderr(t *testing.T) {
+	t.Parallel()
+
+	tempDir := makeWorkspaceTempDir(t)
+	schemaPath := filepath.Join(tempDir, "malformed.json")
+	if err := os.WriteFile(schemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"value":{"$ref":"#/types/pkg:index:Missing"}}}}}`), 0o600); err != nil {
+		t.Fatalf("write malformed schema fixture: %v", err)
+	}
+
+	var defaultStdout strings.Builder
+	var defaultStderr strings.Builder
+	defaultExit := run([]string{"--in", schemaPath}, &defaultStdout, &defaultStderr)
+	if defaultExit != exitUserError {
+		t.Fatalf("default run exit code mismatch: got %d want %d", defaultExit, exitUserError)
+	}
+	if defaultStdout.String() != "" {
+		t.Fatalf("expected empty default stdout, got %q", defaultStdout.String())
+	}
+	if !strings.Contains(defaultStderr.String(), "error:") {
+		t.Fatalf("expected parseable error on default stderr, got %q", defaultStderr.String())
+	}
+
+	var verboseStdout strings.Builder
+	var verboseStderr strings.Builder
+	verboseExit := run([]string{"--in", schemaPath, "--verbose"}, &verboseStdout, &verboseStderr)
+	if verboseExit != exitUserError {
+		t.Fatalf("verbose run exit code mismatch: got %d want %d", verboseExit, exitUserError)
+	}
+	if verboseStdout.String() != "" {
+		t.Fatalf("expected empty verbose stdout, got %q", verboseStdout.String())
+	}
+	if !strings.Contains(verboseStderr.String(), "error:") {
+		t.Fatalf("expected parseable error on verbose stderr, got %q", verboseStderr.String())
+	}
+	if !strings.Contains(verboseStderr.String(), "info: preflight validation") {
+		t.Fatalf("expected verbose stage log on stderr, got %q", verboseStderr.String())
 	}
 }
 
@@ -429,6 +520,7 @@ func TestRun_HelpIncludesSkipGuidance(t *testing.T) {
 	helpText := stdout.String()
 	requiredParts := []string{
 		"Usage: component-to-crd --in",
+		"--verbose",
 		"Untranslatable schema field paths are skipped",
 		"warn: component=",
 		"stderr",

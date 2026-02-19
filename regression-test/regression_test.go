@@ -108,7 +108,6 @@ func TestRegressionSuite_LocalFixtures(t *testing.T) {
 			t.Fatalf("expected empty stdout, got %q", stdout)
 		}
 		assertContainsAll(t, stderr,
-			`warn: component="pkg:index:Thing" path="spec.value" reason="keyword \"oneOf\""`,
 			`error: no translatable spec fields remain after skipping unsupported schema paths for component "pkg:index:Thing"`,
 		)
 	})
