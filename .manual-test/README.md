@@ -1,134 +1,120 @@
-# E2E Example Matrix for `e2e_pulumi_schema_to_crd.sh`
+# Manual E2E Guide
 
-This document lists realistic scenarios for running:
+This directory contains manual end-to-end test workflows for `component-to-crd`.
 
-- `component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh`
+## What To Run
 
-The script always executes the same high-level flow:
-
-1. Extract schema with `pulumi package get-schema`
-2. Run `component-to-crd --in <schema> --component <token>` (with optional CRD identity flags)
-3. Validate CRD output
-
-## Prerequisites
-
-- `pulumi` CLI installed and authenticated as needed
-- internet access for dependency/plugin downloads and registry-backed examples
-- run the Go-based manual regression suite from repo root:
-- Go manual suite assets are isolated to `component-to-crd/manualtest/`:
-  - inputs: `component-to-crd/manualtest/testdata/schemas/`
-  - outputs: `component-to-crd/manualtest/work/`
-
-```bash
-cd component-to-crd && go test ./manualtest
-```
-
-Include live internet-backed checks:
-
-```bash
-cd component-to-crd && RUN_INTERNET_TESTS=1 go test ./manualtest -run URLInputLiveRegistry
-```
-
-Quick default e2e script run (no arguments):
+Host-binary conversion path:
 
 ```bash
 component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh
 ```
 
-## Docker Packaging and Tests
+Docker conversion path (no host binary invocation):
 
-Build only for local architecture:
+```bash
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd_docker.sh
+```
+
+Direct `docker run` example:
+
+```bash
+IMAGE_TAG=component-to-crd:local component-to-crd/scripts/docker_build_local.sh
+
+docker run --rm \
+  component-to-crd:local \
+  --in https://www.pulumi.com/registry/packages/eks/schema.json \
+  --component eks:index:Cluster
+```
+
+Both scripts follow the same flow:
+1. Extract Pulumi schema with `pulumi package get-schema`.
+2. Convert schema to CRD YAML for a selected component.
+3. Validate expected output and write artifacts under `component-to-crd/.manual-test/work/`.
+
+## Prerequisites
+
+Required:
+- `pulumi` CLI
+
+For Docker path:
+- `docker`
+
+For internet-backed examples:
+- network access for schema/plugin downloads
+
+## Fast Checks
+
+Run unit + CLI + regression tests from the package root:
+
+```bash
+cd component-to-crd && go test ./...
+```
+
+Run internet-backed regression subset:
+
+```bash
+cd component-to-crd && RUN_INTERNET_TESTS=1 go test ./regression-test -run URLInputLiveRegistry
+```
+
+## Script Usage
+
+Show options:
+
+```bash
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh --help
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd_docker.sh --help
+```
+
+Common flags (both scripts):
+- `--component <token>`
+- `--schema-source <source>`
+- `--work-name <name>`
+- `--package-name <name>`
+- `--install-plugin <kind:name:version>` (repeatable)
+- `--expect-schema-contains <text>` (repeatable)
+- `--expect-crd-contains <text>` (repeatable)
+- `--skip-install`
+
+Docker-only flags:
+- `--image-tag <tag>`
+- `--skip-image-build`
+
+## Docker Image Commands
+
+Build local image:
 
 ```bash
 IMAGE_TAG=component-to-crd:local component-to-crd/scripts/docker_build_local.sh
 ```
 
-Build and push a multi-arch image (Linux amd64 + arm64):
+Build/push multi-arch image:
 
 ```bash
 IMAGE_TAG=ghcr.io/<org>/component-to-crd:<tag> \
   component-to-crd/scripts/docker_buildx_push_multiarch.sh
 ```
 
-Run a containerized conversion test with an input component token from the root directory:
+## CRD Identity Sanity Checks
+
+Build host binary:
 
 ```bash
-./scripts/docker_build_local.sh
-
-mkdir -p ./.manual-test/work.docker-smoke
-
-pulumi package get-schema \
-  https://www.pulumi.com/registry/packages/eks/ \
-  > ./.manual-test/work.docker-smoke/component.schema.json
-
-docker run --rm \
-  --mount "type=bind,src=$PWD,dst=/repo,readonly" \
-  component-to-crd:local \
-  --in ./.manual-test/work.docker-smoke/component.schema.json \
-  --component nodejs-component-provider:index:MyComponent
+component-to-crd/scripts/build_binary
 ```
 
-Expected result:
-- command exits `0`
-- CRD YAML is printed to stdout
-- output includes identity for `nodejs-component-provider:index:MyComponent`
-
-## Task 03 URL Input Manual Checks
-
-Task 03 added URL support for `--in` (local file paths still work unchanged).
-
-Run the dedicated live URL test:
-
-```bash
-cd component-to-crd && RUN_INTERNET_TESTS=1 go test ./manualtest -run URLInputLiveRegistry
-```
-
-This test validates:
-- `--in https://www.pulumi.com/registry/packages/eks/schema.json --component eks:index:Cluster`
-  - expected: URL fetch succeeds, then current preflight behavior returns exit `2` for unsupported `#/resources/...` refs.
-- `--in https://www.pulumi.com/registry/packages/eks/does-not-exist.json --component eks:index:Cluster`
-  - expected: exit `2` with `error: fetch input schema URL: unexpected status 404 for ...`.
-
-To include these live URL checks in the full manual suite:
-
-```bash
-cd component-to-crd && RUN_INTERNET_TESTS=1 go test ./manualtest
-```
-
-## Task 04 CRD Identity Manual Checks
-
-Task 04 adds optional CRD identity flags:
-- `--group`
-- `--version`
-- `--kind`
-- `--plural`
-- `--singular`
-
-Validation notes:
-- `--kind` must match `^[A-Za-z][A-Za-z0-9]*$` (for example `ServiceDeployment`).
-- `--version`, `--plural`, and `--singular` must be DNS-label-like (lowercase alphanumeric with optional internal `-`).
-- `--group` must be DNS-subdomain-like.
-
-Validate default identity values:
+Default identity:
 
 ```bash
 component-to-crd/bin/component-to-crd \
-  --in component-to-crd/manualtest/testdata/schemas/schema.valid.json
+  --in component-to-crd/regression-test/testdata/schemas/schema.valid.json
 ```
 
-Expected identity snippets:
-- `metadata.name: "components.components.pulumi.local"`
-- `spec.group: components.pulumi.local`
-- `spec.names.kind: Component`
-- `spec.names.plural: components`
-- `spec.names.singular: component`
-- `spec.versions[0].name: v1alpha1`
-
-Validate custom identity values:
+Custom identity:
 
 ```bash
 component-to-crd/bin/component-to-crd \
-  --in component-to-crd/manualtest/testdata/schemas/schema.valid.json \
+  --in component-to-crd/regression-test/testdata/schemas/schema.valid.json \
   --group apps.example.com \
   --version v1 \
   --kind ServiceDeployment \
@@ -136,28 +122,17 @@ component-to-crd/bin/component-to-crd \
   --singular servicedeployment
 ```
 
-Expected identity snippets:
-- `metadata.name: "servicedeployments.apps.example.com"`
-- `spec.group: apps.example.com`
-- `spec.names.kind: ServiceDeployment`
-- `spec.names.plural: servicedeployments`
-- `spec.names.singular: servicedeployment`
-- `spec.versions[0].name: v1`
-
-Validate invalid identity handling (`exit 2`, single-line `error:`):
+Invalid identity (`exit 2`, single-line `error:`):
 
 ```bash
 component-to-crd/bin/component-to-crd \
-  --in component-to-crd/manualtest/testdata/schemas/schema.valid.json \
+  --in component-to-crd/regression-test/testdata/schemas/schema.valid.json \
   --group bad_group
 ```
 
-## Example 1: Simple Local Component (previous simple case)
+## Example Matrix
 
-Source:
-- `pulumi/tests/integration/namespaced_component`
-
-Command:
+Example 1: simple local component
 
 ```bash
 component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
@@ -167,12 +142,7 @@ component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --expect-crd-contains anInput:
 ```
 
-## Example 2: Complex Local Component (current local richer case)
-
-Source:
-- `pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider`
-
-Command:
+Example 2: complex local component
 
 ```bash
 component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
@@ -187,15 +157,7 @@ component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --expect-crd-contains enum:
 ```
 
-## Example 3: Internet Package - Pulumi EKS
-
-Registry page:
-- https://www.pulumi.com/registry/packages/eks/
-
-Schema URL:
-- https://www.pulumi.com/registry/packages/eks/schema.json
-
-Command:
+Example 3: Pulumi EKS from internet
 
 ```bash
 component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
@@ -204,15 +166,7 @@ component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --package-name eks
 ```
 
-## Example 4: Internet Package - Kubernetes Cert Manager
-
-Registry page:
-- https://www.pulumi.com/registry/packages/kubernetes-cert-manager/
-
-Schema URL:
-- https://www.pulumi.com/registry/packages/kubernetes-cert-manager/schema.json
-
-Command:
+Example 4: Kubernetes Cert Manager from internet
 
 ```bash
 component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
@@ -221,15 +175,7 @@ component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --package-name kubernetes-cert-manager
 ```
 
-## Example 5: Internet Package - Kubernetes Ingress NGINX
-
-Registry page:
-- https://www.pulumi.com/registry/packages/kubernetes-ingress-nginx/
-
-Schema URL:
-- https://www.pulumi.com/registry/packages/kubernetes-ingress-nginx/schema.json
-
-Command:
+Example 5: Kubernetes Ingress NGINX from internet
 
 ```bash
 component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
@@ -238,48 +184,7 @@ component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --package-name kubernetes-ingress-nginx
 ```
 
-## Running All Five Examples
-
-Run each command in order. This keeps logs and artifacts isolated per example under:
-
-- `component-to-crd/.manual-test/work/e2e.<work-name>/`
-
-```bash
-component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
-  --component namespaced-component:index:MyComponent \
-  --schema-source pulumi/tests/integration/namespaced_component \
-  --package-name namespaced-component \
-  --expect-crd-contains anInput:
-
-component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
-  --component nodejs-component-provider:index:MyComponent \
-  --schema-source pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider \
-  --package-name nodejs-component-provider \
-  --install-plugin resource:random:v4.18.0 \
-  --expect-schema-contains '"aComplexTypeInput"' \
-  --expect-schema-contains '"enumInput"' \
-  --expect-crd-contains aComplexTypeInput: \
-  --expect-crd-contains nestedComplexType: \
-  --expect-crd-contains enum:
-
-component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
-  --component eks:index:Cluster \
-  --schema-source eks@4.2.0 \
-  --package-name eks
-
-component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
-  --component kubernetes-cert-manager:index:CertManager \
-  --schema-source kubernetes-cert-manager \
-  --package-name kubernetes-cert-manager
-
-component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
-  --component kubernetes-ingress-nginx:index:IngressController \
-  --schema-source kubernetes-ingress-nginx \
-  --package-name kubernetes-ingress-nginx
-```
-
-Tip for internet-backed examples:
-- If a component token is wrong for a package/version, extract schema then list component tokens:
+Tip for internet-backed examples: if a token is wrong for a package/version, extract schema and list component tokens.
 
 ```bash
 pulumi package get-schema eks@4.2.0 > component-to-crd/.manual-test/work/e2e.eks-token-discovery.schema.json

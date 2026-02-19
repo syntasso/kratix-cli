@@ -16,6 +16,11 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! docker buildx version >/dev/null 2>&1; then
+  echo "docker buildx is required" >&2
+  exit 1
+fi
+
 if [[ -z "${IMAGE_TAG:-}" ]]; then
   echo "missing required env IMAGE_TAG (example: ghcr.io/my-org/component-to-crd:v0.1.0)" >&2
   exit 1
@@ -33,4 +38,3 @@ cmd+=("$REPO_DIR")
 echo "building and pushing image: $IMAGE_TAG ($platforms)"
 "${cmd[@]}"
 echo "pushed image: $IMAGE_TAG"
-EOF && chmod +x component-to-crd/scripts/docker_buildx_push_multiarch.sh

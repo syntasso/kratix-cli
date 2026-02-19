@@ -6,8 +6,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 )
+
+var buildBinaryOnce sync.Once
 
 func TestRegressionSuite_LocalFixtures(t *testing.T) {
 	t.Parallel()
@@ -184,17 +187,15 @@ func buildBinary(t *testing.T) string {
 	t.Helper()
 
 	repoDir := componentRoot(t)
-	binDir := filepath.Join(regressionTestDir(t), "work", "bin")
-	binPath := filepath.Join(binDir, "component-to-crd")
-	if err := os.MkdirAll(binDir, 0o755); err != nil {
-		t.Fatalf("create bin dir: %v", err)
-	}
+	binPath := filepath.Join(repoDir, "bin", "component-to-crd")
 
-	cmd := exec.Command("go", "build", "-o", binPath, "./cmd/component-to-crd")
-	cmd.Dir = repoDir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build binary: %v\n%s", err, string(out))
-	}
+	buildBinaryOnce.Do(func() {
+		cmd := exec.Command(filepath.Join(repoDir, "scripts", "build_binary"))
+		cmd.Dir = repoDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("build binary: %v\n%s", err, string(out))
+		}
+	})
 
 	return binPath
 }

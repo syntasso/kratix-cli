@@ -40,7 +40,7 @@ Automated:
   - `--version` ignores other missing-input conditions
 
 Manual:
-- Build binary and run `component-to-crd/.manual-test/component-to-crd --version`.
+- Build binary with `component-to-crd/scripts/build_binary` and run `component-to-crd/bin/component-to-crd --version`.
 
 ## Definition of Done
 - Version output path implemented and tested.
