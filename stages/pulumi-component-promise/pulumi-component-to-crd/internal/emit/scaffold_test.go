@@ -107,3 +107,46 @@ func TestRenderCRDYAML_UsesConfiguredIdentity(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderCRDYAML_IncludesDescriptionFields(t *testing.T) {
+	t.Parallel()
+
+	schema := map[string]any{
+		"type":        "object",
+		"description": "spec description",
+		"properties": map[string]any{
+			"name": map[string]any{
+				"type":        "string",
+				"description": "name field",
+			},
+			"ports": map[string]any{
+				"type":        "array",
+				"description": "ports field",
+				"items": map[string]any{
+					"type":        "integer",
+					"description": "port item",
+				},
+			},
+		},
+	}
+
+	outBytes, err := RenderCRDYAML(DefaultIdentity(), schema)
+	if err != nil {
+		t.Fatalf("RenderCRDYAML error: %v", err)
+	}
+
+	out := string(outBytes)
+	requiredSnippets := []string{
+		`description: "spec description"`,
+		`name:`,
+		`description: "name field"`,
+		`ports:`,
+		`description: "ports field"`,
+		`description: "port item"`,
+	}
+	for _, snippet := range requiredSnippets {
+		if !strings.Contains(out, snippet) {
+			t.Fatalf("expected snippet %q in output:\n%s", snippet, out)
+		}
+	}
+}

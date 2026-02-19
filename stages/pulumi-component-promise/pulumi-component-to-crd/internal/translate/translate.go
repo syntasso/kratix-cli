@@ -195,6 +195,14 @@ func translateObjectNode(ctx *context, node map[string]any, path string) (map[st
 }
 
 func applyAnnotations(node map[string]any, translated map[string]any, componentToken, path string) (map[string]any, error) {
+	if descriptionValue, ok := node["description"]; ok {
+		description, ok := descriptionValue.(string)
+		if !ok {
+			return nil, unsupported(componentToken, path, "description must be a string")
+		}
+		translated["description"] = description
+	}
+
 	if defaultValue, ok := node["default"]; ok {
 		translated["default"] = defaultValue
 	}

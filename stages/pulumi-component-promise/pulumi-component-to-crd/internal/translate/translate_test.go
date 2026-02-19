@@ -331,6 +331,114 @@ func TestInputPropertiesToOpenAPI_HardUnsupportedStillFails(t *testing.T) {
 	}
 }
 
+func TestInputPropertiesToOpenAPI_DescriptionAnnotationsArePropagated(t *testing.T) {
+	t.Parallel()
+
+	doc := &schema.Document{
+		Types: map[string]json.RawMessage{
+			"pkg:index:ServiceRef": json.RawMessage(`{
+				"type":"object",
+				"description":"base service description",
+				"properties":{
+					"id":{"type":"string","description":"service id"}
+				},
+				"required":["id"]
+			}`),
+		},
+	}
+
+	resource := schema.Resource{
+		InputProperties: map[string]json.RawMessage{
+			"name": json.RawMessage(`{"type":"string","description":"display name"}`),
+			"settings": json.RawMessage(`{
+				"type":"object",
+				"description":"settings object",
+				"properties":{
+					"enabled":{"type":"boolean","description":"enable toggle"},
+					"ports":{
+						"type":"array",
+						"description":"port list",
+						"items":{"type":"integer","description":"single port"}
+					},
+					"labels":{
+						"type":"object",
+						"description":"label map",
+						"additionalProperties":{"type":"string","description":"label value"}
+					}
+				}
+			}`),
+			"service": json.RawMessage(`{
+				"$ref":"#/types/pkg:index:ServiceRef",
+				"description":"overlay service description"
+			}`),
+		},
+		RequiredInputs: []string{"name", "service"},
+	}
+
+	got, skipped, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
+	if err != nil {
+		t.Fatalf("InputPropertiesToOpenAPI error = %v", err)
+	}
+	if skipped != nil {
+		t.Fatalf("expected no skipped paths, got %#v", skipped)
+	}
+
+	want := map[string]any{
+		"type": "object",
+		"required": []string{
+			"name",
+			"service",
+		},
+		"properties": map[string]any{
+			"name": map[string]any{
+				"type":        "string",
+				"description": "display name",
+			},
+			"service": map[string]any{
+				"type":        "object",
+				"description": "overlay service description",
+				"required":    []string{"id"},
+				"properties": map[string]any{
+					"id": map[string]any{
+						"type":        "string",
+						"description": "service id",
+					},
+				},
+			},
+			"settings": map[string]any{
+				"type":        "object",
+				"description": "settings object",
+				"properties": map[string]any{
+					"enabled": map[string]any{
+						"type":        "boolean",
+						"description": "enable toggle",
+					},
+					"labels": map[string]any{
+						"type":        "object",
+						"description": "label map",
+						"additionalProperties": map[string]any{
+							"type":        "string",
+							"description": "label value",
+						},
+					},
+					"ports": map[string]any{
+						"type":        "array",
+						"description": "port list",
+						"items": map[string]any{
+							"type":        "integer",
+							"description": "single port",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("translated schema mismatch\n got: %#v\nwant: %#v", got, want)
+	}
+}
+
 func containsAll(got string, parts ...string) bool {
 	for _, part := range parts {
 		if !strings.Contains(got, part) {

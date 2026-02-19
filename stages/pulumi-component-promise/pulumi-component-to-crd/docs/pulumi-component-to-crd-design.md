@@ -78,7 +78,10 @@ Translation (resilient):
     - `type: object`
     - `x-kubernetes-preserve-unknown-fields: true`
     - required field membership from `requiredInputs` is preserved
-  - `enum` and `default` passthrough
+  - annotation passthrough:
+    - `description` (string)
+    - `default`
+    - `enum`
 - skips unsupported field paths (for example unsupported keywords/types such as `oneOf`, `anyOf`, `allOf`, `not`, `discriminator`, `patternProperties`, `const`) and, in `--verbose` mode, logs warnings to `stderr`
 - preserves `exit 3` for intentionally non-skippable unsupported constructs
 - required fields are normalized (deduplicated + sorted)
