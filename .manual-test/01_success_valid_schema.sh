@@ -1,54 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Scenario: valid --in argument with a single component schema.
-# Expected stdout: scaffold YAML for pkg:index:Thing
-# Expected stderr: (empty)
-# Expected exit code: 0
+# Success path: single component auto-select with translated spec schema.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BIN_PATH="$SCRIPT_DIR/component-to-crd"
-SCHEMA_PATH="$SCRIPT_DIR/schema.valid.json"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+ensure_bin
 
-if [[ ! -x "$BIN_PATH" ]]; then
-  "$SCRIPT_DIR/00_build_binary.sh"
-fi
+schema="$SCRIPT_DIR/schema.valid.json"
+stdout="$SCRIPT_DIR/out.success.stdout.txt"
+stderr="$SCRIPT_DIR/out.success.stderr.txt"
 
-cat > "$SCHEMA_PATH" <<'JSON'
-{"resources":{"pkg:index:Thing":{"isComponent":true}}}
+cat >"$schema" <<'JSON'
+{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"},"replicas":{"type":"integer","default":2}},"requiredInputs":["name"]}}}
 JSON
 
-STDOUT_PATH="$SCRIPT_DIR/out.success.stdout.txt"
-STDERR_PATH="$SCRIPT_DIR/out.success.stderr.txt"
-
-set +e
-"$BIN_PATH" --in "$SCHEMA_PATH" >"$STDOUT_PATH" 2>"$STDERR_PATH"
-EXIT_CODE=$?
-set -e
-
-if [[ $EXIT_CODE -ne 0 ]]; then
-  echo "unexpected exit code: $EXIT_CODE (expected 0)" >&2
-  exit 1
-fi
-
-ACTUAL_STDOUT="$(cat "$STDOUT_PATH")"
-if ! grep -q 'apiVersion: apiextensions.k8s.io/v1' "$STDOUT_PATH"; then
-  echo "stdout missing apiVersion, got: $ACTUAL_STDOUT" >&2
-  exit 1
-fi
-
-if ! grep -q 'kind: CustomResourceDefinition' "$STDOUT_PATH"; then
-  echo "stdout missing CRD kind, got: $ACTUAL_STDOUT" >&2
-  exit 1
-fi
-
-if ! grep -q 'placeholder scaffold for pkg:index:Thing' "$STDOUT_PATH"; then
-  echo "stdout missing placeholder descriptor, got: $ACTUAL_STDOUT" >&2
-  exit 1
-fi
-
-if [[ -s "$STDERR_PATH" ]]; then
-  echo "expected empty stderr, got:" >&2
-  cat "$STDERR_PATH" >&2
-  exit 1
-fi
+if run_capture "$stdout" "$stderr" --in "$schema"; then code=0; else code=$?; fi
+assert_eq "$code" "0" "exit code"
+assert_empty_file "$stderr"
+assert_file_contains "$stdout" 'apiVersion: apiextensions.k8s.io/v1'
+assert_file_contains "$stdout" 'kind: CustomResourceDefinition'
+assert_file_contains "$stdout" 'openAPIV3Schema:'
+assert_file_contains "$stdout" 'required:'
+assert_file_contains "$stdout" 'default: 2'

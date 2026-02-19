@@ -6,12 +6,13 @@ import (
 	"os"
 )
 
-// Document is the minimal Pulumi schema representation needed for task 01b.
+// Document is the minimal Pulumi schema representation needed by the converter.
 type Document struct {
-	Resources map[string]Resource `json:"resources"`
+	Resources map[string]Resource        `json:"resources"`
+	Types     map[string]json.RawMessage `json:"types"`
 }
 
-// Resource is the minimal Pulumi resource shape needed for component discovery.
+// Resource is the Pulumi resource shape used for component selection and input translation.
 type Resource struct {
 	IsComponent     bool                       `json:"isComponent"`
 	InputProperties map[string]json.RawMessage `json:"inputProperties"`

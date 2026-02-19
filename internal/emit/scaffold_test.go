@@ -1,43 +1,67 @@
 package emit
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
-
-	"github.com/pulumi/component-to-crd/internal/schema"
 )
 
-func TestRenderScaffoldYAML_IsDeterministic(t *testing.T) {
+func TestRenderCRDYAML_IsDeterministic(t *testing.T) {
 	t.Parallel()
 
-	resource := schema.Resource{
-		InputProperties: map[string]json.RawMessage{
-			"zeta":  []byte(`{"type":"string"}`),
-			"alpha": []byte(`{"type":"number"}`),
+	schema := map[string]any{
+		"type": "object",
+		"required": []string{
+			"alpha",
+			"zeta",
 		},
-		RequiredInputs: []string{"zeta", "alpha"},
+		"properties": map[string]any{
+			"zeta": map[string]any{"type": "string"},
+			"alpha": map[string]any{
+				"type":    "number",
+				"default": float64(42),
+			},
+		},
 	}
 
-	first := string(RenderScaffoldYAML("pkg:index:Thing", resource))
-	second := string(RenderScaffoldYAML("pkg:index:Thing", resource))
+	first, err := RenderCRDYAML("pkg:index:Thing", schema)
+	if err != nil {
+		t.Fatalf("RenderCRDYAML error: %v", err)
+	}
+	second, err := RenderCRDYAML("pkg:index:Thing", schema)
+	if err != nil {
+		t.Fatalf("RenderCRDYAML error: %v", err)
+	}
 
-	if first != second {
-		t.Fatalf("scaffold output should be deterministic; first:\n%s\nsecond:\n%s", first, second)
+	if string(first) != string(second) {
+		t.Fatalf("output should be deterministic; first:\n%s\nsecond:\n%s", string(first), string(second))
 	}
 
 	requiredSnippets := []string{
 		"apiVersion: apiextensions.k8s.io/v1",
 		"kind: CustomResourceDefinition",
 		"openAPIV3Schema:",
-		"properties: {}",
-		"translation is not implemented yet.",
-		"observed inputProperties=2 (alpha, zeta), requiredInputs=2 (alpha, zeta)",
+		"spec:",
+		"default: 42",
+		"required:",
+		"- \"alpha\"",
+		"- \"zeta\"",
+		"alpha:",
+		"zeta:",
 	}
 
+	out := string(first)
 	for _, snippet := range requiredSnippets {
-		if !strings.Contains(first, snippet) {
-			t.Fatalf("expected snippet %q in scaffold:\n%s", snippet, first)
+		if !strings.Contains(out, snippet) {
+			t.Fatalf("expected snippet %q in output:\n%s", snippet, out)
 		}
+	}
+}
+
+func TestRenderCRDYAML_NilSchema(t *testing.T) {
+	t.Parallel()
+
+	_, err := RenderCRDYAML("pkg:index:Thing", nil)
+	if err == nil {
+		t.Fatal("expected error but got nil")
 	}
 }

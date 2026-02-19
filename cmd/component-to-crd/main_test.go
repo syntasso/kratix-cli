@@ -16,12 +16,15 @@ func TestRun(t *testing.T) {
 	multiComponentSchemaPath := filepath.Join(tempDir, "multi-component.json")
 	zeroComponentSchemaPath := filepath.Join(tempDir, "zero-component.json")
 	invalidSchemaPath := filepath.Join(tempDir, "invalid.json")
+	unsupportedSchemaPath := filepath.Join(tempDir, "unsupported.json")
+	malformedSchemaPath := filepath.Join(tempDir, "malformed.json")
+	malformedPrecedenceSchemaPath := filepath.Join(tempDir, "malformed-precedence.json")
 
-	if err := os.WriteFile(singleComponentSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"zeta":{"type":"string"},"alpha":{"type":"number"}},"requiredInputs":["zeta","alpha"]}}}`), 0o600); err != nil {
+	if err := os.WriteFile(singleComponentSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"zeta":{"type":"string"},"alpha":{"type":"number","default":1.5}},"requiredInputs":["zeta","alpha"]}}}`), 0o600); err != nil {
 		t.Fatalf("write single component fixture: %v", err)
 	}
 
-	if err := os.WriteFile(multiComponentSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true},"pkg:index:Alpha":{"isComponent":true},"pkg:index:Other":{"isComponent":false}}}`), 0o600); err != nil {
+	if err := os.WriteFile(multiComponentSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true,"inputProperties":{"v":{"type":"string"}}},"pkg:index:Alpha":{"isComponent":true,"inputProperties":{"w":{"type":"string"}}},"pkg:index:Other":{"isComponent":false}}}`), 0o600); err != nil {
 		t.Fatalf("write multi component fixture: %v", err)
 	}
 
@@ -33,24 +36,48 @@ func TestRun(t *testing.T) {
 		t.Fatalf("write invalid schema fixture: %v", err)
 	}
 
+	if err := os.WriteFile(unsupportedSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600); err != nil {
+		t.Fatalf("write unsupported fixture: %v", err)
+	}
+
+	if err := os.WriteFile(malformedSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"value":{"$ref":"#/types/pkg:index:Missing"}}}}}`), 0o600); err != nil {
+		t.Fatalf("write malformed schema fixture: %v", err)
+	}
+
+	if err := os.WriteFile(malformedPrecedenceSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true,"inputProperties":{"bad":{"$ref":"#/types/pkg:index:Missing"}}},"pkg:index:Alpha":{"isComponent":true,"inputProperties":{"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600); err != nil {
+		t.Fatalf("write malformed precedence fixture: %v", err)
+	}
+
 	tests := []struct {
 		name            string
 		args            []string
 		wantExitCode    int
 		wantStdoutParts []string
 		wantStderrParts []string
+		wantStderrNot   []string
 	}{
 		{
-			name:            "single component auto-select",
-			args:            []string{"--in", singleComponentSchemaPath},
-			wantExitCode:    exitSuccess,
-			wantStdoutParts: []string{"apiVersion: apiextensions.k8s.io/v1", "kind: CustomResourceDefinition", "placeholder scaffold for pkg:index:Thing"},
+			name:         "single component auto-select",
+			args:         []string{"--in", singleComponentSchemaPath},
+			wantExitCode: exitSuccess,
+			wantStdoutParts: []string{
+				"apiVersion: apiextensions.k8s.io/v1",
+				"kind: CustomResourceDefinition",
+				"spec:",
+				"required:",
+				"- \"alpha\"",
+				"- \"zeta\"",
+				"default: 1.5",
+			},
 		},
 		{
-			name:            "explicit component from multi schema",
-			args:            []string{"--in", multiComponentSchemaPath, "--component", "pkg:index:Zulu"},
-			wantExitCode:    exitSuccess,
-			wantStdoutParts: []string{"placeholder scaffold for pkg:index:Zulu"},
+			name:         "explicit component from multi schema",
+			args:         []string{"--in", multiComponentSchemaPath, "--component", "pkg:index:Zulu"},
+			wantExitCode: exitSuccess,
+			wantStdoutParts: []string{
+				"apiVersion: apiextensions.k8s.io/v1",
+				"kind: CustomResourceDefinition",
+			},
 		},
 		{
 			name:            "unknown component",
@@ -69,6 +96,49 @@ func TestRun(t *testing.T) {
 			args:            []string{"--in", zeroComponentSchemaPath},
 			wantExitCode:    exitUserError,
 			wantStderrParts: []string{"error:", "no component resources found in schema"},
+		},
+		{
+			name:            "unsupported construct is exit 3",
+			args:            []string{"--in", unsupportedSchemaPath},
+			wantExitCode:    exitUnsupported,
+			wantStderrParts: []string{"error:", `component "pkg:index:Thing" path "spec.value" unsupported construct`},
+		},
+		{
+			name:         "malformed schema returns exit 2 preflight error",
+			args:         []string{"--in", malformedSchemaPath},
+			wantExitCode: exitUserError,
+			wantStderrParts: []string{
+				"error:",
+				"schema preflight path",
+				`resources.pkg:index:Thing.inputProperties.value`,
+				`unresolved local type ref "#/types/pkg:index:Missing"`,
+			},
+		},
+		{
+			name:         "malformed preflight error has precedence over component selection error",
+			args:         []string{"--in", malformedPrecedenceSchemaPath, "--component", "pkg:index:Missing"},
+			wantExitCode: exitUserError,
+			wantStderrParts: []string{
+				"error:",
+				"schema preflight path",
+				`unresolved local type ref "#/types/pkg:index:Missing"`,
+			},
+			wantStderrNot: []string{
+				`component "pkg:index:Missing" not found`,
+			},
+		},
+		{
+			name:         "malformed preflight error has precedence over unsupported construct",
+			args:         []string{"--in", malformedPrecedenceSchemaPath, "--component", "pkg:index:Alpha"},
+			wantExitCode: exitUserError,
+			wantStderrParts: []string{
+				"error:",
+				"schema preflight path",
+				`unresolved local type ref "#/types/pkg:index:Missing"`,
+			},
+			wantStderrNot: []string{
+				"unsupported construct",
+			},
 		},
 		{
 			name:            "missing in flag",
@@ -116,6 +186,11 @@ func TestRun(t *testing.T) {
 					t.Fatalf("stderr missing %q in %q", part, gotStderr)
 				}
 			}
+			for _, part := range tt.wantStderrNot {
+				if strings.Contains(gotStderr, part) {
+					t.Fatalf("stderr unexpectedly contains %q in %q", part, gotStderr)
+				}
+			}
 
 			if gotStderr != "" && strings.Count(gotStderr, "\n") != 1 {
 				t.Fatalf("stderr should be a single line, got %q", gotStderr)
@@ -124,7 +199,7 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func TestRun_WritesDeterministicScaffold(t *testing.T) {
+func TestRun_WritesDeterministicOutput(t *testing.T) {
 	t.Parallel()
 
 	tempDir := makeWorkspaceTempDir(t)
@@ -161,14 +236,14 @@ func TestRun_WritesDeterministicScaffold(t *testing.T) {
 		"openAPIV3Schema:",
 		"properties:",
 		"spec:",
-		"properties: {}",
-		"TODO: Pulumi inputProperties/requiredInputs to OpenAPI translation is not implemented yet.",
-		"observed inputProperties=2 (alpha, zeta), requiredInputs=2 (alpha, zeta)",
+		"alpha:",
+		"zeta:",
+		"required:",
 	}
 	output := a
 	for _, snippet := range requiredSnippets {
 		if !strings.Contains(output, snippet) {
-			t.Fatalf("expected scaffold to contain %q, got:\n%s", snippet, output)
+			t.Fatalf("expected output to contain %q, got:\n%s", snippet, output)
 		}
 	}
 }
@@ -178,7 +253,7 @@ func TestRun_OutputWriterFailureReturnsExit4(t *testing.T) {
 
 	tempDir := makeWorkspaceTempDir(t)
 	schemaPath := filepath.Join(tempDir, "schema.json")
-	if err := os.WriteFile(schemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true}}}`), 0o600); err != nil {
+	if err := os.WriteFile(schemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"}}}}}`), 0o600); err != nil {
 		t.Fatalf("write schema fixture: %v", err)
 	}
 
@@ -187,7 +262,7 @@ func TestRun_OutputWriterFailureReturnsExit4(t *testing.T) {
 	if code != exitOutputError {
 		t.Fatalf("exit code mismatch: got %d, want %d", code, exitOutputError)
 	}
-	if !strings.Contains(stderr.String(), "write scaffold output:") {
+	if !strings.Contains(stderr.String(), "write CRD output:") {
 		t.Fatalf("stderr mismatch: %q", stderr.String())
 	}
 }

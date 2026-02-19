@@ -10,11 +10,13 @@ import (
 	"github.com/pulumi/component-to-crd/internal/emit"
 	"github.com/pulumi/component-to-crd/internal/schema"
 	selectcomponent "github.com/pulumi/component-to-crd/internal/select"
+	"github.com/pulumi/component-to-crd/internal/translate"
 )
 
 const (
 	exitSuccess     = 0
 	exitUserError   = 2
+	exitUnsupported = 3
 	exitOutputError = 4
 )
 
@@ -34,6 +36,10 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 		printError(stderr, err)
 		return exitUserError
 	}
+	if err := schema.ValidateForTranslation(doc); err != nil {
+		printError(stderr, err)
+		return exitUserError
+	}
 
 	tokens := selectcomponent.DiscoverComponentTokens(doc)
 	selected, err := selectcomponent.SelectComponent(tokens, cfg.component)
@@ -48,9 +54,24 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 		return exitUserError
 	}
 
-	scaffold := emit.RenderScaffoldYAML(selected, resource)
-	if _, err := stdout.Write(scaffold); err != nil {
-		printError(stderr, fmt.Errorf("write scaffold output: %w", err))
+	translatedSpec, err := translate.InputPropertiesToOpenAPI(doc, selected, resource)
+	if err != nil {
+		var unsupportedErr *translate.UnsupportedError
+		if errors.As(err, &unsupportedErr) {
+			printError(stderr, err)
+			return exitUnsupported
+		}
+		printError(stderr, err)
+		return exitUserError
+	}
+
+	crdYAML, err := emit.RenderCRDYAML(selected, translatedSpec)
+	if err != nil {
+		printError(stderr, fmt.Errorf("serialize CRD output: %w", err))
+		return exitOutputError
+	}
+	if _, err := stdout.Write(crdYAML); err != nil {
+		printError(stderr, fmt.Errorf("write CRD output: %w", err))
 		return exitOutputError
 	}
 	return exitSuccess
