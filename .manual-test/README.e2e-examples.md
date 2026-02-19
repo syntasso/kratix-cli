@@ -41,21 +41,28 @@ IMAGE_TAG=ghcr.io/<org>/component-to-crd:<tag> \
   component-to-crd/scripts/docker_buildx_push_multiarch.sh
 ```
 
-Run a containerized conversion test with an input component token:
+Run a containerized conversion test with an input component token from the root directory:
 
 ```bash
-component-to-crd/scripts/docker_build_local.sh
+./scripts/docker_build_local.sh
+
+mkdir -p ./.manual-test/work.docker-smoke
+
+pulumi package get-schema \
+  https://www.pulumi.com/registry/packages/eks/ \
+  > ./.manual-test/work.docker-smoke/component.schema.json
 
 docker run --rm \
-  --mount "type=bind,src=$PWD/component-to-crd/.manual-test,dst=/work,readonly" \
+  --mount "type=bind,src=$PWD,dst=/repo,readonly" \
   component-to-crd:local \
-  --in pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider
+  --in ./.manual-test/work.docker-smoke/component.schema.json \
+  --component nodejs-component-provider:index:MyComponent
 ```
 
 Expected result:
 - command exits `0`
 - CRD YAML is printed to stdout
-- output includes identity for `pkg:index:Thing` (for example `kind: Thing`)
+- output includes identity for `nodejs-component-provider:index:MyComponent`
 
 ## Task 03 URL Input Manual Checks
 

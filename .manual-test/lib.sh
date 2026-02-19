@@ -2,10 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BIN_PATH="$SCRIPT_DIR/component-to-crd"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BIN_DIR="$(cd "$REPO_DIR/bin" && pwd)"
+BIN_PATH="$REPO_DIR/bin/component-to-crd"
 
 ensure_bin() {
-  [[ -x "$BIN_PATH" ]] || "$SCRIPT_DIR/00_build_binary.sh" >/dev/null
+  [[ -x "$BIN_PATH" ]] || "$SCRIPT_DIR/build_binary" >/dev/null
 }
 
 run_capture() {

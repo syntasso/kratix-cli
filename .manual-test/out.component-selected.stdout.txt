@@ -2,13 +2,13 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: "pkg-index-thing"
+  name: "things.pkg.components.platform"
 spec:
-  group: components.pulumi.local
+  group: pkg.components.platform
   names:
-    kind: Component
-    plural: components
-    singular: component
+    kind: Thing
+    plural: things
+    singular: thing
   scope: Namespaced
   versions:
     - name: v1alpha1
