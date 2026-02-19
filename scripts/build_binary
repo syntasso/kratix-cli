@@ -8,11 +8,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-BIN_DIR="$(cd "$REPO_DIR/bin" && pwd)"
-BIN_PATH="$REPO_DIR/bin/component-to-crd"
+BIN_DIR="$REPO_DIR/bin"
+BIN_PATH="$BIN_DIR/component-to-crd"
 
 cd "$REPO_DIR"
-mkdir -p $BIN_DIR
+mkdir -p "$BIN_DIR"
 go build -o "$BIN_PATH" ./cmd/component-to-crd
 
 echo "built $BIN_PATH"

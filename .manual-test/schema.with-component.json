@@ -1,1 +1,0 @@
-{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"}}},"pkg:index:Other":{"isComponent":true,"inputProperties":{"other":{"type":"string"}}},"pkg:index:Skip":{"isComponent":false}}}

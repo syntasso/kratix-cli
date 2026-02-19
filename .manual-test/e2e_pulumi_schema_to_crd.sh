@@ -9,7 +9,8 @@ set -euo pipefail
 # This script is parameterized so the same flow can be reused across multiple
 # local and internet-backed package examples.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/helpers.sh"
+
 ensure_bin
 
 usage() {
@@ -146,7 +147,7 @@ else
   SOURCE_DIR="$WORKSPACE_DIR"
 fi
 
-WORK_DIR="$SCRIPT_DIR/work.e2e.$WORK_NAME"
+WORK_DIR="$WORK_ROOT_DIR/e2e.$WORK_NAME"
 SCHEMA_PATH="$WORK_DIR/$WORK_NAME.schema.json"
 CRD_PATH="$WORK_DIR/$WORK_NAME.crd.yaml"
 PULUMI_INSTALL_LOG="$WORK_DIR/pulumi.install.log"
