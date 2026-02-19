@@ -26,6 +26,37 @@ Quick default run (no arguments):
 component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh
 ```
 
+## Docker Packaging and Tests
+
+Build only for local architecture:
+
+```bash
+IMAGE_TAG=component-to-crd:local component-to-crd/scripts/docker_build_local.sh
+```
+
+Build and push a multi-arch image (Linux amd64 + arm64):
+
+```bash
+IMAGE_TAG=ghcr.io/<org>/component-to-crd:<tag> \
+  component-to-crd/scripts/docker_buildx_push_multiarch.sh
+```
+
+Run a containerized conversion test with an input component token:
+
+```bash
+component-to-crd/scripts/docker_build_local.sh
+
+docker run --rm \
+  --mount "type=bind,src=$PWD/component-to-crd/.manual-test,dst=/work,readonly" \
+  component-to-crd:local \
+  --in pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider
+```
+
+Expected result:
+- command exits `0`
+- CRD YAML is printed to stdout
+- output includes identity for `pkg:index:Thing` (for example `kind: Thing`)
+
 ## Task 03 URL Input Manual Checks
 
 Task 03 added URL support for `--in` (local file paths still work unchanged).

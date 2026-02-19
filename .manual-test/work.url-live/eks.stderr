@@ -1,1 +1,0 @@
-error: schema preflight path "resources.eks:index:Addon.inputProperties.cluster": unsupported ref "#/resources/eks:index:Cluster" (expected local ref prefix "#/types/")
