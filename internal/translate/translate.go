@@ -11,7 +11,7 @@ import (
 type context struct {
 	doc            *schema.Document
 	componentToken string
-	resolvingTypes map[string]bool
+	resolvingRefs  map[string]bool
 }
 
 // InputPropertiesToOpenAPI translates a Pulumi component's input schema to OpenAPI v3 schema for CRD spec.
@@ -19,7 +19,7 @@ func InputPropertiesToOpenAPI(doc *schema.Document, componentToken string, resou
 	ctx := &context{
 		doc:            doc,
 		componentToken: componentToken,
-		resolvingTypes: make(map[string]bool),
+		resolvingRefs:  make(map[string]bool),
 	}
 
 	translatedProps := make(map[string]any, len(resource.InputProperties))
@@ -51,17 +51,17 @@ func InputPropertiesToOpenAPI(doc *schema.Document, componentToken string, resou
 
 func translateNode(ctx *context, node map[string]any, path string) (map[string]any, error) {
 	if ref, ok := stringField(node, "$ref"); ok {
-		resolvedNode, typeToken, err := resolveLocalType(ctx.doc, ref)
+		resolvedNode, refKey, err := resolveLocalRef(ctx.doc, ref)
 		if err != nil {
 			return nil, fmt.Errorf("component %q path %q invalid schema: %w", ctx.componentToken, path, err)
 		}
 
-		if ctx.resolvingTypes[typeToken] {
-			return nil, unsupported(ctx.componentToken, path, fmt.Sprintf("cyclic local type ref %q", ref))
+		if ctx.resolvingRefs[refKey] {
+			return nil, unsupported(ctx.componentToken, path, fmt.Sprintf("cyclic local ref %q", ref))
 		}
-		ctx.resolvingTypes[typeToken] = true
+		ctx.resolvingRefs[refKey] = true
 		translated, err := translateNode(ctx, resolvedNode, path)
-		delete(ctx.resolvingTypes, typeToken)
+		delete(ctx.resolvingRefs, refKey)
 		if err != nil {
 			return nil, err
 		}

@@ -21,8 +21,14 @@ func TestValidateForTranslation(t *testing.T) {
 					"pkg:index:Thing": {
 						IsComponent: true,
 						InputProperties: map[string]json.RawMessage{
-							"mode": json.RawMessage(`{"$ref":"#/types/pkg:index:Mode"}`),
-							"spec": json.RawMessage(`{"type":"object","properties":{"replicas":{"type":"integer"},"labels":{"type":"object","additionalProperties":{"type":"string"}},"ports":{"type":"array","items":{"type":"number"}}}}`),
+							"mode":             json.RawMessage(`{"$ref":"#/types/pkg:index:Mode"}`),
+							"specFromResource": json.RawMessage(`{"$ref":"#/resources/pkg:index:ClusterSpec"}`),
+							"spec":             json.RawMessage(`{"type":"object","properties":{"replicas":{"type":"integer"},"labels":{"type":"object","additionalProperties":{"type":"string"}},"ports":{"type":"array","items":{"type":"number"}}}}`),
+						},
+					},
+					"pkg:index:ClusterSpec": {
+						InputProperties: map[string]json.RawMessage{
+							"name": json.RawMessage(`{"type":"string"}`),
 						},
 					},
 				},
@@ -38,12 +44,12 @@ func TestValidateForTranslation(t *testing.T) {
 					"pkg:index:Thing": {
 						IsComponent: true,
 						InputProperties: map[string]json.RawMessage{
-							"value": json.RawMessage(`{"$ref":"#/resources/pkg:index:Mode"}`),
+							"value": json.RawMessage(`{"$ref":"#/providers/pkg:index:Mode"}`),
 						},
 					},
 				},
 			},
-			wantErrPart: `this tool currently supports only local type refs`,
+			wantErrPart: `unsupported ref`,
 		},
 		{
 			name: "unresolved local ref fails",
@@ -59,6 +65,20 @@ func TestValidateForTranslation(t *testing.T) {
 				Types: map[string]json.RawMessage{},
 			},
 			wantErrPart: `unresolved local type ref "#/types/pkg:index:Missing"`,
+		},
+		{
+			name: "unresolved local resource ref fails",
+			doc: &Document{
+				Resources: map[string]Resource{
+					"pkg:index:Thing": {
+						IsComponent: true,
+						InputProperties: map[string]json.RawMessage{
+							"value": json.RawMessage(`{"$ref":"#/resources/pkg:index:Missing"}`),
+						},
+					},
+				},
+			},
+			wantErrPart: `unresolved local resource ref "#/resources/pkg:index:Missing"`,
 		},
 		{
 			name: "invalid properties container fails",

@@ -14,6 +14,15 @@ func TestInputPropertiesToOpenAPI_SupportedMappings(t *testing.T) {
 	t.Parallel()
 
 	doc := &schema.Document{
+		Resources: map[string]schema.Resource{
+			"pkg:index:ClusterSpec": {
+				InputProperties: map[string]json.RawMessage{
+					"id":   json.RawMessage(`{"type":"string"}`),
+					"tags": json.RawMessage(`{"type":"object","additionalProperties":{"type":"string"}}`),
+				},
+				RequiredInputs: []string{"id"},
+			},
+		},
 		Types: map[string]json.RawMessage{
 			"pkg:index:Resources": json.RawMessage(`{"type":"object","properties":{"cpu":{"type":"string"},"memory":{"type":"string"}},"required":["memory","cpu"]}`),
 			"pkg:index:Mode":      json.RawMessage(`{"type":"string","enum":[{"name":"dev","value":"dev"},{"name":"prod","value":"prod"}]}`),
@@ -27,8 +36,9 @@ func TestInputPropertiesToOpenAPI_SupportedMappings(t *testing.T) {
 			"resources": json.RawMessage(`{"$ref":"#/types/pkg:index:Resources"}`),
 			"labels":    json.RawMessage(`{"type":"object","additionalProperties":{"type":"string"}}`),
 			"mode":      json.RawMessage(`{"$ref":"#/types/pkg:index:Mode"}`),
+			"cluster":   json.RawMessage(`{"$ref":"#/resources/pkg:index:ClusterSpec"}`),
 		},
-		RequiredInputs: []string{"resources", "name"},
+		RequiredInputs: []string{"resources", "name", "cluster"},
 	}
 
 	got, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
@@ -39,10 +49,26 @@ func TestInputPropertiesToOpenAPI_SupportedMappings(t *testing.T) {
 	want := map[string]any{
 		"type": "object",
 		"required": []string{
+			"cluster",
 			"name",
 			"resources",
 		},
 		"properties": map[string]any{
+			"cluster": map[string]any{
+				"type": "object",
+				"required": []string{
+					"id",
+				},
+				"properties": map[string]any{
+					"id": map[string]any{"type": "string"},
+					"tags": map[string]any{
+						"type": "object",
+						"additionalProperties": map[string]any{
+							"type": "string",
+						},
+					},
+				},
+			},
 			"labels": map[string]any{
 				"type": "object",
 				"additionalProperties": map[string]any{
@@ -116,10 +142,10 @@ func TestInputPropertiesToOpenAPI_UnsupportedConstruct(t *testing.T) {
 func TestInputPropertiesToOpenAPI_UnresolvedRefIsInvalidSchemaError(t *testing.T) {
 	t.Parallel()
 
-	doc := &schema.Document{Types: map[string]json.RawMessage{}}
+	doc := &schema.Document{Types: map[string]json.RawMessage{}, Resources: map[string]schema.Resource{}}
 	resource := schema.Resource{
 		InputProperties: map[string]json.RawMessage{
-			"value": json.RawMessage(`{"$ref":"#/types/pkg:index:Missing"}`),
+			"value": json.RawMessage(`{"$ref":"#/resources/pkg:index:Missing"}`),
 		},
 	}
 
@@ -131,7 +157,7 @@ func TestInputPropertiesToOpenAPI_UnresolvedRefIsInvalidSchemaError(t *testing.T
 	if errors.As(err, &unsupportedErr) {
 		t.Fatalf("expected non-unsupported malformed-schema error, got %T: %v", err, err)
 	}
-	if got := err.Error(); got == "" || !containsAll(got, `component "pkg:index:Thing"`, `path "spec.value"`, `invalid schema`, `unresolved local type ref`) {
+	if got := err.Error(); got == "" || !containsAll(got, `component "pkg:index:Thing"`, `path "spec.value"`, `invalid schema`, `unresolved local resource ref`) {
 		t.Fatalf("unexpected error: %q", got)
 	}
 }

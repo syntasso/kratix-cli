@@ -21,6 +21,7 @@ func TestRun(t *testing.T) {
 	unsupportedSchemaPath := filepath.Join(tempDir, "unsupported.json")
 	malformedSchemaPath := filepath.Join(tempDir, "malformed.json")
 	malformedPrecedenceSchemaPath := filepath.Join(tempDir, "malformed-precedence.json")
+	resourceRefSchemaPath := filepath.Join(tempDir, "resource-ref.json")
 
 	if err := os.WriteFile(singleComponentSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"zeta":{"type":"string"},"alpha":{"type":"number","default":1.5}},"requiredInputs":["zeta","alpha"]}}}`), 0o600); err != nil {
 		t.Fatalf("write single component fixture: %v", err)
@@ -48,6 +49,10 @@ func TestRun(t *testing.T) {
 
 	if err := os.WriteFile(malformedPrecedenceSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true,"inputProperties":{"bad":{"$ref":"#/types/pkg:index:Missing"}}},"pkg:index:Alpha":{"isComponent":true,"inputProperties":{"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600); err != nil {
 		t.Fatalf("write malformed precedence fixture: %v", err)
+	}
+
+	if err := os.WriteFile(resourceRefSchemaPath, []byte(`{"resources":{"eks:index:Addon":{"isComponent":true,"inputProperties":{"cluster":{"$ref":"#/resources/eks:index:Cluster"},"addonName":{"type":"string"}},"requiredInputs":["cluster","addonName"]},"eks:index:Cluster":{"isComponent":true,"inputProperties":{"name":{"type":"string"}},"requiredInputs":["name"]}}}`), 0o600); err != nil {
+		t.Fatalf("write resource ref fixture: %v", err)
 	}
 
 	urlSchemaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -131,6 +136,19 @@ func TestRun(t *testing.T) {
 			wantStdoutParts: []string{
 				"apiVersion: apiextensions.k8s.io/v1",
 				"kind: CustomResourceDefinition",
+			},
+		},
+		{
+			name:         "local resource ref translates successfully",
+			args:         []string{"--in", resourceRefSchemaPath, "--component", "eks:index:Addon"},
+			wantExitCode: exitSuccess,
+			wantStdoutParts: []string{
+				"cluster:",
+				"required:",
+				"- \"addonName\"",
+				"- \"cluster\"",
+				"name:",
+				"- \"name\"",
 			},
 		},
 		{

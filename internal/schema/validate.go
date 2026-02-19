@@ -8,6 +8,7 @@ import (
 )
 
 const localTypeRefPrefix = "#/types/"
+const localResourceRefPrefix = "#/resources/"
 
 // ValidateForTranslation checks schema shape constraints needed for translation traversal.
 func ValidateForTranslation(doc *Document) error {
@@ -108,10 +109,17 @@ func (v *preflightValidator) validateNode(node map[string]any, path string) erro
 }
 
 func (v *preflightValidator) validateRef(path, ref string) error {
-	if !strings.HasPrefix(ref, localTypeRefPrefix) {
-		return fmt.Errorf("schema preflight path %q: unsupported ref %q (expected local ref prefix %q; this tool currently supports only local type refs)", path, ref, localTypeRefPrefix)
+	switch {
+	case strings.HasPrefix(ref, localTypeRefPrefix):
+		return v.validateTypeRef(path, ref)
+	case strings.HasPrefix(ref, localResourceRefPrefix):
+		return v.validateResourceRef(path, ref)
+	default:
+		return fmt.Errorf("schema preflight path %q: unsupported ref %q (expected local ref prefix %q or %q)", path, ref, localTypeRefPrefix, localResourceRefPrefix)
 	}
+}
 
+func (v *preflightValidator) validateTypeRef(path, ref string) error {
 	typeToken := strings.TrimPrefix(ref, localTypeRefPrefix)
 	if typeToken == "" {
 		return fmt.Errorf("schema preflight path %q: invalid local type ref %q", path, ref)
@@ -122,19 +130,50 @@ func (v *preflightValidator) validateRef(path, ref string) error {
 		return fmt.Errorf("schema preflight path %q: unresolved local type ref %q", path, ref)
 	}
 
-	if v.validatedRef[typeToken] || v.visitingRef[typeToken] {
+	cacheKey := localTypeRefPrefix + typeToken
+	if v.validatedRef[cacheKey] || v.visitingRef[cacheKey] {
 		return nil
 	}
 
-	v.visitingRef[typeToken] = true
-	defer delete(v.visitingRef, typeToken)
+	v.visitingRef[cacheKey] = true
+	defer delete(v.visitingRef, cacheKey)
 
 	typePath := "types." + typeToken
 	if err := v.validateRawNode(rawType, typePath); err != nil {
 		return fmt.Errorf("schema preflight path %q: invalid ref target %q: %w", path, ref, err)
 	}
 
-	v.validatedRef[typeToken] = true
+	v.validatedRef[cacheKey] = true
+	return nil
+}
+
+func (v *preflightValidator) validateResourceRef(path, ref string) error {
+	resourceToken := strings.TrimPrefix(ref, localResourceRefPrefix)
+	if resourceToken == "" {
+		return fmt.Errorf("schema preflight path %q: invalid local resource ref %q", path, ref)
+	}
+
+	resource, ok := v.doc.Resources[resourceToken]
+	if !ok {
+		return fmt.Errorf("schema preflight path %q: unresolved local resource ref %q", path, ref)
+	}
+
+	cacheKey := localResourceRefPrefix + resourceToken
+	if v.validatedRef[cacheKey] || v.visitingRef[cacheKey] {
+		return nil
+	}
+
+	v.visitingRef[cacheKey] = true
+	defer delete(v.visitingRef, cacheKey)
+
+	for _, prop := range sortedRawMessageKeys(resource.InputProperties) {
+		nodePath := fmt.Sprintf("resources.%s.inputProperties.%s", resourceToken, prop)
+		if err := v.validateRawNode(resource.InputProperties[prop], nodePath); err != nil {
+			return fmt.Errorf("schema preflight path %q: invalid ref target %q: %w", path, ref, err)
+		}
+	}
+
+	v.validatedRef[cacheKey] = true
 	return nil
 }
 
