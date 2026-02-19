@@ -15,9 +15,9 @@ Usage:
 
 Options:
   --component <token>              Pulumi component token.
-                                   Default: nodejs-component-provider:index:MyComponent
+                                   Default: eks:index:Cluster
   --schema-source <source>         Pulumi schema source for `pulumi package get-schema`.
-                                   Default: pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider
+                                   Default: eks@4.2.0
   --work-name <name>               Optional artifact directory suffix.
   --package-name <name>            Optional expected package name in extracted schema.
   --install-plugin <k:n:v>         Optional plugin install before schema extraction.
@@ -50,8 +50,8 @@ sanitize_token_for_name() {
   fi
 }
 
-DEFAULT_COMPONENT_TOKEN="nodejs-component-provider:index:MyComponent"
-DEFAULT_SCHEMA_SOURCE="pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider"
+DEFAULT_COMPONENT_TOKEN="eks:index:Cluster"
+DEFAULT_SCHEMA_SOURCE="eks@4.2.0"
 COMPONENT_TOKEN="$DEFAULT_COMPONENT_TOKEN"
 SCHEMA_SOURCE="$DEFAULT_SCHEMA_SOURCE"
 WORK_NAME=""
@@ -117,11 +117,6 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
-if [[ ${#PLUGIN_SPECS[@]} -eq 0 && "$COMPONENT_TOKEN" == "$DEFAULT_COMPONENT_TOKEN" && "$SCHEMA_SOURCE" == "$DEFAULT_SCHEMA_SOURCE" ]]; then
-  # Default local provider fixture depends on the random plugin.
-  PLUGIN_SPECS=("resource:random:v4.18.0")
-fi
 
 if [[ -z "$WORK_NAME" ]]; then
   WORK_NAME="$(sanitize_token_for_name "$COMPONENT_TOKEN")"
