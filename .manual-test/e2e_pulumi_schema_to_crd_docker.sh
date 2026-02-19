@@ -3,7 +3,7 @@ set -euo pipefail
 
 # End-to-end manual test (Docker conversion path):
 # 1) extract Pulumi schema via `pulumi package get-schema`,
-# 2) run component-to-crd in Docker on a chosen component token,
+# 2) run pulumi-component-to-crd in Docker on a chosen component token,
 # 3) validate that CRD YAML is emitted.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/helpers.sh"
@@ -25,7 +25,7 @@ Options:
   --expect-schema-contains <text>  Optional schema assertion. Repeatable.
   --expect-crd-contains <text>     Optional CRD assertion. Repeatable.
   --skip-install                   Skip `pulumi install` for local directory sources.
-  --image-tag <tag>                Docker image tag. Default: component-to-crd:local
+  --image-tag <tag>                Docker image tag. Default: pulumi-component-to-crd:local
   --skip-image-build               Skip docker image build step.
   --help                           Show this help.
 USAGE
@@ -58,7 +58,7 @@ WORK_NAME=""
 PACKAGE_NAME=""
 SKIP_INSTALL="0"
 SKIP_IMAGE_BUILD="0"
-IMAGE_TAG="component-to-crd:local"
+IMAGE_TAG="pulumi-component-to-crd:local"
 
 PLUGIN_SPECS=()
 EXPECT_SCHEMA_CONTAINS=()
@@ -148,7 +148,7 @@ CRD_PATH="$WORK_DIR/$WORK_NAME.crd.yaml"
 PULUMI_INSTALL_LOG="$WORK_DIR/pulumi.install.log"
 PULUMI_PLUGIN_INSTALL_LOG="$WORK_DIR/pulumi.plugin-install.log"
 PULUMI_SCHEMA_STDERR="$WORK_DIR/pulumi.get-schema.stderr.log"
-CRD_STDERR="$WORK_DIR/component-to-crd.docker.stderr.log"
+CRD_STDERR="$WORK_DIR/pulumi-component-to-crd.docker.stderr.log"
 
 mkdir -p "$WORK_DIR"
 

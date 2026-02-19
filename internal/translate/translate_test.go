@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pulumi/component-to-crd/internal/schema"
+	"github.com/syntasso/pulumi-component-to-crd/internal/schema"
 )
 
 func TestInputPropertiesToOpenAPI_SupportedMappings(t *testing.T) {

@@ -1,7 +1,7 @@
-# ADR-0001: Pulumi Schema to Kubernetes CRD Adapter (`component-to-crd`)
+# ADR-0001: Pulumi Schema to Kubernetes CRD Adapter (`pulumi-component-to-crd`)
 
 ## Document Scope
-This ADR defines the CLI functionality contract and implementation decisions for `component-to-crd`.
+This ADR defines the CLI functionality contract and implementation decisions for `pulumi-component-to-crd`.
 
 When updating this file:
 - include user-visible CLI behavior, technical decisions, and accepted tradeoffs
@@ -35,7 +35,7 @@ Build and keep a small adapter CLI with narrow package responsibilities:
 
 ## Current CLI Contract (Implemented)
 Command:
-- `component-to-crd --in <path-or-url> [--component <token>] [--group ... --version ... --kind ... --plural ... --singular ...] [--verbose]`
+- `pulumi-component-to-crd --in <path-or-url> [--component <token>] [--group ... --version ... --kind ... --plural ... --singular ...] [--verbose]`
 
 Behavior:
 - `--in` is required; supports local files and `http(s)` URLs.
@@ -103,7 +103,7 @@ Identity derivation and overrides:
 - final identity is validated (DNS-like group/version/name constraints and Kubernetes-style kind)
 
 ## Coverage Snapshot
-Automated tests in `component-to-crd` cover:
+Automated tests in this repository cover:
 - CLI arg parsing, missing flags, positional-arg rejection
 - file and URL input loading (including non-200 and timeout paths)
 - deterministic selection behavior

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build and push a multi-architecture Docker image for component-to-crd.
+# Build and push a multi-architecture Docker image for pulumi-component-to-crd.
 # Required env:
-# - IMAGE_TAG, e.g. ghcr.io/my-org/component-to-crd:v0.1.0
+# - IMAGE_TAG, e.g. ghcr.io/my-org/pulumi-component-to-crd:v0.1.0
 # Optional env:
 # - PLATFORMS (default: linux/amd64,linux/arm64)
 # - BUILDER (default: current buildx builder)
@@ -22,7 +22,7 @@ if ! docker buildx version >/dev/null 2>&1; then
 fi
 
 if [[ -z "${IMAGE_TAG:-}" ]]; then
-  echo "missing required env IMAGE_TAG (example: ghcr.io/my-org/component-to-crd:v0.1.0)" >&2
+  echo "missing required env IMAGE_TAG (example: ghcr.io/my-org/pulumi-component-to-crd:v0.1.0)" >&2
   exit 1
 fi
 

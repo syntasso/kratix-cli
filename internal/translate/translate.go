@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/pulumi/component-to-crd/internal/schema"
+	"github.com/syntasso/pulumi-component-to-crd/internal/schema"
 )
 
 type context struct {

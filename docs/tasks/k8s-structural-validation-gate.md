@@ -8,7 +8,7 @@ Planning requires Kubernetes structural compatibility checks, but no validation 
 
 ## Scope
 In scope:
-- Add one workspace-local validation script under `component-to-crd/.manual-test/`.
+- Add one workspace-local validation script under `.manual-test/`.
 - Script flow:
   1. generate CRD from fixture schema
   2. create a kind cluster for a provided Kubernetes version
@@ -27,7 +27,7 @@ Out of scope:
 
 ## Validation
 Automated (script):
-- `component-to-crd/.manual-test/20_k8s_structural_validate.sh v1.35.x`
+- `.manual-test/20_k8s_structural_validate.sh v1.35.x`
 
 Manual follow-up:
 - Run same script for additional versions (`v1.32.x` through `v1.35.x`) one-by-one.

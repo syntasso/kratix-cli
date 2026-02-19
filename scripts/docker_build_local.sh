@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build a local-architecture Docker image for component-to-crd.
+# Build a local-architecture Docker image for pulumi-component-to-crd.
 # Optional env:
-# - IMAGE_TAG (default: component-to-crd:local)
+# - IMAGE_TAG (default: pulumi-component-to-crd:local)
 # - PLATFORM (default: linux/<host-arch>)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +14,7 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-image_tag="${IMAGE_TAG:-component-to-crd:local}"
+image_tag="${IMAGE_TAG:-pulumi-component-to-crd:local}"
 platform="${PLATFORM:-}"
 
 if [[ -z "$platform" ]]; then

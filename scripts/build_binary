@@ -3,16 +3,16 @@ set -eu
 
 # Builds the CLI binary used by local workflows.
 # Expected outcome:
-# - Creates: ./bin/component-to-crd
+# - Creates: ./bin/pulumi-component-to-crd
 # - Exit code: 0
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BIN_DIR="$REPO_DIR/bin"
-BIN_PATH="$BIN_DIR/component-to-crd"
+BIN_PATH="$BIN_DIR/pulumi-component-to-crd"
 
 cd "$REPO_DIR"
 mkdir -p "$BIN_DIR"
-go build -o "$BIN_PATH" ./cmd/component-to-crd
+go build -o "$BIN_PATH" ./cmd/pulumi-component-to-crd
 
 echo "built $BIN_PATH"

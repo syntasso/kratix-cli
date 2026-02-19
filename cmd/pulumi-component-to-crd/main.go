@@ -7,10 +7,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/pulumi/component-to-crd/internal/emit"
-	"github.com/pulumi/component-to-crd/internal/schema"
-	selectcomponent "github.com/pulumi/component-to-crd/internal/select"
-	"github.com/pulumi/component-to-crd/internal/translate"
+	"github.com/syntasso/pulumi-component-to-crd/internal/emit"
+	"github.com/syntasso/pulumi-component-to-crd/internal/schema"
+	selectcomponent "github.com/syntasso/pulumi-component-to-crd/internal/select"
+	"github.com/syntasso/pulumi-component-to-crd/internal/translate"
 )
 
 const (
@@ -127,7 +127,7 @@ type config struct {
 func parseArgs(args []string) (config, error) {
 	var cfg config
 
-	flagSet := flag.NewFlagSet("component-to-crd", flag.ContinueOnError)
+	flagSet := flag.NewFlagSet("pulumi-component-to-crd", flag.ContinueOnError)
 	flagSet.SetOutput(io.Discard)
 	flagSet.StringVar(&cfg.inPath, "in", "", "Path or URL to Pulumi schema JSON file")
 	flagSet.StringVar(&cfg.component, "component", "", "Component token")
@@ -195,7 +195,7 @@ func helpRequested(args []string) bool {
 }
 
 func printHelp(stdout io.Writer) {
-	fmt.Fprintln(stdout, "Usage: component-to-crd --in <path-or-url> [--component <token>] [--group <group>] [--version <version>] [--kind <kind>] [--plural <plural>] [--singular <singular>] [--verbose]")
+	fmt.Fprintln(stdout, "Usage: pulumi-component-to-crd --in <path-or-url> [--component <token>] [--group <group>] [--version <version>] [--kind <kind>] [--plural <plural>] [--singular <singular>] [--verbose]")
 	fmt.Fprintln(stdout, "")
 	fmt.Fprintln(stdout, "Converts a Pulumi component schema into a Kubernetes CRD YAML written to stdout.")
 	fmt.Fprintln(stdout, "")

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pulumi/component-to-crd/internal/schema"
+	"github.com/syntasso/pulumi-component-to-crd/internal/schema"
 )
 
 const localTypeRefPrefix = "#/types/"

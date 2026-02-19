@@ -3,7 +3,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BIN_DIR="$REPO_DIR/bin"
-BIN_PATH="$BIN_DIR/component-to-crd"
+BIN_PATH="$BIN_DIR/pulumi-component-to-crd"
 WORK_ROOT_DIR="$SCRIPT_DIR/work"
 
 ensure_bin() {

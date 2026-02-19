@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/pulumi/component-to-crd/internal/schema"
+	"github.com/syntasso/pulumi-component-to-crd/internal/schema"
 )
 
 const defaultDerivedGroupSuffix = ".components.platform"

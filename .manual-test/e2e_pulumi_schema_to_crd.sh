@@ -3,7 +3,7 @@ set -euo pipefail
 
 # End-to-end manual test:
 # 1) extract Pulumi schema via `pulumi package get-schema`,
-# 2) run component-to-crd on a chosen component token,
+# 2) run pulumi-component-to-crd on a chosen component token,
 # 3) validate that CRD YAML is emitted.
 #
 # This script is parameterized so the same flow can be reused across multiple
@@ -33,15 +33,15 @@ Options:
   --help                           Show this help.
 
 Examples:
-  ./07_e2e_pulumi_schema_to_crd.sh
+  ./e2e_pulumi_schema_to_crd.sh
 
-  ./07_e2e_pulumi_schema_to_crd.sh \
+  ./e2e_pulumi_schema_to_crd.sh \
     --component nodejs-component-provider:index:MyComponent \
     --schema-source pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider \
     --install-plugin resource:random:v4.18.0 \
     --expect-crd-contains aComplexTypeInput:
 
-  ./07_e2e_pulumi_schema_to_crd.sh \
+  ./e2e_pulumi_schema_to_crd.sh \
     --component eks:index:Cluster \
     --schema-source eks@4.2.0
 USAGE
@@ -153,7 +153,7 @@ CRD_PATH="$WORK_DIR/$WORK_NAME.crd.yaml"
 PULUMI_INSTALL_LOG="$WORK_DIR/pulumi.install.log"
 PULUMI_PLUGIN_INSTALL_LOG="$WORK_DIR/pulumi.plugin-install.log"
 PULUMI_SCHEMA_STDERR="$WORK_DIR/pulumi.get-schema.stderr.log"
-CRD_STDERR="$WORK_DIR/component-to-crd.stderr.log"
+CRD_STDERR="$WORK_DIR/pulumi-component-to-crd.stderr.log"
 
 mkdir -p "$WORK_DIR"
 

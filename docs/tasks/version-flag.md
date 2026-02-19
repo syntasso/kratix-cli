@@ -28,8 +28,8 @@ Out of scope:
   - return `0`
 
 ## Acceptance Criteria
-1. `component-to-crd --version` exits `0` and prints a single line.
-2. `component-to-crd --version` does not require `--in`.
+1. `pulumi-component-to-crd --version` exits `0` and prints a single line.
+2. `pulumi-component-to-crd --version` does not require `--in`.
 3. Existing `--in` flows and exit-code behavior remain unchanged.
 4. Test coverage includes version short-circuit behavior.
 
@@ -40,7 +40,7 @@ Automated:
   - `--version` ignores other missing-input conditions
 
 Manual:
-- Build binary with `component-to-crd/scripts/build_binary` and run `component-to-crd/bin/component-to-crd --version`.
+- Build binary with `./scripts/build_binary` and run `./bin/pulumi-component-to-crd --version`.
 
 ## Definition of Done
 - Version output path implemented and tested.

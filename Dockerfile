@@ -17,7 +17,7 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates
 RUN adduser -D -H -u 65532 nonroot
 
-COPY --from=builder /src/bin/component-to-crd /usr/local/bin/component-to-crd
+COPY --from=builder /src/bin/pulumi-component-to-crd /usr/local/bin/pulumi-component-to-crd
 
 USER 65532:65532
-ENTRYPOINT ["/usr/local/bin/component-to-crd"]
+ENTRYPOINT ["/usr/local/bin/pulumi-component-to-crd"]

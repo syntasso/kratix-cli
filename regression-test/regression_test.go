@@ -186,7 +186,7 @@ func buildBinary(t *testing.T) string {
 	t.Helper()
 
 	repoDir := componentRoot(t)
-	binPath := filepath.Join(repoDir, "bin", "component-to-crd")
+	binPath := filepath.Join(repoDir, "bin", "pulumi-component-to-crd")
 
 	buildBinaryOnce.Do(func() {
 		cmd := exec.Command(filepath.Join(repoDir, "scripts", "build_binary"))

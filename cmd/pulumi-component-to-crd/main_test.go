@@ -519,7 +519,7 @@ func TestRun_HelpIncludesSkipGuidance(t *testing.T) {
 
 	helpText := stdout.String()
 	requiredParts := []string{
-		"Usage: component-to-crd --in",
+		"Usage: pulumi-component-to-crd --in",
 		"--verbose",
 		"Untranslatable schema field paths are skipped",
 		"warn: component=",
