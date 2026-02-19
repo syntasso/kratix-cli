@@ -43,7 +43,7 @@ func TestValidateForTranslation(t *testing.T) {
 					},
 				},
 			},
-			wantErrPart: `unsupported ref "#/resources/pkg:index:Mode"`,
+			wantErrPart: `this tool currently supports only local type refs`,
 		},
 		{
 			name: "unresolved local ref fails",

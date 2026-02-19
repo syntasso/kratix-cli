@@ -109,7 +109,7 @@ func (v *preflightValidator) validateNode(node map[string]any, path string) erro
 
 func (v *preflightValidator) validateRef(path, ref string) error {
 	if !strings.HasPrefix(ref, localTypeRefPrefix) {
-		return fmt.Errorf("schema preflight path %q: unsupported ref %q (expected local ref prefix %q)", path, ref, localTypeRefPrefix)
+		return fmt.Errorf("schema preflight path %q: unsupported ref %q (expected local ref prefix %q; this tool currently supports only local type refs)", path, ref, localTypeRefPrefix)
 	}
 
 	typeToken := strings.TrimPrefix(ref, localTypeRefPrefix)

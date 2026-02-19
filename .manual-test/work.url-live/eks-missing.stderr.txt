@@ -1,0 +1,1 @@
+error: fetch input schema URL: unexpected status 404 for https://www.pulumi.com/registry/packages/eks/does-not-exist.json

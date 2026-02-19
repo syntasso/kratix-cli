@@ -1,16 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Runs the current manual regression suite for component-to-crd Task 02 behavior.
+# Runs the manual regression suite.
+# Discovers and runs all executable test scripts named [0-9][0-9]_*.sh.
+# Set RUN_INTERNET_TESTS=1 to include scripts marked with REQUIRES_INTERNET=1.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+THIS_SCRIPT="$(basename "${BASH_SOURCE[0]}")"
 
-"$SCRIPT_DIR/00_build_binary.sh"
-"$SCRIPT_DIR/01_success_valid_schema.sh"
-"$SCRIPT_DIR/02_error_multiple_components_without_component.sh"
-"$SCRIPT_DIR/03_success_explicit_component_multi_schema.sh"
-"$SCRIPT_DIR/04_error_unknown_component.sh"
-"$SCRIPT_DIR/05_error_unsupported_construct.sh"
-"$SCRIPT_DIR/06_error_malformed_schema_preflight.sh"
+for test_script in "$SCRIPT_DIR"/[0-9][0-9]_*.sh; do
+  test_name="$(basename "$test_script")"
+  if [[ "$test_name" == "$THIS_SCRIPT" ]]; then
+    continue
+  fi
+  if [[ ! -x "$test_script" ]]; then
+    continue
+  fi
+
+  if grep -q '^# REQUIRES_INTERNET=1$' "$test_script"; then
+    if [[ "${RUN_INTERNET_TESTS:-0}" != "1" ]]; then
+      continue
+    fi
+  fi
+
+  "$test_script"
+done
 
 echo "manual tests: PASS"

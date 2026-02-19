@@ -1,8 +1,8 @@
-# E2E Example Matrix for `07_e2e_pulumi_schema_to_crd.sh`
+# E2E Example Matrix for `e2e_pulumi_schema_to_crd.sh`
 
 This document lists realistic scenarios for running:
 
-- `component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh`
+- `component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh`
 
 The script always executes the same high-level flow:
 
@@ -23,7 +23,29 @@ component-to-crd/.manual-test/00_build_binary.sh
 Quick default run (no arguments):
 
 ```bash
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh
+```
+
+## Task 03 URL Input Manual Checks
+
+Task 03 added URL support for `--in` (local file paths still work unchanged).
+
+Run the dedicated live URL script:
+
+```bash
+component-to-crd/.manual-test/08_url_input_live_registry.sh
+```
+
+This script validates:
+- `--in https://www.pulumi.com/registry/packages/eks/schema.json --component eks:index:Cluster`
+  - expected: URL fetch succeeds, then current preflight behavior returns exit `2` for unsupported `#/resources/...` refs.
+- `--in https://www.pulumi.com/registry/packages/eks/does-not-exist.json --component eks:index:Cluster`
+  - expected: exit `2` with `error: fetch input schema URL: unexpected status 404 for ...`.
+
+To include these live URL checks in the full manual suite:
+
+```bash
+RUN_INTERNET_TESTS=1 component-to-crd/.manual-test/99_run_all.sh
 ```
 
 ## Example 1: Simple Local Component (previous simple case)
@@ -34,7 +56,7 @@ Source:
 Command:
 
 ```bash
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component namespaced-component:index:MyComponent \
   --schema-source pulumi/tests/integration/namespaced_component \
   --package-name namespaced-component \
@@ -49,7 +71,7 @@ Source:
 Command:
 
 ```bash
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component nodejs-component-provider:index:MyComponent \
   --schema-source pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider \
   --package-name nodejs-component-provider \
@@ -72,11 +94,10 @@ Schema URL:
 Command:
 
 ```bash
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component eks:index:Cluster \
   --schema-source eks@4.2.0 \
-  --package-name eks \
-  --allow-downloads
+  --package-name eks
 ```
 
 ## Example 4: Internet Package - Kubernetes Cert Manager
@@ -90,11 +111,10 @@ Schema URL:
 Command:
 
 ```bash
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component kubernetes-cert-manager:index:CertManager \
   --schema-source kubernetes-cert-manager \
-  --package-name kubernetes-cert-manager \
-  --allow-downloads
+  --package-name kubernetes-cert-manager
 ```
 
 ## Example 5: Internet Package - Kubernetes Ingress NGINX
@@ -108,11 +128,10 @@ Schema URL:
 Command:
 
 ```bash
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component kubernetes-ingress-nginx:index:IngressController \
   --schema-source kubernetes-ingress-nginx \
-  --package-name kubernetes-ingress-nginx \
-  --allow-downloads
+  --package-name kubernetes-ingress-nginx
 ```
 
 ## Running All Five Examples
@@ -122,13 +141,13 @@ Run each command in order. This keeps logs and artifacts isolated per example un
 - `component-to-crd/.manual-test/work.e2e.<work-name>/`
 
 ```bash
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component namespaced-component:index:MyComponent \
   --schema-source pulumi/tests/integration/namespaced_component \
   --package-name namespaced-component \
   --expect-crd-contains anInput:
 
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component nodejs-component-provider:index:MyComponent \
   --schema-source pulumi/tests/integration/component_provider/nodejs/component-provider-host/provider \
   --package-name nodejs-component-provider \
@@ -139,23 +158,20 @@ component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
   --expect-crd-contains nestedComplexType: \
   --expect-crd-contains enum:
 
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component eks:index:Cluster \
   --schema-source eks@4.2.0 \
-  --package-name eks \
-  --allow-downloads
+  --package-name eks
 
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component kubernetes-cert-manager:index:CertManager \
   --schema-source kubernetes-cert-manager \
-  --package-name kubernetes-cert-manager \
-  --allow-downloads
+  --package-name kubernetes-cert-manager
 
-component-to-crd/.manual-test/07_e2e_pulumi_schema_to_crd.sh \
+component-to-crd/.manual-test/e2e_pulumi_schema_to_crd.sh \
   --component kubernetes-ingress-nginx:index:IngressController \
   --schema-source kubernetes-ingress-nginx \
-  --package-name kubernetes-ingress-nginx \
-  --allow-downloads
+  --package-name kubernetes-ingress-nginx
 ```
 
 Tip for internet-backed examples:

@@ -31,7 +31,7 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 		return exitUserError
 	}
 
-	doc, err := schema.LoadFile(cfg.inPath)
+	doc, err := schema.Load(cfg.inPath)
 	if err != nil {
 		printError(stderr, err)
 		return exitUserError
@@ -87,7 +87,7 @@ func parseArgs(args []string) (config, error) {
 
 	flagSet := flag.NewFlagSet("component-to-crd", flag.ContinueOnError)
 	flagSet.SetOutput(io.Discard)
-	flagSet.StringVar(&cfg.inPath, "in", "", "Path to Pulumi schema JSON file")
+	flagSet.StringVar(&cfg.inPath, "in", "", "Path or URL to Pulumi schema JSON file")
 	flagSet.StringVar(&cfg.component, "component", "", "Component token")
 
 	if err := flagSet.Parse(args); err != nil {

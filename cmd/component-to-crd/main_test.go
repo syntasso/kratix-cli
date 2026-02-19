@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,6 +49,16 @@ func TestRun(t *testing.T) {
 	if err := os.WriteFile(malformedPrecedenceSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true,"inputProperties":{"bad":{"$ref":"#/types/pkg:index:Missing"}}},"pkg:index:Alpha":{"isComponent":true,"inputProperties":{"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600); err != nil {
 		t.Fatalf("write malformed precedence fixture: %v", err)
 	}
+
+	urlSchemaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"}}}}}`))
+	}))
+	t.Cleanup(urlSchemaServer.Close)
+
+	urlNotFoundServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "missing", http.StatusNotFound)
+	}))
+	t.Cleanup(urlNotFoundServer.Close)
 
 	tests := []struct {
 		name            string
@@ -150,13 +162,28 @@ func TestRun(t *testing.T) {
 			name:            "input file does not exist",
 			args:            []string{"--in", filepath.Join(tempDir, "missing.json")},
 			wantExitCode:    exitUserError,
-			wantStderrParts: []string{"error:", "read input schema:"},
+			wantStderrParts: []string{"error:", "read input schema file:"},
 		},
 		{
 			name:            "input file is invalid json",
 			args:            []string{"--in", invalidSchemaPath},
 			wantExitCode:    exitUserError,
 			wantStderrParts: []string{"error:", "parse input schema as JSON:"},
+		},
+		{
+			name:         "url input success",
+			args:         []string{"--in", urlSchemaServer.URL},
+			wantExitCode: exitSuccess,
+			wantStdoutParts: []string{
+				"apiVersion: apiextensions.k8s.io/v1",
+				"kind: CustomResourceDefinition",
+			},
+		},
+		{
+			name:            "url input non-200",
+			args:            []string{"--in", urlNotFoundServer.URL},
+			wantExitCode:    exitUserError,
+			wantStderrParts: []string{"error:", "fetch input schema URL: unexpected status 404 for"},
 		},
 	}
 
