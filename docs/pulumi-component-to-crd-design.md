@@ -1,5 +1,13 @@
 # ADR-0001: Pulumi Schema to Kubernetes CRD Adapter (`component-to-crd`)
 
+## Document Scope
+This ADR defines the CLI functionality contract and implementation decisions for `component-to-crd`.
+
+When updating this file:
+- include user-visible CLI behavior, technical decisions, and accepted tradeoffs
+- keep contracts explicit (flags, output channels, errors, exit codes, deterministic behavior)
+- do not add contributor workflow, coding-style rules, or repository process guidance (those belong in `AGENTS.md`)
+
 ## Status
 Accepted and implemented (current CLI baseline).
 
@@ -110,7 +118,8 @@ Automated tests in `component-to-crd` cover:
 - Non-local refs use fallback schema: permissive object (`type: object` + `x-kubernetes-preserve-unknown-fields: true`).
 - Fallback-backed fields remain in `required` when present in Pulumi `requiredInputs`.
 - Non-local-ref provenance annotations are currently undecided and not required.
-- Follow-up identified: `eks:index:Cluster` still fails on reachable `oneOf` (`spec.fargate`), which requires additional scoped fallback work.
+- Component-scoped preflight is the active contract: only reachable nodes from the selected component are validated before translation.
+- Reachable composition keywords such as `oneOf` are currently handled by translation skip behavior with deterministic `warn:` output; if all top-level `spec` fields are skipped, the command returns `exit 2`.
 
 ## Explicitly Out of Scope (Current)
 - Docker image packaging/distribution
