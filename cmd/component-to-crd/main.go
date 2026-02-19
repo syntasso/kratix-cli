@@ -1,0 +1,89 @@
+package main
+
+import (
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/pulumi/component-to-crd/internal/emit"
+	"github.com/pulumi/component-to-crd/internal/schema"
+	selectcomponent "github.com/pulumi/component-to-crd/internal/select"
+)
+
+const (
+	exitSuccess     = 0
+	exitUserError   = 2
+	exitOutputError = 4
+)
+
+func main() {
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+func run(args []string, stdout io.Writer, stderr io.Writer) int {
+	cfg, err := parseArgs(args)
+	if err != nil {
+		printError(stderr, err)
+		return exitUserError
+	}
+
+	doc, err := schema.LoadFile(cfg.inPath)
+	if err != nil {
+		printError(stderr, err)
+		return exitUserError
+	}
+
+	tokens := selectcomponent.DiscoverComponentTokens(doc)
+	selected, err := selectcomponent.SelectComponent(tokens, cfg.component)
+	if err != nil {
+		printError(stderr, err)
+		return exitUserError
+	}
+
+	resource, ok := doc.Resources[selected]
+	if !ok {
+		printError(stderr, fmt.Errorf("selected component %q missing from schema resources", selected))
+		return exitUserError
+	}
+
+	scaffold := emit.RenderScaffoldYAML(selected, resource)
+	if _, err := stdout.Write(scaffold); err != nil {
+		printError(stderr, fmt.Errorf("write scaffold output: %w", err))
+		return exitOutputError
+	}
+	return exitSuccess
+}
+
+type config struct {
+	inPath    string
+	component string
+}
+
+func parseArgs(args []string) (config, error) {
+	var cfg config
+
+	flagSet := flag.NewFlagSet("component-to-crd", flag.ContinueOnError)
+	flagSet.SetOutput(io.Discard)
+	flagSet.StringVar(&cfg.inPath, "in", "", "Path to Pulumi schema JSON file")
+	flagSet.StringVar(&cfg.component, "component", "", "Component token")
+
+	if err := flagSet.Parse(args); err != nil {
+		return config{}, fmt.Errorf("invalid flags: %w", err)
+	}
+
+	if cfg.inPath == "" {
+		return config{}, errors.New("missing required flag: --in")
+	}
+
+	if flagSet.NArg() > 0 {
+		return config{}, fmt.Errorf("unexpected positional arguments: %v", flagSet.Args())
+	}
+
+	return cfg, nil
+}
+
+func printError(stderr io.Writer, err error) {
+	fmt.Fprintf(stderr, "error: %v\n", err)
+}
