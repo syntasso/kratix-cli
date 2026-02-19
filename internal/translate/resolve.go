@@ -11,6 +11,10 @@ import (
 const localTypeRefPrefix = "#/types/"
 const localResourceRefPrefix = "#/resources/"
 
+func isLocalRef(ref string) bool {
+	return strings.HasPrefix(ref, localTypeRefPrefix) || strings.HasPrefix(ref, localResourceRefPrefix)
+}
+
 func resolveLocalRef(doc *schema.Document, ref string) (map[string]any, string, error) {
 	switch {
 	case strings.HasPrefix(ref, localTypeRefPrefix):

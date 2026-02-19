@@ -165,3 +165,120 @@ func TestValidateForTranslation(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateForTranslationComponent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reachable malformed ref fails", func(t *testing.T) {
+		t.Parallel()
+
+		doc := &Document{
+			Resources: map[string]Resource{
+				"pkg:index:Selected": {
+					IsComponent: true,
+					InputProperties: map[string]json.RawMessage{
+						"value": json.RawMessage(`{"$ref":"#/types/pkg:index:Missing"}`),
+					},
+				},
+				"pkg:index:Other": {
+					IsComponent: true,
+					InputProperties: map[string]json.RawMessage{
+						"ok": json.RawMessage(`{"type":"string"}`),
+					},
+				},
+			},
+			Types: map[string]json.RawMessage{},
+		}
+
+		err := ValidateForTranslationComponent(doc, "pkg:index:Selected")
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), `schema preflight component "pkg:index:Selected"`) {
+			t.Fatalf("expected selected component context in error, got %q", err)
+		}
+		if !strings.Contains(err.Error(), `unresolved local type ref "#/types/pkg:index:Missing"`) {
+			t.Fatalf("expected unresolved ref error, got %q", err)
+		}
+	})
+
+	t.Run("unreachable malformed ref does not fail selected component", func(t *testing.T) {
+		t.Parallel()
+
+		doc := &Document{
+			Resources: map[string]Resource{
+				"pkg:index:Selected": {
+					IsComponent: true,
+					InputProperties: map[string]json.RawMessage{
+						"ok": json.RawMessage(`{"type":"string"}`),
+					},
+				},
+				"pkg:index:Other": {
+					IsComponent: true,
+					InputProperties: map[string]json.RawMessage{
+						"bad": json.RawMessage(`{"$ref":"#/types/pkg:index:Missing"}`),
+					},
+				},
+			},
+			Types: map[string]json.RawMessage{},
+		}
+
+		if err := ValidateForTranslationComponent(doc, "pkg:index:Selected"); err != nil {
+			t.Fatalf("ValidateForTranslationComponent error = %v", err)
+		}
+	})
+
+	t.Run("reachable non-local ref does not fail selected component preflight", func(t *testing.T) {
+		t.Parallel()
+
+		doc := &Document{
+			Resources: map[string]Resource{
+				"pkg:index:Selected": {
+					IsComponent: true,
+					InputProperties: map[string]json.RawMessage{
+						"value": json.RawMessage(`{"$ref":"/aws/v7.14.0/schema.json#/types/aws:eks%2FAccessScope:AccessScope"}`),
+					},
+				},
+			},
+		}
+
+		if err := ValidateForTranslationComponent(doc, "pkg:index:Selected"); err != nil {
+			t.Fatalf("ValidateForTranslationComponent error = %v", err)
+		}
+	})
+
+	t.Run("deterministic traversal for equivalent input map ordering", func(t *testing.T) {
+		t.Parallel()
+
+		buildDoc := func(assignmentOrder []string) *Document {
+			inputProperties := make(map[string]json.RawMessage, 2)
+			for _, key := range assignmentOrder {
+				switch key {
+				case "alpha":
+					inputProperties[key] = json.RawMessage(`{"$ref":"#/types/pkg:index:Missing"}`)
+				case "zeta":
+					inputProperties[key] = json.RawMessage(`{"type":"string"}`)
+				}
+			}
+
+			return &Document{
+				Resources: map[string]Resource{
+					"pkg:index:Selected": {
+						IsComponent:     true,
+						InputProperties: inputProperties,
+					},
+				},
+				Types: map[string]json.RawMessage{},
+			}
+		}
+
+		errA := ValidateForTranslationComponent(buildDoc([]string{"zeta", "alpha"}), "pkg:index:Selected")
+		errB := ValidateForTranslationComponent(buildDoc([]string{"alpha", "zeta"}), "pkg:index:Selected")
+		if errA == nil || errB == nil {
+			t.Fatalf("expected both validations to fail, got errA=%v errB=%v", errA, errB)
+		}
+		if errA.Error() != errB.Error() {
+			t.Fatalf("expected deterministic error ordering, got errA=%q errB=%q", errA, errB)
+		}
+	})
+}

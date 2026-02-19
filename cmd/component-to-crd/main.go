@@ -25,6 +25,11 @@ func main() {
 }
 
 func run(args []string, stdout io.Writer, stderr io.Writer) int {
+	if helpRequested(args) {
+		printHelp(stdout)
+		return exitSuccess
+	}
+
 	cfg, err := parseArgs(args)
 	if err != nil {
 		printError(stderr, err)
@@ -33,10 +38,6 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 
 	doc, err := schema.Load(cfg.inPath)
 	if err != nil {
-		printError(stderr, err)
-		return exitUserError
-	}
-	if err := schema.ValidateForTranslation(doc); err != nil {
 		printError(stderr, err)
 		return exitUserError
 	}
@@ -51,6 +52,10 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 	resource, ok := doc.Resources[selected]
 	if !ok {
 		printError(stderr, fmt.Errorf("selected component %q missing from schema resources", selected))
+		return exitUserError
+	}
+	if err := schema.ValidateForTranslationComponent(doc, selected); err != nil {
+		printError(stderr, err)
 		return exitUserError
 	}
 
@@ -75,10 +80,13 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 		return exitUserError
 	}
 
-	translatedSpec, err := translate.InputPropertiesToOpenAPI(doc, selected, resource)
+	translatedSpec, skippedPaths, err := translate.InputPropertiesToOpenAPI(doc, selected, resource)
+	for _, issue := range skippedPaths {
+		printWarning(stderr, issue)
+	}
 	if err != nil {
 		var unsupportedErr *translate.UnsupportedError
-		if errors.As(err, &unsupportedErr) {
+		if errors.As(err, &unsupportedErr) && !unsupportedErr.Skippable {
 			printError(stderr, err)
 			return exitUnsupported
 		}
@@ -138,4 +146,47 @@ func parseArgs(args []string) (config, error) {
 
 func printError(stderr io.Writer, err error) {
 	fmt.Fprintf(stderr, "error: %v\n", err)
+}
+
+func printWarning(stderr io.Writer, issue translate.SkippedPathIssue) {
+	fmt.Fprintf(stderr, "warn: component=%q path=%q reason=%q\n", issue.Component, issue.Path, issue.Reason)
+}
+
+func helpRequested(args []string) bool {
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			return true
+		}
+	}
+	return false
+}
+
+func printHelp(stdout io.Writer) {
+	fmt.Fprintln(stdout, "Usage: component-to-crd --in <path-or-url> [--component <token>] [--group <group>] [--version <version>] [--kind <kind>] [--plural <plural>] [--singular <singular>]")
+	fmt.Fprintln(stdout, "")
+	fmt.Fprintln(stdout, "Converts a Pulumi component schema into a Kubernetes CRD YAML written to stdout.")
+	fmt.Fprintln(stdout, "")
+	fmt.Fprintln(stdout, "Flags:")
+	fmt.Fprintln(stdout, "  --in string")
+	fmt.Fprintln(stdout, "        Path or URL to Pulumi schema JSON file (required unless --help is used)")
+	fmt.Fprintln(stdout, "  --component string")
+	fmt.Fprintln(stdout, "        Component token")
+	fmt.Fprintln(stdout, "  --group string")
+	fmt.Fprintln(stdout, "        CRD API group")
+	fmt.Fprintln(stdout, "  --version string")
+	fmt.Fprintln(stdout, "        CRD API version")
+	fmt.Fprintln(stdout, "  --kind string")
+	fmt.Fprintln(stdout, "        CRD kind")
+	fmt.Fprintln(stdout, "  --plural string")
+	fmt.Fprintln(stdout, "        CRD plural resource name")
+	fmt.Fprintln(stdout, "  --singular string")
+	fmt.Fprintln(stdout, "        CRD singular resource name")
+	fmt.Fprintln(stdout, "")
+	fmt.Fprintln(stdout, "Translation behavior:")
+	fmt.Fprintln(stdout, "  - Untranslatable schema field paths are skipped instead of failing the whole command.")
+	fmt.Fprintln(stdout, "  - Skipped-path details are reported to stderr as parseable lines:")
+	fmt.Fprintln(stdout, "      warn: component=\"...\" path=\"...\" reason=\"...\"")
+	fmt.Fprintln(stdout, "  - Known construct classes that may be skipped include composition keywords")
+	fmt.Fprintln(stdout, "    (oneOf, anyOf, allOf), unsupported schema keywords, and unsupported shapes")
+	fmt.Fprintln(stdout, "    under a property path, plus unresolved refs outside supported local handling.")
 }

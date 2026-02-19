@@ -2,6 +2,7 @@ package translate
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -12,10 +13,11 @@ type context struct {
 	doc            *schema.Document
 	componentToken string
 	resolvingRefs  map[string]bool
+	skipped        []SkippedPathIssue
 }
 
 // InputPropertiesToOpenAPI translates a Pulumi component's input schema to OpenAPI v3 schema for CRD spec.
-func InputPropertiesToOpenAPI(doc *schema.Document, componentToken string, resource schema.Resource) (map[string]any, error) {
+func InputPropertiesToOpenAPI(doc *schema.Document, componentToken string, resource schema.Resource) (map[string]any, []SkippedPathIssue, error) {
 	ctx := &context{
 		doc:            doc,
 		componentToken: componentToken,
@@ -27,17 +29,25 @@ func InputPropertiesToOpenAPI(doc *schema.Document, componentToken string, resou
 	for _, name := range propertyNames {
 		node, err := decodeNode(resource.InputProperties[name])
 		if err != nil {
-			return nil, fmt.Errorf("decode input property %q: %w", name, err)
+			return nil, nil, fmt.Errorf("decode input property %q: %w", name, err)
 		}
 
 		translated, err := translateNode(ctx, node, "spec."+name)
 		if err != nil {
-			return nil, err
+			if skipped := maybeRecordSkippedPath(ctx, err); skipped {
+				continue
+			}
+			return nil, sortedSkippedIssues(ctx.skipped), err
 		}
 		translatedProps[name] = translated
 	}
 
+	if len(translatedProps) == 0 {
+		return nil, sortedSkippedIssues(ctx.skipped), fmt.Errorf("no translatable spec fields remain after skipping unsupported schema paths for component %q", componentToken)
+	}
+
 	required := normalizedRequired(resource.RequiredInputs)
+	required = filterRequiredForProperties(required, translatedProps)
 	schemaNode := map[string]any{
 		"type":       "object",
 		"properties": translatedProps,
@@ -46,18 +56,22 @@ func InputPropertiesToOpenAPI(doc *schema.Document, componentToken string, resou
 		schemaNode["required"] = required
 	}
 
-	return schemaNode, nil
+	return schemaNode, sortedSkippedIssues(ctx.skipped), nil
 }
 
 func translateNode(ctx *context, node map[string]any, path string) (map[string]any, error) {
 	if ref, ok := stringField(node, "$ref"); ok {
+		if !isLocalRef(ref) {
+			return applyAnnotations(node, fallbackSchemaForNonLocalRef(), ctx.componentToken, path)
+		}
+
 		resolvedNode, refKey, err := resolveLocalRef(ctx.doc, ref)
 		if err != nil {
 			return nil, fmt.Errorf("component %q path %q invalid schema: %w", ctx.componentToken, path, err)
 		}
 
 		if ctx.resolvingRefs[refKey] {
-			return nil, unsupported(ctx.componentToken, path, fmt.Sprintf("cyclic local ref %q", ref))
+			return nil, unsupportedHard(ctx.componentToken, path, fmt.Sprintf("cyclic local ref %q", ref))
 		}
 		ctx.resolvingRefs[refKey] = true
 		translated, err := translateNode(ctx, resolvedNode, path)
@@ -118,6 +132,13 @@ func translateNode(ctx *context, node map[string]any, path string) (map[string]a
 	return applyAnnotations(node, translated, ctx.componentToken, path)
 }
 
+func fallbackSchemaForNonLocalRef() map[string]any {
+	return map[string]any{
+		"type":                                 "object",
+		"x-kubernetes-preserve-unknown-fields": true,
+	}
+}
+
 func translateObjectNode(ctx *context, node map[string]any, path string) (map[string]any, error) {
 	translated := map[string]any{"type": "object"}
 
@@ -135,6 +156,9 @@ func translateObjectNode(ctx *context, node map[string]any, path string) (map[st
 			}
 			childTranslated, err := translateNode(ctx, child, path+"."+name)
 			if err != nil {
+				if skipped := maybeRecordSkippedPath(ctx, err); skipped {
+					continue
+				}
 				return nil, err
 			}
 			translatedProps[name] = childTranslated
@@ -146,6 +170,9 @@ func translateObjectNode(ctx *context, node map[string]any, path string) (map[st
 		required, err := parseRequired(requiredNode)
 		if err != nil {
 			return nil, unsupported(ctx.componentToken, path, "object required must be an array of strings")
+		}
+		if props, ok := translated["properties"].(map[string]any); ok {
+			required = filterRequiredForProperties(required, props)
 		}
 		if len(required) > 0 {
 			translated["required"] = required
@@ -255,6 +282,53 @@ func normalizedRequired(values []string) []string {
 	}
 	sort.Strings(result)
 	return result
+}
+
+func maybeRecordSkippedPath(ctx *context, err error) bool {
+	var unsupportedErr *UnsupportedError
+	if !errors.As(err, &unsupportedErr) || !unsupportedErr.Skippable {
+		return false
+	}
+
+	ctx.skipped = append(ctx.skipped, SkippedPathIssue{
+		Component: unsupportedErr.Component,
+		Path:      unsupportedErr.Path,
+		Reason:    unsupportedErr.Summary,
+	})
+	return true
+}
+
+func sortedSkippedIssues(issues []SkippedPathIssue) []SkippedPathIssue {
+	if len(issues) == 0 {
+		return nil
+	}
+
+	result := make([]SkippedPathIssue, len(issues))
+	copy(result, issues)
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Path != result[j].Path {
+			return result[i].Path < result[j].Path
+		}
+		if result[i].Reason != result[j].Reason {
+			return result[i].Reason < result[j].Reason
+		}
+		return result[i].Component < result[j].Component
+	})
+	return result
+}
+
+func filterRequiredForProperties(required []string, translatedProps map[string]any) []string {
+	if len(required) == 0 {
+		return nil
+	}
+
+	filtered := make([]string, 0, len(required))
+	for _, name := range required {
+		if _, exists := translatedProps[name]; exists {
+			filtered = append(filtered, name)
+		}
+	}
+	return filtered
 }
 
 func sortedRawKeys(values map[string]json.RawMessage) []string {

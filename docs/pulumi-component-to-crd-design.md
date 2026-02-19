@@ -13,6 +13,7 @@ This project intentionally does not re-implement source analysis. It adapts that
 Primary constraints carried from planning:
 - deterministic output
 - single-line parseable errors (`error: ...`)
+- single-line parseable skip warnings (`warn: ...`)
 - stable exit-code contract (`0`, `2`, `3`, `4`)
 - YAML written to `stdout`
 
@@ -34,11 +35,12 @@ Behavior:
 - positional arguments are rejected.
 - generated CRD YAML is written to `stdout` only.
 - all user-facing errors are single-line `error: ...` on `stderr`.
+- skipped untranslatable field paths are emitted as single-line `warn: ...` entries on `stderr`.
 
 Exit codes:
 - `0`: success
-- `2`: user/input/validation/preflight errors
-- `3`: valid schema but unsupported translation construct
+- `2`: user/input/validation/preflight errors (including when no translatable top-level `spec` fields remain)
+- `3`: hard unsupported translation construct (non-skippable)
 - `4`: output serialization/write errors
 
 ## Implemented Technical Rules
@@ -50,22 +52,29 @@ Selection:
   - implicit auto-select when exactly one token
   - implicit zero/multiple is an error with sorted token list
 
-Preflight validation (runs before selection/translation):
+Preflight validation (component-scoped, runs after selection):
 - validates traversal shape for `properties`, `items`, `additionalProperties`
-- validates `$ref` is local-only (`#/types/...`)
-- validates referenced local type exists and is traversable
-- malformed schema fails as `exit 2` before any selection or translation error
+- validates local `$ref` targets (`#/types/...`, `#/resources/...`) exist and are traversable
+- tolerates reachable non-local refs in selected-component mode (does not fail preflight solely on non-local prefix)
+- malformed reachable local schema fails as `exit 2`
 
-Translation (strict):
+Translation (resilient):
 - supports:
   - scalar types: `string`, `boolean`, `integer`, `number`
   - arrays (`items`)
   - objects (`properties`, `required`)
   - maps (`additionalProperties`)
-  - local `$ref` resolution from `types`
+  - local `$ref` resolution from `types` and `resources`
+  - non-local `$ref` deterministic fallback:
+    - `type: object`
+    - `x-kubernetes-preserve-unknown-fields: true`
+    - required field membership from `requiredInputs` is preserved
   - `enum` and `default` passthrough
-- rejects unsupported keywords/types (for example `oneOf`, `anyOf`, `allOf`, `not`, `discriminator`, `patternProperties`, `const`) as `exit 3`
+- skips unsupported field paths (for example unsupported keywords/types such as `oneOf`, `anyOf`, `allOf`, `not`, `discriminator`, `patternProperties`, `const`) and logs warnings to `stderr`
+- preserves `exit 3` for intentionally non-skippable unsupported constructs
 - required fields are normalized (deduplicated + sorted)
+- required entries for skipped properties are removed to keep emitted schema valid
+- fails as `exit 2` if all top-level `spec` properties are skipped and none remain translatable
 
 CRD emission:
 - deterministic key ordering and stable YAML text formatting
@@ -90,9 +99,18 @@ Automated tests in `component-to-crd` cover:
 - file and URL input loading (including non-200 and timeout paths)
 - deterministic selection behavior
 - malformed-schema preflight and precedence over later stages
-- translation success and unsupported classification (`exit 3`)
+- translation success with deterministic skipped-path logging
+- hard unsupported classification (`exit 3`) for non-skippable constructs
+- selected-component preflight behavior (reachable vs unreachable defects)
+- non-local ref fallback behavior and required-field preservation
 - identity defaults, overrides, and validation failures
 - deterministic output and output-writer failure (`exit 4`)
+
+## Team Decisions (2026-02-18)
+- Non-local refs use fallback schema: permissive object (`type: object` + `x-kubernetes-preserve-unknown-fields: true`).
+- Fallback-backed fields remain in `required` when present in Pulumi `requiredInputs`.
+- Non-local-ref provenance annotations are currently undecided and not required.
+- Follow-up identified: `eks:index:Cluster` still fails on reachable `oneOf` (`spec.fargate`), which requires additional scoped fallback work.
 
 ## Explicitly Out of Scope (Current)
 - Docker image packaging/distribution

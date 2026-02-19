@@ -16,19 +16,12 @@ func ValidateForTranslation(doc *Document) error {
 		return fmt.Errorf("schema preflight path %q: document is nil", "root")
 	}
 
-	validator := &preflightValidator{
-		doc:          doc,
-		validatedRef: make(map[string]bool),
-		visitingRef:  make(map[string]bool),
-	}
+	validator := newPreflightValidator(doc, false)
 
 	for _, token := range sortedResourceKeys(doc.Resources) {
 		resource := doc.Resources[token]
-		for _, prop := range sortedRawMessageKeys(resource.InputProperties) {
-			nodePath := fmt.Sprintf("resources.%s.inputProperties.%s", token, prop)
-			if err := validator.validateRawNode(resource.InputProperties[prop], nodePath); err != nil {
-				return err
-			}
+		if err := validator.validateResourceInputs(token, resource); err != nil {
+			return err
 		}
 	}
 
@@ -42,10 +35,52 @@ func ValidateForTranslation(doc *Document) error {
 	return nil
 }
 
+// ValidateForTranslationComponent checks schema shape constraints reachable from the selected component.
+func ValidateForTranslationComponent(doc *Document, componentToken string) error {
+	if doc == nil {
+		return fmt.Errorf("schema preflight component %q path %q: document is nil", componentToken, "root")
+	}
+	if componentToken == "" {
+		return fmt.Errorf("schema preflight component %q path %q: selected component token is empty", componentToken, "root")
+	}
+
+	resource, ok := doc.Resources[componentToken]
+	if !ok {
+		return fmt.Errorf("schema preflight component %q path %q: selected component not found in schema resources", componentToken, "resources."+componentToken)
+	}
+
+	validator := newPreflightValidator(doc, true)
+	if err := validator.validateResourceInputs(componentToken, resource); err != nil {
+		return fmt.Errorf("schema preflight component %q: %w", componentToken, err)
+	}
+
+	return nil
+}
+
 type preflightValidator struct {
-	doc          *Document
-	validatedRef map[string]bool
-	visitingRef  map[string]bool
+	doc               *Document
+	validatedRef      map[string]bool
+	visitingRef       map[string]bool
+	allowNonLocalRefs bool
+}
+
+func newPreflightValidator(doc *Document, allowNonLocalRefs bool) *preflightValidator {
+	return &preflightValidator{
+		doc:               doc,
+		validatedRef:      make(map[string]bool),
+		visitingRef:       make(map[string]bool),
+		allowNonLocalRefs: allowNonLocalRefs,
+	}
+}
+
+func (v *preflightValidator) validateResourceInputs(resourceToken string, resource Resource) error {
+	for _, prop := range sortedRawMessageKeys(resource.InputProperties) {
+		nodePath := fmt.Sprintf("resources.%s.inputProperties.%s", resourceToken, prop)
+		if err := v.validateRawNode(resource.InputProperties[prop], nodePath); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (v *preflightValidator) validateRawNode(raw json.RawMessage, path string) error {
@@ -115,6 +150,9 @@ func (v *preflightValidator) validateRef(path, ref string) error {
 	case strings.HasPrefix(ref, localResourceRefPrefix):
 		return v.validateResourceRef(path, ref)
 	default:
+		if v.allowNonLocalRefs {
+			return nil
+		}
 		return fmt.Errorf("schema preflight path %q: unsupported ref %q (expected local ref prefix %q or %q)", path, ref, localTypeRefPrefix, localResourceRefPrefix)
 	}
 }
@@ -166,11 +204,8 @@ func (v *preflightValidator) validateResourceRef(path, ref string) error {
 	v.visitingRef[cacheKey] = true
 	defer delete(v.visitingRef, cacheKey)
 
-	for _, prop := range sortedRawMessageKeys(resource.InputProperties) {
-		nodePath := fmt.Sprintf("resources.%s.inputProperties.%s", resourceToken, prop)
-		if err := v.validateRawNode(resource.InputProperties[prop], nodePath); err != nil {
-			return fmt.Errorf("schema preflight path %q: invalid ref target %q: %w", path, ref, err)
-		}
+	if err := v.validateResourceInputs(resourceToken, resource); err != nil {
+		return fmt.Errorf("schema preflight path %q: invalid ref target %q: %w", path, ref, err)
 	}
 
 	v.validatedRef[cacheKey] = true

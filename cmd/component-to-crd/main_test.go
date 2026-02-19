@@ -18,10 +18,14 @@ func TestRun(t *testing.T) {
 	multiComponentSchemaPath := filepath.Join(tempDir, "multi-component.json")
 	zeroComponentSchemaPath := filepath.Join(tempDir, "zero-component.json")
 	invalidSchemaPath := filepath.Join(tempDir, "invalid.json")
-	unsupportedSchemaPath := filepath.Join(tempDir, "unsupported.json")
+	mixedSkippableSchemaPath := filepath.Join(tempDir, "mixed-skippable.json")
+	allSkippableSchemaPath := filepath.Join(tempDir, "all-skippable.json")
+	hardUnsupportedSchemaPath := filepath.Join(tempDir, "hard-unsupported.json")
 	malformedSchemaPath := filepath.Join(tempDir, "malformed.json")
-	malformedPrecedenceSchemaPath := filepath.Join(tempDir, "malformed-precedence.json")
+	unreachableMalformedSchemaPath := filepath.Join(tempDir, "unreachable-malformed.json")
+	selectedMalformedAndUnsupportedSchemaPath := filepath.Join(tempDir, "selected-malformed-and-unsupported.json")
 	resourceRefSchemaPath := filepath.Join(tempDir, "resource-ref.json")
+	nonLocalRefSchemaPath := filepath.Join(tempDir, "non-local-ref.json")
 
 	if err := os.WriteFile(singleComponentSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"zeta":{"type":"string"},"alpha":{"type":"number","default":1.5}},"requiredInputs":["zeta","alpha"]}}}`), 0o600); err != nil {
 		t.Fatalf("write single component fixture: %v", err)
@@ -39,20 +43,36 @@ func TestRun(t *testing.T) {
 		t.Fatalf("write invalid schema fixture: %v", err)
 	}
 
-	if err := os.WriteFile(unsupportedSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600); err != nil {
-		t.Fatalf("write unsupported fixture: %v", err)
+	if err := os.WriteFile(mixedSkippableSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"},"badTop":{"oneOf":[{"type":"string"},{"type":"number"}]},"settings":{"type":"object","properties":{"enabled":{"type":"boolean"},"badNested":{"anyOf":[{"type":"string"},{"type":"number"}]}},"required":["enabled","badNested"]}},"requiredInputs":["name","badTop"]}}}`), 0o600); err != nil {
+		t.Fatalf("write mixed skippable fixture: %v", err)
+	}
+
+	if err := os.WriteFile(allSkippableSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600); err != nil {
+		t.Fatalf("write all skippable fixture: %v", err)
+	}
+
+	if err := os.WriteFile(hardUnsupportedSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"cycle":{"$ref":"#/types/pkg:index:A"}}}},"types":{"pkg:index:A":{"$ref":"#/types/pkg:index:B"},"pkg:index:B":{"$ref":"#/types/pkg:index:A"}}}`), 0o600); err != nil {
+		t.Fatalf("write hard unsupported fixture: %v", err)
 	}
 
 	if err := os.WriteFile(malformedSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"value":{"$ref":"#/types/pkg:index:Missing"}}}}}`), 0o600); err != nil {
 		t.Fatalf("write malformed schema fixture: %v", err)
 	}
 
-	if err := os.WriteFile(malformedPrecedenceSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true,"inputProperties":{"bad":{"$ref":"#/types/pkg:index:Missing"}}},"pkg:index:Alpha":{"isComponent":true,"inputProperties":{"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600); err != nil {
-		t.Fatalf("write malformed precedence fixture: %v", err)
+	if err := os.WriteFile(unreachableMalformedSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true,"inputProperties":{"bad":{"$ref":"#/types/pkg:index:Missing"}}},"pkg:index:Alpha":{"isComponent":true,"inputProperties":{"value":{"type":"string"}}}}}`), 0o600); err != nil {
+		t.Fatalf("write unreachable malformed fixture: %v", err)
+	}
+
+	if err := os.WriteFile(selectedMalformedAndUnsupportedSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"bad":{"$ref":"#/types/pkg:index:Missing"},"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600); err != nil {
+		t.Fatalf("write selected malformed + unsupported fixture: %v", err)
 	}
 
 	if err := os.WriteFile(resourceRefSchemaPath, []byte(`{"resources":{"eks:index:Addon":{"isComponent":true,"inputProperties":{"cluster":{"$ref":"#/resources/eks:index:Cluster"},"addonName":{"type":"string"}},"requiredInputs":["cluster","addonName"]},"eks:index:Cluster":{"isComponent":true,"inputProperties":{"name":{"type":"string"}},"requiredInputs":["name"]}}}`), 0o600); err != nil {
 		t.Fatalf("write resource ref fixture: %v", err)
+	}
+
+	if err := os.WriteFile(nonLocalRefSchemaPath, []byte(`{"resources":{"eks:index:Cluster":{"isComponent":true,"inputProperties":{"name":{"type":"string"},"accessScope":{"$ref":"/aws/v7.14.0/schema.json#/types/aws:eks%2FAccessScope:AccessScope"}},"requiredInputs":["name","accessScope"]}}}`), 0o600); err != nil {
+		t.Fatalf("write non-local ref fixture: %v", err)
 	}
 
 	urlSchemaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -70,8 +90,10 @@ func TestRun(t *testing.T) {
 		args            []string
 		wantExitCode    int
 		wantStdoutParts []string
+		wantStdoutNot   []string
 		wantStderrParts []string
 		wantStderrNot   []string
+		wantStderrLines []string
 	}{
 		{
 			name:         "single component auto-select",
@@ -152,6 +174,18 @@ func TestRun(t *testing.T) {
 			},
 		},
 		{
+			name:         "reachable non-local ref uses fallback schema",
+			args:         []string{"--in", nonLocalRefSchemaPath, "--component", "eks:index:Cluster"},
+			wantExitCode: exitSuccess,
+			wantStdoutParts: []string{
+				"accessScope:",
+				"x-kubernetes-preserve-unknown-fields: true",
+				"required:",
+				"- \"accessScope\"",
+				"- \"name\"",
+			},
+		},
+		{
 			name:            "unknown component",
 			args:            []string{"--in", multiComponentSchemaPath, "--component", "pkg:index:Missing"},
 			wantExitCode:    exitUserError,
@@ -170,10 +204,44 @@ func TestRun(t *testing.T) {
 			wantStderrParts: []string{"error:", "no component resources found in schema"},
 		},
 		{
-			name:            "unsupported construct is exit 3",
-			args:            []string{"--in", unsupportedSchemaPath},
+			name:         "mixed translatable and untranslatable fields succeeds and logs skipped paths",
+			args:         []string{"--in", mixedSkippableSchemaPath},
+			wantExitCode: exitSuccess,
+			wantStdoutParts: []string{
+				`name: "things.pkg.components.platform"`,
+				"name:",
+				"settings:",
+				"enabled:",
+			},
+			wantStderrLines: []string{
+				`warn: component="pkg:index:Thing" path="spec.badTop" reason="keyword \"oneOf\""`,
+				`warn: component="pkg:index:Thing" path="spec.settings.badNested" reason="keyword \"anyOf\""`,
+			},
+			wantStdoutNot: []string{
+				"badTop:",
+				"badNested:",
+				"- \"badTop\"",
+				"- \"badNested\"",
+			},
+			wantStderrNot: []string{
+				"error:",
+			},
+		},
+		{
+			name:         "all top-level untranslatable fields fail with exit 2",
+			args:         []string{"--in", allSkippableSchemaPath},
+			wantExitCode: exitUserError,
+			wantStderrParts: []string{
+				`warn: component="pkg:index:Thing" path="spec.value" reason="keyword \"oneOf\""`,
+				"error:",
+				`no translatable spec fields remain after skipping unsupported schema paths for component "pkg:index:Thing"`,
+			},
+		},
+		{
+			name:            "hard non-skippable unsupported construct is exit 3",
+			args:            []string{"--in", hardUnsupportedSchemaPath},
 			wantExitCode:    exitUnsupported,
-			wantStderrParts: []string{"error:", `component "pkg:index:Thing" path "spec.value" unsupported construct`},
+			wantStderrParts: []string{"error:", `component "pkg:index:Thing" path "spec.cycle" unsupported construct: cyclic local ref "#/types/pkg:index:A"`},
 		},
 		{
 			name:         "malformed schema returns exit 2 preflight error",
@@ -181,30 +249,43 @@ func TestRun(t *testing.T) {
 			wantExitCode: exitUserError,
 			wantStderrParts: []string{
 				"error:",
+				`schema preflight component "pkg:index:Thing"`,
 				"schema preflight path",
 				`resources.pkg:index:Thing.inputProperties.value`,
 				`unresolved local type ref "#/types/pkg:index:Missing"`,
 			},
 		},
 		{
-			name:         "malformed preflight error has precedence over component selection error",
-			args:         []string{"--in", malformedPrecedenceSchemaPath, "--component", "pkg:index:Missing"},
+			name:         "component selection error has precedence over scoped preflight",
+			args:         []string{"--in", unreachableMalformedSchemaPath, "--component", "pkg:index:Missing"},
 			wantExitCode: exitUserError,
 			wantStderrParts: []string{
 				"error:",
-				"schema preflight path",
-				`unresolved local type ref "#/types/pkg:index:Missing"`,
+				`component "pkg:index:Missing" not found; available components: pkg:index:Alpha, pkg:index:Zulu`,
 			},
 			wantStderrNot: []string{
-				`component "pkg:index:Missing" not found`,
+				"schema preflight path",
 			},
 		},
 		{
-			name:         "malformed preflight error has precedence over unsupported construct",
-			args:         []string{"--in", malformedPrecedenceSchemaPath, "--component", "pkg:index:Alpha"},
+			name:         "unreachable malformed ref does not block selected component",
+			args:         []string{"--in", unreachableMalformedSchemaPath, "--component", "pkg:index:Alpha"},
+			wantExitCode: exitSuccess,
+			wantStdoutParts: []string{
+				"apiVersion: apiextensions.k8s.io/v1",
+				"kind: CustomResourceDefinition",
+			},
+			wantStderrNot: []string{
+				"schema preflight path",
+			},
+		},
+		{
+			name:         "reachable preflight error has precedence over unsupported construct",
+			args:         []string{"--in", selectedMalformedAndUnsupportedSchemaPath},
 			wantExitCode: exitUserError,
 			wantStderrParts: []string{
 				"error:",
+				`schema preflight component "pkg:index:Thing"`,
 				"schema preflight path",
 				`unresolved local type ref "#/types/pkg:index:Missing"`,
 			},
@@ -290,6 +371,11 @@ func TestRun(t *testing.T) {
 					t.Fatalf("stdout missing %q in %q", part, gotStdout)
 				}
 			}
+			for _, part := range tt.wantStdoutNot {
+				if strings.Contains(gotStdout, part) {
+					t.Fatalf("stdout unexpectedly contains %q in %q", part, gotStdout)
+				}
+			}
 
 			gotStderr := stderr.String()
 			for _, part := range tt.wantStderrParts {
@@ -303,10 +389,57 @@ func TestRun(t *testing.T) {
 				}
 			}
 
-			if gotStderr != "" && strings.Count(gotStderr, "\n") != 1 {
-				t.Fatalf("stderr should be a single line, got %q", gotStderr)
+			if len(tt.wantStderrLines) > 0 {
+				gotLines := splitNonEmptyLines(gotStderr)
+				if len(gotLines) < len(tt.wantStderrLines) {
+					t.Fatalf("stderr has %d lines, want at least %d; stderr = %q", len(gotLines), len(tt.wantStderrLines), gotStderr)
+				}
+				for i, wantLine := range tt.wantStderrLines {
+					if gotLines[i] != wantLine {
+						t.Fatalf("stderr line %d mismatch\n got: %q\nwant: %q\nfull stderr: %q", i+1, gotLines[i], wantLine, gotStderr)
+					}
+				}
+			}
+
+			for _, line := range splitNonEmptyLines(gotStderr) {
+				if strings.HasPrefix(line, "error:") || strings.HasPrefix(line, "warn:") {
+					if strings.Contains(line, "\n") {
+						t.Fatalf("stderr line should be single-line parseable, got %q", line)
+					}
+				}
 			}
 		})
+	}
+}
+
+func TestRun_HelpIncludesSkipGuidance(t *testing.T) {
+	t.Parallel()
+
+	var stdout strings.Builder
+	var stderr strings.Builder
+
+	code := run([]string{"--help"}, &stdout, &stderr)
+	if code != exitSuccess {
+		t.Fatalf("exit code mismatch: got %d, want %d", code, exitSuccess)
+	}
+	if stderr.String() != "" {
+		t.Fatalf("expected empty stderr, got %q", stderr.String())
+	}
+
+	helpText := stdout.String()
+	requiredParts := []string{
+		"Usage: component-to-crd --in",
+		"Untranslatable schema field paths are skipped",
+		"warn: component=",
+		"stderr",
+		"oneOf, anyOf, allOf",
+		"unsupported schema keywords",
+		"unresolved refs outside supported local handling",
+	}
+	for _, part := range requiredParts {
+		if !strings.Contains(helpText, part) {
+			t.Fatalf("help output missing %q in %q", part, helpText)
+		}
 	}
 }
 
@@ -396,4 +529,16 @@ func makeWorkspaceTempDir(t *testing.T) string {
 		}
 	})
 	return dir
+}
+
+func splitNonEmptyLines(value string) []string {
+	raw := strings.Split(value, "\n")
+	lines := make([]string, 0, len(raw))
+	for _, line := range raw {
+		if line == "" {
+			continue
+		}
+		lines = append(lines, line)
+	}
+	return lines
 }

@@ -41,9 +41,12 @@ func TestInputPropertiesToOpenAPI_SupportedMappings(t *testing.T) {
 		RequiredInputs: []string{"resources", "name", "cluster"},
 	}
 
-	got, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
+	got, skipped, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
 	if err != nil {
 		t.Fatalf("InputPropertiesToOpenAPI error = %v", err)
+	}
+	if skipped != nil {
+		t.Fatalf("expected no skipped paths, got %#v", skipped)
 	}
 
 	want := map[string]any{
@@ -112,30 +115,117 @@ func TestInputPropertiesToOpenAPI_SupportedMappings(t *testing.T) {
 	}
 }
 
-func TestInputPropertiesToOpenAPI_UnsupportedConstruct(t *testing.T) {
+func TestInputPropertiesToOpenAPI_UnsupportedConstructIsSkipped(t *testing.T) {
 	t.Parallel()
 
 	doc := &schema.Document{}
 	resource := schema.Resource{
 		InputProperties: map[string]json.RawMessage{
+			"name":  json.RawMessage(`{"type":"string"}`),
 			"value": json.RawMessage(`{"oneOf":[{"type":"string"},{"type":"number"}]}`),
+		},
+		RequiredInputs: []string{"name", "value"},
+	}
+
+	got, skipped, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
+	if err != nil {
+		t.Fatalf("InputPropertiesToOpenAPI error = %v", err)
+	}
+
+	wantSkipped := []SkippedPathIssue{
+		{
+			Component: "pkg:index:Thing",
+			Path:      "spec.value",
+			Reason:    `keyword "oneOf"`,
+		},
+	}
+	if !reflect.DeepEqual(skipped, wantSkipped) {
+		t.Fatalf("skipped mismatch\n got: %#v\nwant: %#v", skipped, wantSkipped)
+	}
+
+	want := map[string]any{
+		"type": "object",
+		"required": []string{
+			"name",
+		},
+		"properties": map[string]any{
+			"name": map[string]any{
+				"type": "string",
+			},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("translated schema mismatch\n got: %#v\nwant: %#v", got, want)
+	}
+}
+
+func TestInputPropertiesToOpenAPI_DeterministicSkippedOrdering(t *testing.T) {
+	t.Parallel()
+
+	doc := &schema.Document{}
+	resource := schema.Resource{
+		InputProperties: map[string]json.RawMessage{
+			"zeta":  json.RawMessage(`{"oneOf":[{"type":"string"},{"type":"number"}]}`),
+			"alpha": json.RawMessage(`{"type":"object","properties":{"beta":{"oneOf":[{"type":"string"},{"type":"number"}]},"ok":{"type":"string"},"aardvark":{"anyOf":[{"type":"string"},{"type":"number"}]}},"required":["beta","ok","aardvark"]}`),
 		},
 	}
 
-	_, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
+	gotA, skippedA, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
+	if err != nil {
+		t.Fatalf("InputPropertiesToOpenAPI error = %v", err)
+	}
+	gotB, skippedB, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
 	if err == nil {
-		t.Fatal("expected error but got nil")
+		// noop
+	} else {
+		t.Fatalf("InputPropertiesToOpenAPI error = %v", err)
 	}
 
-	var unsupportedErr *UnsupportedError
-	if !errors.As(err, &unsupportedErr) {
-		t.Fatalf("expected UnsupportedError, got %T: %v", err, err)
+	if !reflect.DeepEqual(gotA, gotB) {
+		t.Fatalf("translated schema is not deterministic\nA: %#v\nB: %#v", gotA, gotB)
 	}
-	if unsupportedErr.Component != "pkg:index:Thing" {
-		t.Fatalf("component mismatch: got %q", unsupportedErr.Component)
+	if !reflect.DeepEqual(skippedA, skippedB) {
+		t.Fatalf("skipped list is not deterministic\nA: %#v\nB: %#v", skippedA, skippedB)
 	}
-	if unsupportedErr.Path != "spec.value" {
-		t.Fatalf("path mismatch: got %q", unsupportedErr.Path)
+
+	wantSkipped := []SkippedPathIssue{
+		{
+			Component: "pkg:index:Thing",
+			Path:      "spec.alpha.aardvark",
+			Reason:    `keyword "anyOf"`,
+		},
+		{
+			Component: "pkg:index:Thing",
+			Path:      "spec.alpha.beta",
+			Reason:    `keyword "oneOf"`,
+		},
+		{
+			Component: "pkg:index:Thing",
+			Path:      "spec.zeta",
+			Reason:    `keyword "oneOf"`,
+		},
+	}
+	if !reflect.DeepEqual(skippedA, wantSkipped) {
+		t.Fatalf("skipped mismatch\n got: %#v\nwant: %#v", skippedA, wantSkipped)
+	}
+	want := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"alpha": map[string]any{
+				"type": "object",
+				"required": []string{
+					"ok",
+				},
+				"properties": map[string]any{
+					"ok": map[string]any{
+						"type": "string",
+					},
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(gotA, want) {
+		t.Fatalf("translated schema mismatch\n got: %#v\nwant: %#v", gotA, want)
 	}
 }
 
@@ -149,9 +239,12 @@ func TestInputPropertiesToOpenAPI_UnresolvedRefIsInvalidSchemaError(t *testing.T
 		},
 	}
 
-	_, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
+	_, skipped, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
 	if err == nil {
 		t.Fatal("expected error but got nil")
+	}
+	if skipped != nil {
+		t.Fatalf("expected no skipped paths, got %#v", skipped)
 	}
 	var unsupportedErr *UnsupportedError
 	if errors.As(err, &unsupportedErr) {
@@ -159,6 +252,82 @@ func TestInputPropertiesToOpenAPI_UnresolvedRefIsInvalidSchemaError(t *testing.T
 	}
 	if got := err.Error(); got == "" || !containsAll(got, `component "pkg:index:Thing"`, `path "spec.value"`, `invalid schema`, `unresolved local resource ref`) {
 		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
+func TestInputPropertiesToOpenAPI_NonLocalRefUsesFallbackSchema(t *testing.T) {
+	t.Parallel()
+
+	doc := &schema.Document{}
+	resource := schema.Resource{
+		InputProperties: map[string]json.RawMessage{
+			"name":       json.RawMessage(`{"type":"string"}`),
+			"accessData": json.RawMessage(`{"$ref":"/aws/v7.14.0/schema.json#/types/aws:eks%2FAccessScope:AccessScope"}`),
+		},
+		RequiredInputs: []string{"accessData", "name"},
+	}
+
+	got, skipped, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
+	if err != nil {
+		t.Fatalf("InputPropertiesToOpenAPI error = %v", err)
+	}
+	if skipped != nil {
+		t.Fatalf("expected no skipped paths, got %#v", skipped)
+	}
+
+	want := map[string]any{
+		"type": "object",
+		"required": []string{
+			"accessData",
+			"name",
+		},
+		"properties": map[string]any{
+			"accessData": map[string]any{
+				"type":                                 "object",
+				"x-kubernetes-preserve-unknown-fields": true,
+			},
+			"name": map[string]any{
+				"type": "string",
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("translated schema mismatch\n got: %#v\nwant: %#v", got, want)
+	}
+}
+
+func TestInputPropertiesToOpenAPI_HardUnsupportedStillFails(t *testing.T) {
+	t.Parallel()
+
+	doc := &schema.Document{
+		Types: map[string]json.RawMessage{
+			"pkg:index:A": json.RawMessage(`{"$ref":"#/types/pkg:index:B"}`),
+			"pkg:index:B": json.RawMessage(`{"$ref":"#/types/pkg:index:A"}`),
+		},
+	}
+	resource := schema.Resource{
+		InputProperties: map[string]json.RawMessage{
+			"cycle": json.RawMessage(`{"$ref":"#/types/pkg:index:A"}`),
+		},
+	}
+
+	_, skipped, err := InputPropertiesToOpenAPI(doc, "pkg:index:Thing", resource)
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+	if skipped != nil {
+		t.Fatalf("expected no skipped paths, got %#v", skipped)
+	}
+	var unsupportedErr *UnsupportedError
+	if !errors.As(err, &unsupportedErr) {
+		t.Fatalf("expected UnsupportedError, got %T: %v", err, err)
+	}
+	if unsupportedErr.Skippable {
+		t.Fatalf("expected hard unsupported error, got skippable: %#v", unsupportedErr)
+	}
+	if unsupportedErr.Path != "spec.cycle" {
+		t.Fatalf("path mismatch: got %q", unsupportedErr.Path)
 	}
 }
 
