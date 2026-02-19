@@ -43,6 +43,7 @@ Behavior:
 - positional arguments are rejected.
 - generated CRD YAML is written to `stdout` only.
 - errors are emitted as parseable single-line `error: ...` entries on `stderr`.
+- default mode does not emit `info:` or `warn:` diagnostics.
 - `--verbose` emits additional stage logs (`info: ...`) and skipped-path diagnostics (`warn: ...`) on `stderr`.
 
 Exit codes:
@@ -108,6 +109,7 @@ Automated tests in `component-to-crd` cover:
 - deterministic selection behavior
 - malformed-schema preflight and precedence over later stages
 - translation success with deterministic skipped-path logging
+- local `#/resources/...` ref preflight/translation success and unresolved-ref failures
 - hard unsupported classification (`exit 3`) for non-skippable constructs
 - selected-component preflight behavior (reachable vs unreachable defects)
 - non-local ref fallback behavior and required-field preservation
