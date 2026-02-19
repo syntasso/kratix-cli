@@ -80,6 +80,14 @@ Docker-only flags:
 - `--image-tag <tag>`
 - `--skip-image-build`
 
+### Path Resolution Note (`--in`)
+
+For local schema files, relative paths passed to `--in` are resolved in this order:
+1. `$PWD/<path>` (the caller shell directory, when `PWD` is absolute)
+2. `<path>` (the process working directory fallback)
+
+To avoid ambiguity in wrappers or scripts that invoke the binary from another directory, prefer absolute `--in` paths.
+
 ## Docker Image Commands
 
 Build local image:
@@ -128,6 +136,59 @@ Invalid identity (`exit 2`, single-line `error:`):
 ./bin/pulumi-component-to-crd \
   --in regression-test/testdata/schemas/schema.valid.json \
   --group bad_group
+```
+
+## Local Fixture Manual Test (`.manual-test/test-schema.json`)
+
+Use this when validating local-file input handling without fetching schemas.
+
+Host binary (relative path):
+
+```bash
+./scripts/build_binary
+./bin/pulumi-component-to-crd \
+  --in .manual-test/test-schema.json \
+  --component my-package-name:index:MyComponent \
+  > .manual-test/work/local-fixture.crd.yaml
+```
+
+Host binary (absolute path):
+
+```bash
+./bin/pulumi-component-to-crd \
+  --in "$(pwd)/.manual-test/test-schema.json" \
+  --component my-package-name:index:MyComponent \
+  > .manual-test/work/local-fixture.abs.crd.yaml
+```
+
+Docker `run` with local file input:
+
+```bash
+IMAGE_TAG=pulumi-component-to-crd:local ./scripts/docker_build_local.sh
+
+docker run --rm \
+  -v "$(pwd):/workspace" \
+  -w /workspace \
+  pulumi-component-to-crd:local \
+  --in .manual-test/test-schema.json \
+  --component my-package-name:index:MyComponent \
+  > .manual-test/work/local-fixture.docker.crd.yaml
+```
+
+Why this mount is required:
+- the container must be able to read the local schema file path given to `--in`
+- `-v "$(pwd):/workspace"` makes `.manual-test/test-schema.json` available inside the container
+- `-w /workspace` makes relative `--in` paths resolve from the mounted repo root
+
+Docker `run` with an absolute in-container path:
+
+```bash
+docker run --rm \
+  -v "$(pwd):/workspace" \
+  pulumi-component-to-crd:local \
+  --in /workspace/.manual-test/test-schema.json \
+  --component my-package-name:index:MyComponent \
+  > .manual-test/work/local-fixture.docker.abs.crd.yaml
 ```
 
 ## Example Matrix

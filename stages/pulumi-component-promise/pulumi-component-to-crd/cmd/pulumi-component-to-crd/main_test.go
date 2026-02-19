@@ -521,6 +521,7 @@ func TestRun_HelpIncludesSkipGuidance(t *testing.T) {
 	requiredParts := []string{
 		"Usage: pulumi-component-to-crd --in",
 		"--verbose",
+		"Relative paths are resolved from $PWD first",
 		"Untranslatable schema field paths are skipped",
 		"warn: component=",
 		"stderr",

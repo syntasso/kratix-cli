@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -109,9 +110,30 @@ func loadURLWithClient(rawURL string, client *http.Client) ([]byte, error) {
 }
 
 func loadFile(path string) ([]byte, error) {
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read input schema file: %w", err)
+	candidates := resolveFileReadCandidates(path, os.Getenv("PWD"))
+	var readErr error
+	for _, candidate := range candidates {
+		contents, err := os.ReadFile(candidate)
+		if err == nil {
+			return contents, nil
+		}
+		readErr = err
 	}
-	return contents, nil
+	return nil, fmt.Errorf("read input schema file: %w", readErr)
+}
+
+func resolveFileReadCandidates(path string, envPWD string) []string {
+	if filepath.IsAbs(path) {
+		return []string{path}
+	}
+
+	candidates := make([]string, 0, 2)
+	if filepath.IsAbs(envPWD) {
+		candidate := filepath.Join(envPWD, path)
+		if candidate != path {
+			candidates = append(candidates, candidate)
+		}
+	}
+	candidates = append(candidates, path)
+	return candidates
 }

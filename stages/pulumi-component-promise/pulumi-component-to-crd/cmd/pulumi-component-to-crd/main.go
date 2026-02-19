@@ -202,6 +202,7 @@ func printHelp(stdout io.Writer) {
 	fmt.Fprintln(stdout, "Flags:")
 	fmt.Fprintln(stdout, "  --in string")
 	fmt.Fprintln(stdout, "        Path or URL to Pulumi schema JSON file (required unless --help is used)")
+	fmt.Fprintln(stdout, "        Relative paths are resolved from $PWD first, then from the process working directory")
 	fmt.Fprintln(stdout, "  --component string")
 	fmt.Fprintln(stdout, "        Component token")
 	fmt.Fprintln(stdout, "  --group string")

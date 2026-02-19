@@ -39,6 +39,9 @@ Command:
 
 Behavior:
 - `--in` is required; supports local files and `http(s)` URLs.
+- for relative local file paths in `--in`, resolution order is:
+  1. `$PWD/<path>` (caller shell directory when `PWD` is absolute)
+  2. `<path>` (process working directory fallback)
 - `--component` is optional only when exactly one component exists.
 - positional arguments are rejected.
 - generated CRD YAML is written to `stdout` only.
