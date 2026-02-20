@@ -16,9 +16,10 @@ const schemaURLTimeout = 15 * time.Second
 
 // SchemaDocument is the subset of the Pulumi package schema required by init.
 type SchemaDocument struct {
-	Name      string                    `json:"name"`
-	Version   string                    `json:"version"`
-	Resources map[string]SchemaResource `json:"resources"`
+	Name      string                     `json:"name"`
+	Version   string                     `json:"version"`
+	Resources map[string]SchemaResource  `json:"resources"`
+	Types     map[string]json.RawMessage `json:"types"`
 }
 
 // SchemaResource contains the component metadata and input shape for a Pulumi resource.

@@ -17,6 +17,8 @@ var _ = Describe("init pulumi-component-promise", func() {
 		singleSchemaPath    string
 		multiSchemaPath     string
 		malformedSchemaPath string
+		onlyUnsupportedPath string
+		mixedSchemaPath     string
 	)
 
 	BeforeEach(func() {
@@ -26,13 +28,19 @@ var _ = Describe("init pulumi-component-promise", func() {
 		r = &runner{exitCode: 0, dir: workingDir, timeout: 10 * time.Second}
 
 		singleSchemaPath = filepath.Join(workingDir, "single-component-schema.json")
-		Expect(os.WriteFile(singleSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true}}}`), 0o600)).To(Succeed())
+		Expect(os.WriteFile(singleSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"}},"requiredInputs":["name"]}}}`), 0o600)).To(Succeed())
 
 		multiSchemaPath = filepath.Join(workingDir, "multi-component-schema.json")
-		Expect(os.WriteFile(multiSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true},"pkg:index:Alpha":{"isComponent":true}}}`), 0o600)).To(Succeed())
+		Expect(os.WriteFile(multiSchemaPath, []byte(`{"resources":{"pkg:index:Zulu":{"isComponent":true,"inputProperties":{"name":{"type":"string"}}},"pkg:index:Alpha":{"isComponent":true,"inputProperties":{"name":{"type":"string"}}}}}`), 0o600)).To(Succeed())
 
 		malformedSchemaPath = filepath.Join(workingDir, "malformed-schema.json")
 		Expect(os.WriteFile(malformedSchemaPath, []byte(`{"resources":`), 0o600)).To(Succeed())
+
+		onlyUnsupportedPath = filepath.Join(workingDir, "unsupported-schema.json")
+		Expect(os.WriteFile(onlyUnsupportedPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600)).To(Succeed())
+
+		mixedSchemaPath = filepath.Join(workingDir, "mixed-schema.json")
+		Expect(os.WriteFile(mixedSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"},"value":{"oneOf":[{"type":"string"},{"type":"number"}]}}}}}`), 0o600)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -124,6 +132,27 @@ var _ = Describe("init pulumi-component-promise", func() {
 		)
 		Expect(session.Out).To(gbytes.Say("Preview: This command is in preview"))
 		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
+	It("prints deterministic warnings for skipped unsupported paths", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", mixedSchemaPath,
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Out).To(gbytes.Say(`warning: skipped unsupported schema path "spec.value" for component "pkg:index:Thing": keyword "oneOf"`))
+		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
+	It("fails when translated spec is empty after skipping unsupported paths", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", onlyUnsupportedPath,
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: translate component inputs: no translatable spec fields remain after skipping unsupported schema paths for component "pkg:index:Thing"`))
 	})
 
 	It("fails for malformed JSON schema", func() {

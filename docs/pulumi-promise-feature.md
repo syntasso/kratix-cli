@@ -121,6 +121,19 @@ Minimum translation contract for preview:
 - Fail with clear message if no translatable top-level `spec` fields remain.
 - Make sure to default all versions to v1alpha1 unless user provides an override.
 
+Translator support matrix (preview):
+
+| Pulumi schema construct | Status | Behavior |
+| --- | --- | --- |
+| `type: string`, `number`, `integer`, `boolean` | Supported | Mapped directly to OpenAPI `type`. |
+| `type: object` + `properties` | Supported | Properties translated recursively. |
+| `required` | Supported | Preserved and filtered to translated properties only. |
+| `type: array` + `items` | Supported | `items` translated recursively. |
+| `additionalProperties` | Supported | Mapped as OpenAPI map values schema. |
+| Local `$ref` (`#/types/...`, `#/resources/...`) | Supported | Resolved recursively; cycles fail with a clear error. |
+| Non-local `$ref` | Supported (fallback) | Converted to permissive object with `x-kubernetes-preserve-unknown-fields: true`. |
+| `oneOf`, `anyOf`, `allOf`, `not`, `discriminator`, `patternProperties`, `const` | Skipped | Path is omitted and surfaced as deterministic warning text. |
+
 ### 3) Promise API generation
 Use existing promise generation flow for consistency:
 - Build CRD object with `group/kind/version/plural` from flags/defaults.

@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix-cli/internal/pulumi"
 )
@@ -51,10 +53,19 @@ func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return initPulumiComponentPromiseFromSelection(selectedComponent)
+	specSchema, warnings, err := pulumi.TranslateInputsToSpecSchema(schemaDoc, selectedComponent)
+	if err != nil {
+		return err
+	}
+	for _, warning := range warnings {
+		fmt.Println(warning)
+	}
+
+	return initPulumiComponentPromiseFromSelection(selectedComponent, specSchema)
 }
 
-func initPulumiComponentPromiseFromSelection(component pulumi.SelectedComponent) error {
-	_ = component // selected component is intentionally passed forward for translation in the next task.
+func initPulumiComponentPromiseFromSelection(component pulumi.SelectedComponent, specSchema map[string]any) error {
+	_ = component
+	_ = specSchema // Translation output is passed forward for Promise generation in the next task.
 	return nil
 }
