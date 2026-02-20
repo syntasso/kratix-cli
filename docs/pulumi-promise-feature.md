@@ -56,6 +56,10 @@ Generated resource `configure` workflow uses:
   - `PULUMI_COMPONENT_TOKEN`
   - `PULUMI_SCHEMA_SOURCE`
 
+After generation, teams can edit these env vars directly in:
+- flat output: `promise.yaml` under `spec.workflows.resource.configure[].spec.containers[].env`
+- split output: `workflows/resource/configure/workflow.yaml` under `spec.containers[].env`
+
 ## Test Coverage And Fixtures
 - Command integration tests: `test/init_pulumi_component_promise_test.go`
 - Unit tests:

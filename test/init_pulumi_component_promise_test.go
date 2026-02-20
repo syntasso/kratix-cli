@@ -174,7 +174,15 @@ var _ = Describe("init pulumi-component-promise", func() {
 		)
 
 		Expect(getFiles(workingDir)).To(ContainElements("promise.yaml", "example-resource.yaml", "README.md"))
-		Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output/promise.yaml")))
+		promiseContents := cat(filepath.Join(workingDir, "promise.yaml"))
+		Expect(promiseContents).To(MatchYAML(cat("assets/pulumi/expected-output/promise.yaml")))
+		Expect(promiseContents).To(SatisfyAll(
+			ContainSubstring("name: instance-configure"),
+			ContainSubstring("name: from-api-to-pulumi-pko-program"),
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"),
+			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
+			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
+		))
 		Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output/example-resource.yaml")))
 		Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/pulumi/expected-output/README.md")))
 		Expect(session.Out).To(SatisfyAll(
@@ -194,7 +202,15 @@ var _ = Describe("init pulumi-component-promise", func() {
 
 		Expect(getFiles(workingDir)).To(ContainElements("api.yaml", "workflows", "example-resource.yaml", "README.md", "dependencies.yaml"))
 		Expect(cat(filepath.Join(workingDir, "api.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/api.yaml")))
-		Expect(cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
+		resourceConfigureWorkflowContents := cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))
+		Expect(resourceConfigureWorkflowContents).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
+		Expect(resourceConfigureWorkflowContents).To(SatisfyAll(
+			ContainSubstring("name: instance-configure"),
+			ContainSubstring("name: from-api-to-pulumi-pko-program"),
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"),
+			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
+			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
+		))
 		Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/example-resource.yaml")))
 		Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/pulumi/expected-output-with-split/README.md")))
 		Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/dependencies.yaml")))
