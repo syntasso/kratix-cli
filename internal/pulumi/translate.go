@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 )
@@ -230,6 +231,12 @@ func applyAnnotations(node map[string]any, translated map[string]any, componentT
 		return nil, unsupported(componentToken, path, err.Error())
 	}
 	if hasEnum {
+		typeName, hasType := translated["type"].(string)
+		if hasType {
+			if err := validateEnumValuesForType(enumValues, typeName); err != nil {
+				return nil, unsupportedHard(componentToken, path, err.Error())
+			}
+		}
 		translated["enum"] = enumValues
 	}
 
@@ -264,6 +271,43 @@ func parseEnum(node map[string]any) ([]any, bool, error) {
 	}
 
 	return translatedValues, true, nil
+}
+
+func validateEnumValuesForType(values []any, typeName string) error {
+	for _, value := range values {
+		if !isValueCompatibleWithType(value, typeName) {
+			return fmt.Errorf("enum value %v is not compatible with type %q", value, typeName)
+		}
+	}
+	return nil
+}
+
+func isValueCompatibleWithType(value any, typeName string) bool {
+	switch typeName {
+	case "string":
+		_, ok := value.(string)
+		return ok
+	case "boolean":
+		_, ok := value.(bool)
+		return ok
+	case "number":
+		_, ok := value.(float64)
+		return ok
+	case "integer":
+		asNumber, ok := value.(float64)
+		if !ok {
+			return false
+		}
+		return math.Trunc(asNumber) == asNumber
+	case "array":
+		_, ok := value.([]any)
+		return ok
+	case "object":
+		_, ok := value.(map[string]any)
+		return ok
+	default:
+		return false
+	}
 }
 
 func rejectUnsupportedKeywords(node map[string]any, componentToken, path string) error {

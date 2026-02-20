@@ -244,6 +244,60 @@ func TestTranslateInputsToSpecSchema(t *testing.T) {
 			t.Fatalf("unexpected error: %q", got)
 		}
 	})
+
+	t.Run("returns error when enum values are incompatible with declared type", func(t *testing.T) {
+		t.Parallel()
+
+		component := SelectedComponent{
+			Token: "pkg:index:Thing",
+			Resource: SchemaResource{
+				InputProperties: map[string]json.RawMessage{
+					"mode": json.RawMessage(`{"type":"string","enum":["on",2]}`),
+				},
+			},
+		}
+
+		_, warnings, err := TranslateInputsToSpecSchema(SchemaDocument{}, component)
+		if err == nil {
+			t.Fatal("expected error but got nil")
+		}
+		if len(warnings) != 0 {
+			t.Fatalf("expected no warnings, got %v", warnings)
+		}
+		if got := err.Error(); !strings.Contains(got, `enum value 2 is not compatible with type "string"`) {
+			t.Fatalf("unexpected error: %q", got)
+		}
+	})
+
+	t.Run("accepts integer enums encoded as JSON numbers", func(t *testing.T) {
+		t.Parallel()
+
+		component := SelectedComponent{
+			Token: "pkg:index:Thing",
+			Resource: SchemaResource{
+				InputProperties: map[string]json.RawMessage{
+					"replicas": json.RawMessage(`{"type":"integer","enum":[1,2,3]}`),
+				},
+			},
+		}
+
+		specSchema, warnings, err := TranslateInputsToSpecSchema(SchemaDocument{}, component)
+		if err != nil {
+			t.Fatalf("TranslateInputsToSpecSchema returned error: %v", err)
+		}
+		if len(warnings) != 0 {
+			t.Fatalf("expected no warnings, got %v", warnings)
+		}
+
+		replicas := mustProperties(t, specSchema)["replicas"].(map[string]any)
+		enumValues, ok := replicas["enum"].([]any)
+		if !ok {
+			t.Fatalf("expected enum []any, got %#v", replicas["enum"])
+		}
+		if len(enumValues) != 3 {
+			t.Fatalf("expected 3 enum values, got %v", enumValues)
+		}
+	})
 }
 
 func assertSchemaType(t *testing.T, node map[string]any, want string) {
