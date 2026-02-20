@@ -34,6 +34,11 @@ Use `kratix init pulumi-component-promise` to bootstrap from a Pulumi package sc
 kratix init pulumi-component-promise PROMISE-NAME --schema PATH_OR_URL --group API-GROUP --kind API-KIND [--component TOKEN]
 ```
 
+Preview prerequisites:
+- Install the Pulumi Kubernetes Operator in the destination cluster before applying generated Promise resources.
+- Ensure the generated resource `configure` workflow can reach the schema source from `PULUMI_SCHEMA_SOURCE` (HTTP(S) source recommended).
+- Use the generated stage image `ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0` or a compatible replacement.
+
 Flat output (`promise.yaml`, `example-resource.yaml`, `README.md`):
 ```
 kratix init pulumi-component-promise mypromise --schema ./test/assets/pulumi/schema.valid.json --group syntasso.io --kind Database
@@ -43,6 +48,10 @@ Split output (`api.yaml`, workflows, `dependencies.yaml`, `example-resource.yaml
 ```
 kratix init pulumi-component-promise mypromise --schema ./test/assets/pulumi/schema.valid.json --group syntasso.io --kind Database --split
 ```
+
+Generated resource `configure` workflow contract:
+- Container name: `from-api-to-pulumi-pko-program`
+- Env vars: `PULUMI_COMPONENT_TOKEN`, `PULUMI_SCHEMA_SOURCE`
 
 Component selection is deterministic:
 - If schema contains one component and `--component` is omitted, it is auto-selected.

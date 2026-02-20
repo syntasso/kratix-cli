@@ -56,3 +56,23 @@ kratix init helm-promise PROMISENAME --group myorg.com --kind database [--versio
 ```
 kratix init operator-promise PROMISENAME --group myorg.com --kind database [--version v1] [--plural postgreses] --operator-manifests PATH-TO-OPERATOR-RELEASE-MANIFEST --api-schema-from CRD-FULLNAME(needs to exist in operator release manifest)
 ```
+
+### init from pulumi component (Preview)
+
+```bash
+kratix init pulumi-component-promise PROMISENAME --schema PATH_OR_URL --group myorg.com --kind database [--component TOKEN] [--version v1] [--plural postgreses] [--split]
+```
+
+Preview caveats:
+- This command is preview-only and may change without notice.
+- The generated resource `configure` workflow runs in cluster and expects Pulumi Kubernetes Operator APIs to be available.
+- `PULUMI_SCHEMA_SOURCE` must be reachable by the workflow container at runtime.
+
+Examples:
+```bash
+# flat output (promise.yaml)
+kratix init pulumi-component-promise mypromise --schema ./schema.json --group syntasso.io --kind Database
+
+# split output (api.yaml + workflows)
+kratix init pulumi-component-promise mypromise --schema ./schema.json --group syntasso.io --kind Database --split
+```
