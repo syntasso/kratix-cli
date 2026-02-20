@@ -23,12 +23,12 @@ Out of scope:
 - Promise file rendering.
 
 ## Suggested Reuse
-Leverage existing prototype internals in:
-- `stages/pulumi-component-promise/pulumi-component-to-crd/internal/schema`
-- `stages/pulumi-component-promise/pulumi-component-to-crd/internal/select`
+Leverage the shared Pulumi internals in the main CLI tree:
+- `internal/pulumi/schema_loader.go`
+- `internal/pulumi/component_select.go`
 
 Preferred direction:
-- Extract/adapt into reusable package in main CLI tree (for example `internal/pulumi/`), avoiding shelling out to another binary.
+- Keep schema loading and component selection in `internal/pulumi/` and avoid shelling out to other binaries.
 
 ## File Touchpoints
 - `cmd/init_pulumi_component_promise.go`

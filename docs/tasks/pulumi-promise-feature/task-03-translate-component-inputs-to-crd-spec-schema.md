@@ -24,8 +24,8 @@ Out of scope:
 - Stage output generation.
 
 ## Suggested Reuse
-Adapt translator logic from:
-- `stages/pulumi-component-promise/pulumi-component-to-crd/internal/translate`
+Build on the shared translator in:
+- `internal/pulumi/translate.go`
 
 ## File Touchpoints
 - `internal/pulumi/translate.go` (new or extracted)
