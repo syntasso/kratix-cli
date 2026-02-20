@@ -107,6 +107,31 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(session.Out).To(gbytes.Say("Preview: This command is in preview"))
 	})
 
+	It("prints warning guidance when schema source is local", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", singleSchemaPath,
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Out).To(SatisfyAll(
+			gbytes.Say(`warning: local Pulumi schema source`),
+			gbytes.Say(`prefer publishing your Pulumi component/schema for remote HTTP\(S\) access`),
+			gbytes.Say(`for local iteration before publishing, make the schema reachable from the cluster`),
+		))
+	})
+
+	It("does not print local schema warning for non-local schema sources", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "ftp://example.com/schema.json",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Out).NotTo(gbytes.Say(`warning: local Pulumi schema source`))
+		Expect(session.Err).To(gbytes.Say(`Error: load schema: unsupported URL scheme "ftp"`))
+	})
+
 	It("fails when schema has multiple components and --component is not provided", func() {
 		session := withExitCode(1).run(
 			"init", "pulumi-component-promise", "mypromise",

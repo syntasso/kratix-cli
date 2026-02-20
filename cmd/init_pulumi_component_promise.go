@@ -52,6 +52,10 @@ func init() {
 
 func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 	printPreviewWarning()
+	if pulumi.IsLocalSchemaSource(pulumiSchemaPath) {
+		printPulumiLocalSchemaWarning(pulumiSchemaPath)
+	}
+
 	schemaDoc, err := pulumi.LoadSchema(pulumiSchemaPath)
 	if err != nil {
 		return err
@@ -133,6 +137,12 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 
 	fmt.Println("Pulumi component Promise generated successfully.")
 	return nil
+}
+
+func printPulumiLocalSchemaWarning(source string) {
+	fmt.Printf("warning: local Pulumi schema source %q detected. The generated resource workflow runs in Kubernetes and cannot read files from your machine.\n", source)
+	fmt.Println("warning: prefer publishing your Pulumi component/schema for remote HTTP(S) access and pass that URL with --schema.")
+	fmt.Println("warning: for local iteration before publishing, make the schema reachable from the cluster (for example: bake it into the stage image, mount it via ConfigMap/volume, or host it in object storage).")
 }
 
 func buildPulumiPromiseExtraFlags() string {

@@ -63,6 +63,17 @@ func readSchemaSource(source string) ([]byte, error) {
 	return readSchemaFile(source)
 }
 
+// IsLocalSchemaSource reports whether a schema source should be treated as a local file path.
+func IsLocalSchemaSource(source string) bool {
+	parsedURL, err := url.Parse(source)
+	if err != nil {
+		return true
+	}
+
+	scheme := strings.ToLower(parsedURL.Scheme)
+	return scheme == "" || isWindowsFilePath(source)
+}
+
 var windowsFilePath = regexp.MustCompile(`^[a-zA-Z]:[\\/]`)
 
 func isWindowsFilePath(source string) bool {

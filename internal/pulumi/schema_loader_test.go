@@ -111,6 +111,51 @@ func TestLoadSchema(t *testing.T) {
 	})
 }
 
+func TestIsLocalSchemaSource(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		source  string
+		expects bool
+	}{
+		"relative path": {
+			source:  "./schema.json",
+			expects: true,
+		},
+		"absolute path": {
+			source:  "/tmp/schema.json",
+			expects: true,
+		},
+		"windows path": {
+			source:  `C:\tmp\schema.json`,
+			expects: true,
+		},
+		"https url": {
+			source:  "https://example.com/schema.json",
+			expects: false,
+		},
+		"http url": {
+			source:  "http://example.com/schema.json",
+			expects: false,
+		},
+		"unsupported url scheme": {
+			source:  "ftp://example.com/schema.json",
+			expects: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := IsLocalSchemaSource(tc.source); got != tc.expects {
+				t.Fatalf("IsLocalSchemaSource(%q) = %t, want %t", tc.source, got, tc.expects)
+			}
+		})
+	}
+}
+
 type roundTripFunc func(req *http.Request) (*http.Response, error)
 
 func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
