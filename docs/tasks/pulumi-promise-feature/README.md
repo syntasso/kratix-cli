@@ -13,6 +13,7 @@ Each task is scoped to roughly 1-2 senior-engineer days and includes code, tests
 7. `task-07-release-plumbing-and-end-to-end-regression.md`
 8. `task-08-reduce-global-flag-coupling-across-init-commands.md` (optional refactor follow-up)
 9. `task-09-add-url-schema-integration-tests.md` (optional test-coverage follow-up)
+10. `task-10-pulumi-init-defaults-without-global-mutation.md` (optional pulumi hardening follow-up)
 
 ## Notes
 - Tasks 01-05 can be parallelized partially once interfaces are agreed.
