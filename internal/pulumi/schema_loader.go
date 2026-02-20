@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -45,13 +46,26 @@ func LoadSchema(source string) (SchemaDocument, error) {
 func readSchemaSource(source string) ([]byte, error) {
 	parsedURL, err := url.Parse(source)
 	if err == nil {
-		switch strings.ToLower(parsedURL.Scheme) {
+		scheme := strings.ToLower(parsedURL.Scheme)
+		if scheme == "" || isWindowsFilePath(source) {
+			return readSchemaFile(source)
+		}
+
+		switch scheme {
 		case "http", "https":
 			return readSchemaURL(source)
+		default:
+			return nil, fmt.Errorf("load schema: unsupported URL scheme %q", parsedURL.Scheme)
 		}
 	}
 
 	return readSchemaFile(source)
+}
+
+var windowsFilePath = regexp.MustCompile(`^[a-zA-Z]:[\\/]`)
+
+func isWindowsFilePath(source string) bool {
+	return windowsFilePath.MatchString(source)
 }
 
 func readSchemaFile(path string) ([]byte, error) {

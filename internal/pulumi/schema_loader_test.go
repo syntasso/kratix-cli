@@ -99,6 +99,16 @@ func TestLoadSchema(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("returns unsupported URL scheme error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := LoadSchema("ftp://example.com/schema.json")
+		want := `load schema: unsupported URL scheme "ftp"`
+		if err == nil || err.Error() != want {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 type roundTripFunc func(req *http.Request) (*http.Response, error)

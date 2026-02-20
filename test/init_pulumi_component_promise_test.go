@@ -136,4 +136,14 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(session.Err).To(gbytes.Say(`Error: load schema: parse input schema as JSON:`))
 	})
 
+	It("fails for unsupported schema URL scheme", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "ftp://example.com/schema.json",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: load schema: unsupported URL scheme "ftp"`))
+	})
+
 })
