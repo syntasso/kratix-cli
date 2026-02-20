@@ -27,6 +27,7 @@ This file gives guidance for LLM agents contributing to this repository.
 
 ## Commit Discipline (Important)
 - Use atomic commits: one logical change per commit.
+- Every completed code change must be captured in a local commit before handoff.
 - A commit should be understandable on its own by a junior engineer.
 - Keep commits mixed only when needed for coherence:
   - code + tests for that exact behavior
