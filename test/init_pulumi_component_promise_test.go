@@ -190,7 +190,26 @@ var _ = Describe("init pulumi-component-promise", func() {
 		)
 
 		readme := cat(filepath.Join(workingDir, "README.md"))
-		Expect(readme).To(ContainSubstring("kratix init pulumi-component-promise mypromise --schema ./multi-component-schema.json --component pkg:index:Alpha --split --group syntasso.io --kind Database"))
+		Expect(readme).To(ContainSubstring("kratix init pulumi-component-promise mypromise --schema './multi-component-schema.json' --component 'pkg:index:Alpha' --split --group syntasso.io --kind Database"))
+		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
+	It("reconstructs shell-safe README args and omits --dir", func() {
+		validSchemaContents, err := os.ReadFile(validSchemaPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.WriteFile(filepath.Join(workingDir, "schema&prod.json"), validSchemaContents, 0o600)).To(Succeed())
+
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "./schema&prod.json",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+			"--dir", "generated",
+		)
+
+		readme := cat(filepath.Join(workingDir, "generated", "README.md"))
+		Expect(readme).To(ContainSubstring("--schema './schema&prod.json'"))
+		Expect(readme).NotTo(ContainSubstring("--dir"))
 		Expect(session.Err).NotTo(gbytes.Say("Error:"))
 	})
 

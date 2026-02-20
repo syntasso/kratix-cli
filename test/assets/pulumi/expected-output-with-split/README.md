@@ -4,7 +4,7 @@
   This Promise was generated with:
 
   ```
-  kratix init pulumi-component-promise mypromise --schema ./schema.valid.json --split --group syntasso.io --kind Database
+  kratix init pulumi-component-promise mypromise --schema './schema.valid.json' --split --group syntasso.io --kind Database
   ```
 
   ## Updating API properties

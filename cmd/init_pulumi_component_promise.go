@@ -136,25 +136,26 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 }
 
 func buildPulumiPromiseExtraFlags() string {
-	flags := fmt.Sprintf("--schema %s", pulumiSchemaPath)
+	flags := []string{"--schema", shellQuoteArg(pulumiSchemaPath)}
 
 	if pulumiComponent != "" {
-		flags = fmt.Sprintf("%s --component %s", flags, pulumiComponent)
+		flags = append(flags, "--component", shellQuoteArg(pulumiComponent))
 	}
 	if version != "" {
-		flags = fmt.Sprintf("%s --version %s", flags, version)
+		flags = append(flags, "--version", shellQuoteArg(version))
 	}
 	if plural != "" {
-		flags = fmt.Sprintf("%s --plural %s", flags, plural)
+		flags = append(flags, "--plural", shellQuoteArg(plural))
 	}
 	if split {
-		flags = fmt.Sprintf("%s --split", flags)
-	}
-	if outputDir != "." {
-		flags = fmt.Sprintf("%s --dir %s", flags, outputDir)
+		flags = append(flags, "--split")
 	}
 
-	return flags
+	return strings.Join(flags, " ")
+}
+
+func shellQuoteArg(arg string) string {
+	return "'" + strings.ReplaceAll(arg, "'", `'"'"'`) + "'"
 }
 
 func buildPulumiCRD(specSchema map[string]any) (*apiextensionsv1.CustomResourceDefinition, error) {
