@@ -60,6 +60,25 @@ After generation, teams can edit these env vars directly in:
 - flat output: `promise.yaml` under `spec.workflows.resource.configure[].spec.containers[].env`
 - split output: `workflows/resource/configure/workflow.yaml` under `spec.containers[].env`
 
+## Stage Runtime Contract
+The Pulumi stage runtime lives at `stages/pulumi-promise`.
+
+Inputs:
+- `KRATIX_INPUT_FILE` (optional, default `/kratix/input/object.yaml`)
+- `PULUMI_COMPONENT_TOKEN` (required)
+
+Output:
+- `KRATIX_OUTPUT_FILE` (optional, default `/kratix/output/object.yaml`)
+
+Transformation:
+- Reads one Kratix request object.
+- Requires `metadata.name` and `spec` (where `spec` must be an object).
+- Emits one `pulumi.com/v1` `Program` manifest.
+- Copies request `metadata.labels` and `metadata.annotations`.
+- Preserves request namespace (defaults to `default` if unset).
+- Maps request `spec` to `spec.resources.<component-token>.properties`.
+- Uses deterministic Program naming: `<request-name>-<hash>`.
+
 ## Test Coverage And Fixtures
 - Command integration tests: `test/init_pulumi_component_promise_test.go`
 - Unit tests:

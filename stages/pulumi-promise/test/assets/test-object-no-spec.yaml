@@ -1,0 +1,10 @@
+apiVersion: mypromise.com/v1
+kind: TestObject
+metadata:
+  name: test-object
+  namespace: non-default
+  labels:
+    app.kubernetes.io/name: test-object
+    keyy: value
+  annotations:
+    image-registry: ghcr.io
