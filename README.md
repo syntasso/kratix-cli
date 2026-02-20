@@ -27,6 +27,18 @@ To bootstrap the Promise, you can use `kratix init promise` command:
 kratix init promise PROMISE-NAME --group API-GROUP --kind API-KIND [--version] [--plural] [--split]
 ```
 
+### Initializing Pulumi component promise (Preview)
+
+Use `kratix init pulumi-component-promise` to bootstrap from a Pulumi package schema:
+```
+kratix init pulumi-component-promise PROMISE-NAME --schema PATH_OR_URL --group API-GROUP --kind API-KIND [--component TOKEN]
+```
+
+Component selection is deterministic:
+- If schema contains one component and `--component` is omitted, it is auto-selected.
+- If schema contains multiple components and `--component` is omitted, the command fails and lists valid component tokens.
+- If `--component` is provided but not found, the command fails and lists valid component tokens.
+
 ### Updating API properties
 
 To update the Promise API, you can use the `kratix update api` command:
@@ -103,4 +115,3 @@ is merged the following happens:
    contents of the PRs description (**NOT the contents of the file committed**).
 - Goreleaser gets triggered in Github actions, creating and uploading the binaries to the
    existing release.
-

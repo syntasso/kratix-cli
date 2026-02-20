@@ -1,6 +1,9 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+	"github.com/syntasso/kratix-cli/internal/pulumi"
+)
 
 const (
 	pulumiComponentPromiseCommandName = "pulumi-component-promise"
@@ -38,5 +41,20 @@ func init() {
 
 func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 	printPreviewWarning()
+	schemaDoc, err := pulumi.LoadSchema(pulumiSchemaPath)
+	if err != nil {
+		return err
+	}
+
+	selectedComponent, err := pulumi.SelectComponent(schemaDoc, pulumiComponent)
+	if err != nil {
+		return err
+	}
+
+	return initPulumiComponentPromiseFromSelection(selectedComponent)
+}
+
+func initPulumiComponentPromiseFromSelection(component pulumi.SelectedComponent) error {
+	_ = component // selected component is intentionally passed forward for translation in the next task.
 	return nil
 }
