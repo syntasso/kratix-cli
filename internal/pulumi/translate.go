@@ -85,6 +85,10 @@ func TranslateInputsToSpecSchema(doc SchemaDocument, component SelectedComponent
 }
 
 func translateNode(ctx *translationContext, node map[string]any, path string) (map[string]any, error) {
+	if err := rejectUnsupportedKeywords(node, ctx.componentToken, path); err != nil {
+		return nil, err
+	}
+
 	if ref, ok := stringField(node, "$ref"); ok {
 		if !isLocalRef(ref) {
 			return applyAnnotations(node, fallbackSchemaForNonLocalRef(), ctx.componentToken, path)
@@ -110,10 +114,6 @@ func translateNode(ctx *translationContext, node map[string]any, path string) (m
 			return nil, err
 		}
 		return withAnnotations, nil
-	}
-
-	if err := rejectUnsupportedKeywords(node, ctx.componentToken, path); err != nil {
-		return nil, err
 	}
 
 	typeName, ok := stringField(node, "type")

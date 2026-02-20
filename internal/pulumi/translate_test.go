@@ -172,6 +172,49 @@ func TestTranslateInputsToSpecSchema(t *testing.T) {
 		}
 	})
 
+	t.Run("skips refs that include unsupported sibling keywords", func(t *testing.T) {
+		t.Parallel()
+
+		doc := SchemaDocument{
+			Types: map[string]json.RawMessage{
+				"pkg:index:Settings": json.RawMessage(`{"type":"object","properties":{"region":{"type":"string"}}}`),
+			},
+		}
+		component := SelectedComponent{
+			Token: "pkg:index:Thing",
+			Resource: SchemaResource{
+				InputProperties: map[string]json.RawMessage{
+					"name":   json.RawMessage(`{"type":"string"}`),
+					"config": json.RawMessage(`{"$ref":"#/types/pkg:index:Settings","oneOf":[{"type":"string"},{"type":"number"}]}`),
+				},
+				RequiredInputs: []string{"config", "name"},
+			},
+		}
+
+		specSchema, warnings, err := TranslateInputsToSpecSchema(doc, component)
+		if err != nil {
+			t.Fatalf("TranslateInputsToSpecSchema returned error: %v", err)
+		}
+
+		wantWarnings := []string{
+			`warning: skipped unsupported schema path "spec.config" for component "pkg:index:Thing": keyword "oneOf"`,
+		}
+		if len(warnings) != len(wantWarnings) {
+			t.Fatalf("warning count mismatch: got %d want %d (%v)", len(warnings), len(wantWarnings), warnings)
+		}
+		for i := range wantWarnings {
+			if warnings[i] != wantWarnings[i] {
+				t.Fatalf("warning mismatch at index %d: got %q want %q", i, warnings[i], wantWarnings[i])
+			}
+		}
+
+		props := mustProperties(t, specSchema)
+		if _, found := props["config"]; found {
+			t.Fatalf("expected property with unsupported keyword to be skipped")
+		}
+		assertRequired(t, specSchema, []string{"name"})
+	})
+
 	t.Run("returns hard error for cyclic local refs", func(t *testing.T) {
 		t.Parallel()
 
