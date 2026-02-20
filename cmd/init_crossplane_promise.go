@@ -121,7 +121,7 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 	if skipDependencies {
 		flags = fmt.Sprintf("%s --skip-dependencies", flags)
 	}
-	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, flags, crossplaneDestinationSelectors, dependencies, crd, pipelines, exampleResource)
+	filesToWrite, err := getFilesToWrite("crossplane-promise", promiseName, split, workflowDirectory, flags, crossplaneDestinationSelectors, dependencies, crd, pipelines, exampleResource)
 	if err != nil {
 		return err
 	}
