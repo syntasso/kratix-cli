@@ -28,8 +28,8 @@ var operatorPromiseCmd = &cobra.Command{
 	Short: "Preview: Generate a Promise from a given Kubernetes Operator.",
 	Long: "Preview: Generate a Promise from a given Kubernetes Operator. " +
 		"This command is in preview, not supported under SLAs, and may change or break without notice.",
-	Args:  cobra.ExactArgs(1),
-	RunE:  InitPromiseFromOperator,
+	Args: cobra.ExactArgs(1),
+	RunE: InitPromiseFromOperator,
 }
 
 var (
@@ -107,7 +107,7 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 	pipelines := generateResourceConfigurePipelines(operatorContainerName, operatorContainerImage, envs)
 
 	flags := fmt.Sprintf("--operator-manifests %s --api-schema-from %s", operatorManifestsDir, targetCrdName)
-	filesToWrite, err := getFilesToWrite(promiseName, split, workflowDirectory, flags, nil, dependencies, crd, pipelines, exampleResource)
+	filesToWrite, err := getFilesToWrite("operator-promise", promiseName, split, workflowDirectory, flags, nil, dependencies, crd, pipelines, exampleResource)
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[s
 	return m
 }
 
-func getFilesToWrite(promiseName string, split bool, workflowDirectory, extraFlags string, destinationSelectors []v1alpha1.PromiseScheduling, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]any, error) {
+func getFilesToWrite(subCommand, promiseName string, split bool, workflowDirectory, extraFlags string, destinationSelectors []v1alpha1.PromiseScheduling, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]any, error) {
 	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md.tpl")
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func getFilesToWrite(promiseName string, split bool, workflowDirectory, extraFla
 
 	templatedReadme := bytes.NewBuffer([]byte{})
 	err = readmeTemplate.Execute(templatedReadme, promiseTemplateValues{
-		SubCommand: "operator-promise",
+		SubCommand: subCommand,
 		ExtraFlags: extraFlags,
 		Name:       promiseName,
 		Group:      crd.Spec.Group,

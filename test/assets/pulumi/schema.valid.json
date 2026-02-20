@@ -1,0 +1,42 @@
+{
+  "resources": {
+    "pkg:index:Database": {
+      "isComponent": true,
+      "inputProperties": {
+        "name": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "network": {
+          "type": "object",
+          "properties": {
+            "subnetId": {
+              "type": "string"
+            },
+            "public": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "subnetId"
+          ]
+        }
+      },
+      "requiredInputs": [
+        "name",
+        "network"
+      ]
+    }
+  }
+}

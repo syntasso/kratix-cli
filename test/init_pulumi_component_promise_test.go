@@ -14,6 +14,7 @@ var _ = Describe("init pulumi-component-promise", func() {
 	var (
 		r                   *runner
 		workingDir          string
+		validSchemaPath     string
 		singleSchemaPath    string
 		multiSchemaPath     string
 		malformedSchemaPath string
@@ -26,6 +27,11 @@ var _ = Describe("init pulumi-component-promise", func() {
 		workingDir, err = os.MkdirTemp("", "kratix-test")
 		Expect(err).NotTo(HaveOccurred())
 		r = &runner{exitCode: 0, dir: workingDir, timeout: 10 * time.Second}
+
+		validSchemaPath = filepath.Join(workingDir, "schema.valid.json")
+		validSchemaContents, err := os.ReadFile("assets/pulumi/schema.valid.json")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.WriteFile(validSchemaPath, validSchemaContents, 0o600)).To(Succeed())
 
 		singleSchemaPath = filepath.Join(workingDir, "single-component-schema.json")
 		Expect(os.WriteFile(singleSchemaPath, []byte(`{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"}},"requiredInputs":["name"]}}}`), 0o600)).To(Succeed())
@@ -131,6 +137,60 @@ var _ = Describe("init pulumi-component-promise", func() {
 			"--kind", "Database",
 		)
 		Expect(session.Out).To(gbytes.Say("Preview: This command is in preview"))
+		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
+	It("generates expected flat Promise files from translated schema", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "./schema.valid.json",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+
+		Expect(getFiles(workingDir)).To(ContainElements("promise.yaml", "example-resource.yaml", "README.md"))
+		Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output/promise.yaml")))
+		Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output/example-resource.yaml")))
+		Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/pulumi/expected-output/README.md")))
+		Expect(session.Out).To(SatisfyAll(
+			gbytes.Say("Preview: This command is in preview"),
+			gbytes.Say("Pulumi component Promise generated successfully."),
+		))
+	})
+
+	It("generates expected split Promise files from translated schema", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "./schema.valid.json",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+			"--split",
+		)
+
+		Expect(getFiles(workingDir)).To(ContainElements("api.yaml", "workflows", "example-resource.yaml", "README.md", "dependencies.yaml"))
+		Expect(cat(filepath.Join(workingDir, "api.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/api.yaml")))
+		Expect(cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
+		Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/example-resource.yaml")))
+		Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/pulumi/expected-output-with-split/README.md")))
+		Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/dependencies.yaml")))
+		Expect(session.Out).To(SatisfyAll(
+			gbytes.Say("Preview: This command is in preview"),
+			gbytes.Say("Pulumi component Promise generated successfully."),
+		))
+	})
+
+	It("reconstructs the README command with schema and component args", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "./multi-component-schema.json",
+			"--component", "pkg:index:Alpha",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+			"--split",
+		)
+
+		readme := cat(filepath.Join(workingDir, "README.md"))
+		Expect(readme).To(ContainSubstring("kratix init pulumi-component-promise mypromise --schema ./multi-component-schema.json --component pkg:index:Alpha --split --group syntasso.io --kind Database"))
 		Expect(session.Err).NotTo(gbytes.Say("Error:"))
 	})
 

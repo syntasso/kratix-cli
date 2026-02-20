@@ -34,6 +34,16 @@ Use `kratix init pulumi-component-promise` to bootstrap from a Pulumi package sc
 kratix init pulumi-component-promise PROMISE-NAME --schema PATH_OR_URL --group API-GROUP --kind API-KIND [--component TOKEN]
 ```
 
+Flat output (`promise.yaml`, `example-resource.yaml`, `README.md`):
+```
+kratix init pulumi-component-promise mypromise --schema ./test/assets/pulumi/schema.valid.json --group syntasso.io --kind Database
+```
+
+Split output (`api.yaml`, workflows, `dependencies.yaml`, `example-resource.yaml`, `README.md`):
+```
+kratix init pulumi-component-promise mypromise --schema ./test/assets/pulumi/schema.valid.json --group syntasso.io --kind Database --split
+```
+
 Component selection is deterministic:
 - If schema contains one component and `--component` is omitted, it is auto-selected.
 - If schema contains multiple components and `--component` is omitted, the command fails and lists valid component tokens.

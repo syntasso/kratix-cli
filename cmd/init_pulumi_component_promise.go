@@ -1,10 +1,17 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/syntasso/kratix-cli/internal/pulumi"
+	"github.com/syntasso/kratix/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -15,6 +22,8 @@ const (
   # initialize a new promise from a remote Pulumi package schema
   kratix init pulumi-component-promise mypromise --schema https://www.pulumi.com/registry/packages/aws/schema.json --group syntasso.io --kind Database
 `
+	pulumiComponentContainerName  = "from-api-to-pulumi-pko-program"
+	pulumiComponentContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"
 )
 
 var (
@@ -61,11 +70,136 @@ func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 		fmt.Println(warning)
 	}
 
-	return initPulumiComponentPromiseFromSelection(selectedComponent, specSchema)
+	return initPulumiComponentPromiseFromSelection(args[0], selectedComponent, specSchema)
 }
 
-func initPulumiComponentPromiseFromSelection(component pulumi.SelectedComponent, specSchema map[string]any) error {
-	_ = component
-	_ = specSchema // Translation output is passed forward for Promise generation in the next task.
+func initPulumiComponentPromiseFromSelection(promiseName string, component pulumi.SelectedComponent, specSchema map[string]any) error {
+	extraFlags := buildPulumiPromiseExtraFlags()
+
+	if version == "" {
+		version = "v1alpha1"
+	}
+	if plural == "" {
+		plural = fmt.Sprintf("%ss", strings.ToLower(kind))
+	}
+
+	crd, err := buildPulumiCRD(specSchema)
+	if err != nil {
+		return err
+	}
+
+	pipelines := generateResourceConfigurePipelines(pulumiComponentContainerName, pulumiComponentContainerImage, []corev1.EnvVar{
+		{
+			Name:  "PULUMI_COMPONENT_TOKEN",
+			Value: component.Token,
+		},
+		{
+			Name:  "PULUMI_SCHEMA_SOURCE",
+			Value: pulumiSchemaPath,
+		},
+	})
+
+	exampleResource := &unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": fmt.Sprintf("%s/%s", crd.Spec.Group, crd.Spec.Versions[0].Name),
+			"kind":       kind,
+			"metadata": map[string]string{
+				"name":      "example-request",
+				"namespace": "default",
+			},
+			"spec": topLevelRequiredFields(crd),
+		},
+	}
+
+	filesToWrite, err := getFilesToWrite(
+		pulumiComponentPromiseCommandName,
+		promiseName,
+		split,
+		workflowDirectory,
+		extraFlags,
+		nil,
+		[]v1alpha1.Dependency{},
+		crd,
+		pipelines,
+		exampleResource,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := writePromiseFiles(outputDir, filesToWrite); err != nil {
+		return err
+	}
+
+	fmt.Println("Pulumi component Promise generated successfully.")
 	return nil
+}
+
+func buildPulumiPromiseExtraFlags() string {
+	flags := fmt.Sprintf("--schema %s", pulumiSchemaPath)
+
+	if pulumiComponent != "" {
+		flags = fmt.Sprintf("%s --component %s", flags, pulumiComponent)
+	}
+	if version != "" {
+		flags = fmt.Sprintf("%s --version %s", flags, version)
+	}
+	if plural != "" {
+		flags = fmt.Sprintf("%s --plural %s", flags, plural)
+	}
+	if split {
+		flags = fmt.Sprintf("%s --split", flags)
+	}
+	if outputDir != "." {
+		flags = fmt.Sprintf("%s --dir %s", flags, outputDir)
+	}
+
+	return flags
+}
+
+func buildPulumiCRD(specSchema map[string]any) (*apiextensionsv1.CustomResourceDefinition, error) {
+	specSchemaBytes, err := json.Marshal(specSchema)
+	if err != nil {
+		return nil, fmt.Errorf("build Promise CRD: marshal translated schema: %w", err)
+	}
+
+	var specProps apiextensionsv1.JSONSchemaProps
+	if err := json.Unmarshal(specSchemaBytes, &specProps); err != nil {
+		return nil, fmt.Errorf("build Promise CRD: parse translated schema: %w", err)
+	}
+	specProps.Default = &apiextensionsv1.JSON{Raw: []byte(`{}`)}
+
+	return &apiextensionsv1.CustomResourceDefinition{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apiextensions.k8s.io/v1",
+			Kind:       "CustomResourceDefinition",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%s.%s", plural, group),
+		},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: group,
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
+				Plural:   plural,
+				Singular: strings.ToLower(kind),
+				Kind:     kind,
+			},
+			Scope: "Namespaced",
+			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
+				{
+					Name:    version,
+					Served:  true,
+					Storage: true,
+					Schema: &apiextensionsv1.CustomResourceValidation{
+						OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+							Type: "object",
+							Properties: map[string]apiextensionsv1.JSONSchemaProps{
+								"spec": specProps,
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
 }
