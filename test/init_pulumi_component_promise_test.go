@@ -132,6 +132,67 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(session.Err).To(gbytes.Say(`Error: load schema: unsupported URL scheme "ftp"`))
 	})
 
+	It("loads schema from URL and generates Promise files", func() {
+		schemaURL := "https://schemas.example.test/schema.json"
+		schemaBody := `{"resources":{"pkg:index:Thing":{"isComponent":true,"inputProperties":{"name":{"type":"string"}},"requiredInputs":["name"]}}}`
+		r.env = []string{
+			"KRATIX_TEST_SCHEMA_URL=" + schemaURL,
+			"KRATIX_TEST_SCHEMA_URL_BODY=" + schemaBody,
+		}
+
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", schemaURL,
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+
+		Expect(getFiles(workingDir)).To(ContainElements("promise.yaml", "example-resource.yaml", "README.md"))
+		Expect(session.Out).To(gbytes.Say("Pulumi component Promise generated successfully."))
+		Expect(session.Out).NotTo(gbytes.Say(`warning: local Pulumi schema source`))
+		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
+	It("fails for non-200 URL status while loading schema", func() {
+		schemaURL := "https://schemas.example.test/not-found.json"
+		failingRunner := withExitCode(1)
+		failingRunner.dir = workingDir
+		failingRunner.timeout = 10 * time.Second
+		failingRunner.env = []string{
+			"KRATIX_TEST_SCHEMA_URL=" + schemaURL,
+			"KRATIX_TEST_SCHEMA_URL_MODE=status:404",
+		}
+
+		session := failingRunner.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", schemaURL,
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+
+		Expect(session.Err).To(gbytes.Say(`Error: load schema: fetch input schema URL: unexpected status 404 for`))
+	})
+
+	It("fails for unreachable schema URL", func() {
+		unreachableURL := "https://schemas.example.test/unreachable.json"
+		failingRunner := withExitCode(1)
+		failingRunner.dir = workingDir
+		failingRunner.timeout = 10 * time.Second
+		failingRunner.env = []string{
+			"KRATIX_TEST_SCHEMA_URL=" + unreachableURL,
+			"KRATIX_TEST_SCHEMA_URL_MODE=error:dial tcp: lookup schemas.example.test: no such host",
+		}
+
+		session := failingRunner.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", unreachableURL,
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+
+		Expect(session.Err).To(gbytes.Say(`Error: load schema: fetch input schema URL:`))
+	})
+
 	It("fails when schema has multiple components and --component is not provided", func() {
 		session := withExitCode(1).run(
 			"init", "pulumi-component-promise", "mypromise",

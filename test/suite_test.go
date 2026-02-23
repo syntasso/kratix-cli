@@ -33,6 +33,7 @@ type runner struct {
 	exitCode int
 	dir      string
 	flags    map[string]string
+	env      []string
 	timeout  time.Duration
 	noPath   bool
 	Path     string
@@ -66,6 +67,7 @@ func (r *runner) run(args ...string) *gexec.Session {
 	}
 
 	cmd.Env = append(cmd.Env, "PATH="+cmdPath)
+	cmd.Env = append(cmd.Env, r.env...)
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())

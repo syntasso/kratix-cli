@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -94,6 +95,10 @@ func readSchemaURL(rawURL string) ([]byte, error) {
 }
 
 func readSchemaURLWithClient(rawURL string, client *http.Client) ([]byte, error) {
+	if contents, err, handled := readSchemaURLFromTestEnv(rawURL); handled {
+		return contents, err
+	}
+
 	resp, err := client.Get(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("load schema: fetch input schema URL: %w", err)
@@ -110,6 +115,40 @@ func readSchemaURLWithClient(rawURL string, client *http.Client) ([]byte, error)
 	}
 
 	return contents, nil
+}
+
+func readSchemaURLFromTestEnv(rawURL string) ([]byte, error, bool) {
+	targetURL := os.Getenv("KRATIX_TEST_SCHEMA_URL")
+	if targetURL == "" || rawURL != targetURL {
+		return nil, nil, false
+	}
+
+	mode := os.Getenv("KRATIX_TEST_SCHEMA_URL_MODE")
+	if mode == "" || mode == "success" {
+		body := os.Getenv("KRATIX_TEST_SCHEMA_URL_BODY")
+		if body == "" {
+			return nil, fmt.Errorf("load schema: fetch input schema URL: missing KRATIX_TEST_SCHEMA_URL_BODY for %s", sanitizedURL(rawURL)), true
+		}
+		return []byte(body), nil, true
+	}
+
+	if strings.HasPrefix(mode, "status:") {
+		statusCode, err := strconv.Atoi(strings.TrimPrefix(mode, "status:"))
+		if err != nil {
+			return nil, fmt.Errorf("load schema: fetch input schema URL: invalid KRATIX_TEST_SCHEMA_URL_MODE %q", mode), true
+		}
+		return nil, fmt.Errorf("load schema: fetch input schema URL: unexpected status %d for %s", statusCode, sanitizedURL(rawURL)), true
+	}
+
+	if strings.HasPrefix(mode, "error:") {
+		errMsg := strings.TrimPrefix(mode, "error:")
+		if errMsg == "" {
+			errMsg = "test URL fetch failure"
+		}
+		return nil, fmt.Errorf("load schema: fetch input schema URL: %s", errMsg), true
+	}
+
+	return nil, fmt.Errorf("load schema: fetch input schema URL: invalid KRATIX_TEST_SCHEMA_URL_MODE %q", mode), true
 }
 
 func sanitizedURL(rawURL string) string {

@@ -156,6 +156,65 @@ func TestIsLocalSchemaSource(t *testing.T) {
 	}
 }
 
+func TestReadSchemaURLWithClient_TestEnvOverride(t *testing.T) {
+	t.Run("returns fixture body without HTTP request", func(t *testing.T) {
+		rawURL := "https://schemas.example.test/schema.json"
+		t.Setenv("KRATIX_TEST_SCHEMA_URL", rawURL)
+		t.Setenv("KRATIX_TEST_SCHEMA_URL_BODY", `{"resources":{"pkg:index:Thing":{"isComponent":true}}}`)
+
+		contents, err := readSchemaURLWithClient(rawURL, clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			t.Fatal("unexpected HTTP request when KRATIX_TEST_SCHEMA_URL is set")
+			return nil, nil
+		})))
+		if err != nil {
+			t.Fatalf("readSchemaURLWithClient returned error: %v", err)
+		}
+		if !strings.Contains(string(contents), `"pkg:index:Thing"`) {
+			t.Fatalf("unexpected schema contents: %s", string(contents))
+		}
+	})
+
+	t.Run("returns configured non-200 error", func(t *testing.T) {
+		rawURL := "https://schemas.example.test/missing.json"
+		t.Setenv("KRATIX_TEST_SCHEMA_URL", rawURL)
+		t.Setenv("KRATIX_TEST_SCHEMA_URL_MODE", "status:404")
+
+		_, err := readSchemaURLWithClient(rawURL, clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			t.Fatal("unexpected HTTP request when KRATIX_TEST_SCHEMA_URL is set")
+			return nil, nil
+		})))
+		if err == nil || !strings.Contains(err.Error(), "load schema: fetch input schema URL: unexpected status 404 for") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("returns configured transport error", func(t *testing.T) {
+		rawURL := "https://schemas.example.test/unreachable.json"
+		t.Setenv("KRATIX_TEST_SCHEMA_URL", rawURL)
+		t.Setenv("KRATIX_TEST_SCHEMA_URL_MODE", "error:dial tcp: lookup schemas.example.test: no such host")
+
+		_, err := readSchemaURLWithClient(rawURL, clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			t.Fatal("unexpected HTTP request when KRATIX_TEST_SCHEMA_URL is set")
+			return nil, nil
+		})))
+		if err == nil || !strings.Contains(err.Error(), "load schema: fetch input schema URL: dial tcp: lookup schemas.example.test: no such host") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("ignores override when URL does not match", func(t *testing.T) {
+		t.Setenv("KRATIX_TEST_SCHEMA_URL", "https://schemas.example.test/schema.json")
+		t.Setenv("KRATIX_TEST_SCHEMA_URL_BODY", `{"resources":{}}`)
+
+		_, err := readSchemaURLWithClient("https://example.com/schema.json", clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			return nil, errors.New("network call reached client")
+		})))
+		if err == nil || !strings.Contains(err.Error(), "network call reached client") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
 type roundTripFunc func(req *http.Request) (*http.Response, error)
 
 func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
