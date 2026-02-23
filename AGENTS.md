@@ -14,6 +14,7 @@ This file gives guidance for LLM agents contributing to this repository.
 - When you change behavior, update tests in the same change.
 - When a test fails, start by confirming the code isn't broken before changing any tests.
 - When relevant, update docs in the same change.
+- This codebase works in British English for all documentation.
 
 ## XP Principles to Apply Here
 - Work in tiny slices.
