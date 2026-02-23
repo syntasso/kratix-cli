@@ -20,7 +20,7 @@ const (
   kratix init pulumi-component-promise mypromise --schema ./schema.json --group syntasso.io --kind Database
 
   # initialize a new promise from a remote Pulumi package schema
-  kratix init pulumi-component-promise mypromise --schema https://www.pulumi.com/registry/packages/aws/schema.json --group syntasso.io --kind Database
+  kratix init pulumi-component-promise mypromise --schema https://www.pulumi.com/registry/packages/aws-iam/schema.json --component aws-iam:index:User --group syntasso.io --kind User
 `
 	pulumiComponentContainerName  = "from-api-to-pulumi-pko-program"
 	pulumiComponentContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"
