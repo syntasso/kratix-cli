@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/go-logr/stdr"
 	"github.com/spf13/cobra"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const filePerm = 0644
@@ -28,6 +31,7 @@ var rootCmd = &cobra.Command{
 
 func Execute(version string) {
 	rootCmd.Version = version
+	ctrl.SetLogger(stdr.New(log.New(os.Stderr, "", log.LstdFlags)))
 	if err := handlePotentialPluginCommand(os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
