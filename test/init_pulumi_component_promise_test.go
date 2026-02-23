@@ -63,7 +63,7 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(session.Out).To(SatisfyAll(
 			gbytes.Say("Preview: Initialize a new Promise from a Pulumi package schema"),
 			gbytes.Say("kratix init pulumi-component-promise mypromise --schema ./schema.json"),
-			gbytes.Say("kratix init pulumi-component-promise mypromise --schema https://www.pulumi.com/registry/packages/aws/schema.json"),
+			gbytes.Say("kratix init pulumi-component-promise mypromise --schema https://www.pulumi.com/registry/packages/aws-iam/schema.json --component aws-iam:index:User"),
 		))
 		Expect(string(session.Out.Contents())).NotTo(ContainSubstring("Preview: This command is in preview"))
 	})
