@@ -3,14 +3,15 @@ on:
   workflow_dispatch:
     inputs:
       PIPELINE_TAG:
-        description: 'Git tag of the release e.g. helm-promise-v0.3.0'
+        description: "Git tag of the release e.g. helm-promise-v0.3.0"
         required: true
   push:
     tags:
-      - helm-promise-*
       - crossplane-promise-*
-      - terraform-module-promise-*
+      - helm-promise-*
       - operator-promise-*
+      - pulumi-promise-*
+      - terraform-module-promise-*
 
 jobs:
   make-release:
