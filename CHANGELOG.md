@@ -1,5 +1,68 @@
 # Changelog
 
+## [0.14.0](https://github.com/syntasso/kratix-cli/compare/v0.13.0...v0.14.0) (2026-02-24)
+
+
+### Features
+
+* **init-pulumi:** scaffolding for pulumi cli command ([d9be96a](https://github.com/syntasso/kratix-cli/commit/d9be96aa3ff860e1bd65f2e975acb7741a710617))
+* load pulumi schema and select component in init command ([13c622a](https://github.com/syntasso/kratix-cli/commit/13c622a38cdfefc6ef56efaac784cf7536b0297b))
+* **pulumi-component-to-cli:** add initial Pulumi schema to OpenAPI translation ([b657da9](https://github.com/syntasso/kratix-cli/commit/b657da9e5c87c2e5437efd1e0ef1237dde386b6a))
+* **pulumi-component-to-cli:** add resilient translation with component-scoped preflight ([5ae1fbc](https://github.com/syntasso/kratix-cli/commit/5ae1fbc0638b43e65bf2e5f6bd658dda5ae68c22))
+* **pulumi-component-to-cli:** add verbose warn/info channels and document output contract ([6567e0e](https://github.com/syntasso/kratix-cli/commit/6567e0e50e871bf50ccb8d81810d95d3164e1b42))
+* **pulumi-component-to-cli:** implement CRD identity overrides and derived defaults ([c729c02](https://github.com/syntasso/kratix-cli/commit/c729c029682f0b0bceff90190f4cb004903adbdf))
+* **pulumi-component-to-cli:** implement task 1 CLI selection and scaffold emission ([7d3c486](https://github.com/syntasso/kratix-cli/commit/7d3c4865b208f09dadddb435d9b89e068c50ce5e))
+* **pulumi-component-to-cli:** stage diagnostics behind --verbose ([e20c042](https://github.com/syntasso/kratix-cli/commit/e20c0424859a978b091ea91bc9ce9d315b88346a))
+* **pulumi-component-to-cli:** support URL-based schema inputs ([1413c6e](https://github.com/syntasso/kratix-cli/commit/1413c6e2c1ca2e6cc357fabc4f210de91bc3d8a5))
+* **pulumi-component-to-crd:** pass descrptions from component -&gt; crd output ([bab1be8](https://github.com/syntasso/kratix-cli/commit/bab1be89c6f09d9f665d9b18b43aeb38a289382a))
+* **pulumi:** Add promise stage runtime and tests ([14233ca](https://github.com/syntasso/kratix-cli/commit/14233ca71cd6803a6ec97dda182d05433fa183ec))
+* **pulumi:** generate files for pulumi init ([358ce08](https://github.com/syntasso/kratix-cli/commit/358ce08c130a2aa81fb739365b8ce4c96682d8fb))
+* **pulumi:** translate component inputs to CRD spec schema ([5dead2c](https://github.com/syntasso/kratix-cli/commit/5dead2c881f4a50d69bf7db879c4926951c9d9f5))
+* **pulumi:** warn when pulumi schema source is local ([571f8bf](https://github.com/syntasso/kratix-cli/commit/571f8bf31bd8615e428109a9a683131218b53cc7))
+* wire pulumi stage release metadata and add e2e regression ([0db682a](https://github.com/syntasso/kratix-cli/commit/0db682acfbb545ad4828621adb56e4e16e4bc08f))
+
+
+### Bug Fixes
+
+* **crossplane:** tests referenced wrong init ([6247f43](https://github.com/syntasso/kratix-cli/commit/6247f4306d3c7966f48a7440bf6bad45b1f6a27d))
+* **pulumi-component-to-cli:** support local resource refs in translation ([836f717](https://github.com/syntasso/kratix-cli/commit/836f7173598e5e755843ee2b38f5cfcbc5a99fcd))
+* **pulumi-component-to-crd:** manage relative paths better ([cb62f17](https://github.com/syntasso/kratix-cli/commit/cb62f17561486bf777c1078d1924cefc7508dd73))
+* **pulumi-translate:** reject unsupported keywords before $ref handling ([46beda0](https://github.com/syntasso/kratix-cli/commit/46beda06a05978842e6d762690e2f648052de5af))
+* **pulumi-translate:** validate enum values against declared type ([53ef256](https://github.com/syntasso/kratix-cli/commit/53ef2562dd7f0c3b15b347b0903d0bc063b3f1af))
+* **pulumi:** shell-quote README args and omit --dir replay ([d12822b](https://github.com/syntasso/kratix-cli/commit/d12822b1e801bc54f4459d6ffb0d643ad2072ca4))
+* **tf:** remove panic on tf-module-init ([ec67918](https://github.com/syntasso/kratix-cli/commit/ec67918e551d2fd9fc57fc37f3a352bad0ff68e4))
+* **tf:** remove panic on tf-module-init ([dbbf955](https://github.com/syntasso/kratix-cli/commit/dbbf955c3454d4679b6da6e5c2a7d19d8941eff8))
+
+
+### Chores
+
+* Add preview warning to init crossplane/helm/operator ([#204](https://github.com/syntasso/kratix-cli/issues/204)) ([1d4e23f](https://github.com/syntasso/kratix-cli/commit/1d4e23f8ad9d39b56ec8f7b7982f5b128b2419cb))
+* bump cli version to v0.14.0 ([a7437ae](https://github.com/syntasso/kratix-cli/commit/a7437ae0b3f35a5919273de809dcaf700ca14b11))
+* **component-to-crd:** rename to include pulumi in cli name ([f17661e](https://github.com/syntasso/kratix-cli/commit/f17661e8b29739f4a34b67d61dac8683aa768bf0))
+* **component-to-crd:** shift manual tests to use more permanent remote test files ([44ccf97](https://github.com/syntasso/kratix-cli/commit/44ccf97b4a83a856cbd9e5e76e78364604d75c09))
+* **init-pulumi:** plan for feature implementation ([8da9d17](https://github.com/syntasso/kratix-cli/commit/8da9d1774f3786ae7ad4cf3e3d1afb5675fbe802))
+* **init-pulumi:** refactoring plan after scaffolding ([f618df5](https://github.com/syntasso/kratix-cli/commit/f618df522a70bd0709bce826c8d69617c4513b92))
+* **main:** release pulumi-promise 0.1.0 ([87e0b5f](https://github.com/syntasso/kratix-cli/commit/87e0b5f8e06d1e3698735ef1fca923db80f247e0))
+* **main:** release pulumi-promise 0.1.0 ([901bce0](https://github.com/syntasso/kratix-cli/commit/901bce03e8cafc511d4ad028a453c75fa2f65ece))
+* **pulumi-component-to-cli:** migrate manual-test workflow to regression harness ([02b2588](https://github.com/syntasso/kratix-cli/commit/02b2588f5fed9483035ae84b5beb62bde2282592))
+* **pulumi-translate:** split translator by concern ([841d3a9](https://github.com/syntasso/kratix-cli/commit/841d3a9b3f703ef7ebc8c6fcb03ef816d395b4fa))
+* **pulumi:** add tests for translate lib ([ef7da82](https://github.com/syntasso/kratix-cli/commit/ef7da82367badb31179268440353d996d6013ba9))
+* **pulumi:** align pulumi help example expectation with current output ([e22ac6c](https://github.com/syntasso/kratix-cli/commit/e22ac6c5624acd42ef250fe03a1611070cd4982a))
+* **pulumi:** Apply suggestions from code review ([eb2795a](https://github.com/syntasso/kratix-cli/commit/eb2795afc0e9eab5a2f2f2c5ddef0b9939995856))
+* **pulumi:** more e2e testing for url parsing ([cca9665](https://github.com/syntasso/kratix-cli/commit/cca9665fcd27befb730fa299641810342988fe1d))
+* **pulumi:** remove completed tasks and documentation ([0412cb3](https://github.com/syntasso/kratix-cli/commit/0412cb33aa281a18ed788869236a7f0ff3893587))
+* **pulumi:** remove initial conversion code after building into cli ([a0c5370](https://github.com/syntasso/kratix-cli/commit/a0c53704798d2448e0c039e128503b12b2fce25f))
+* **pulumi:** remove unnecessary details in readme ([9bfc39e](https://github.com/syntasso/kratix-cli/commit/9bfc39e4e93255c29da41981aa231f96d58bdd50))
+* **pulumi:** update command help text for better example ([7a475a8](https://github.com/syntasso/kratix-cli/commit/7a475a8b5838321d95c454e6ab17d4ddd35dbdb5))
+* refactorings after pulumi load/select schema ([725611d](https://github.com/syntasso/kratix-cli/commit/725611da4dbe89771dc61d63322c6cbdb65b43b0))
+* reorg all pulumi files to correct directories ([a645dbe](https://github.com/syntasso/kratix-cli/commit/a645dbee7b9bbf5d404f13bd20d95e0402d290ed))
+
+
+### Build System
+
+* **pulumi-component-to-cli:** build test artifacts via binary helper script ([76d6dc1](https://github.com/syntasso/kratix-cli/commit/76d6dc1512a9402dcfcf4348b52e8eacce4eb663))
+* **pulumi-component-to-cli:** docker build ([78fa31f](https://github.com/syntasso/kratix-cli/commit/78fa31f7435de4158df30b059d666b07d5bd86b8))
+
 ## [0.13.0](https://github.com/syntasso/kratix-cli/compare/v0.12.1...v0.13.0) (2026-01-26)
 
 
