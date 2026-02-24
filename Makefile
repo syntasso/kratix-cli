@@ -59,6 +59,15 @@ build-and-load-operator-promise-stage:
 build-and-push-operator-promise-stage:
 	$(MAKE) -C stages/operator-promise build-and-push
 
+build-pulumi-promise-stage:
+	$(MAKE) -C stages/pulumi-promise build
+
+build-and-load-pulumi-promise-stage:
+	$(MAKE) -C stages/pulumi-promise build-and-load
+
+build-and-push-pulumi-promise-stage:
+	$(MAKE) -C stages/pulumi-promise build-and-push
+
 build-terraform-module-promise-stage:
 	$(MAKE) -C stages/terraform-module-promise build
 

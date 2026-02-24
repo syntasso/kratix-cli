@@ -103,4 +103,3 @@ is merged the following happens:
    contents of the PRs description (**NOT the contents of the file committed**).
 - Goreleaser gets triggered in Github actions, creating and uploading the binaries to the
    existing release.
-

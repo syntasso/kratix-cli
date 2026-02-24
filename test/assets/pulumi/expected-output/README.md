@@ -4,7 +4,7 @@
   This Promise was generated with:
 
   ```
-  kratix init crossplane-promise s3buckets --xrd assets/crossplane/xrd-with-no-spec-properties.yaml --group syntasso.io --kind S3Bucket
+  kratix init pulumi-component-promise mypromise --schema './schema.valid.json' --group syntasso.io --kind Database
   ```
 
   ## Updating API properties
@@ -12,7 +12,7 @@
   To update the Promise API, you can use the `kratix update api` command:
 
   ```
-  kratix update api --property name:string --property region- --kind S3Bucket
+  kratix update api --property name:string --property region- --kind Database
   ```
 
   ## Updating Workflows

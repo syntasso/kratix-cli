@@ -1,0 +1,6 @@
+apiVersion: mypromise.com/v1
+kind: TestObject
+metadata:
+  name: test-object
+  namespace: non-default
+spec: just-a-string

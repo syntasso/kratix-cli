@@ -1,0 +1,13 @@
+- apiVersion: platform.kratix.io/v1alpha1
+  kind: Pipeline
+  metadata:
+    name: instance-configure
+  spec:
+    containers:
+    - env:
+      - name: PULUMI_COMPONENT_TOKEN
+        value: pkg:index:Database
+      - name: PULUMI_SCHEMA_SOURCE
+        value: ./schema.valid.json
+      image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0
+      name: from-api-to-pulumi-pko-program
