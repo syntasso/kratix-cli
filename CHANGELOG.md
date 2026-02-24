@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/syntasso/kratix-cli/compare/v0.14.0...v0.14.1) (2026-02-24)
+
+
+### Chores
+
+* add pulumi stage to release pipeline ([ae8e1a3](https://github.com/syntasso/kratix-cli/commit/ae8e1a3c297bd12b7113020f26c67a464626ce5f))
+
 ## [0.14.0](https://github.com/syntasso/kratix-cli/compare/v0.13.0...v0.14.0) (2026-02-24)
 
 
