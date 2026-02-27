@@ -3,6 +3,7 @@ package integration_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -57,6 +58,26 @@ var _ = Describe("plugin", func() {
 					gbytes.Say("kratix-error"),
 					gbytes.Say("kratix-hi"),
 				))
+			})
+		})
+
+		When("PATH has duplicate directory entries that resolve to the same location", func() {
+			BeforeEach(func() {
+				createPlugins(workingDir)
+				r = &runner{
+					exitCode: 0,
+					dir:      workingDir,
+					Path:     workingDir + ":" + workingDir + "/" + ":" + workingDir,
+				}
+			})
+
+			It("does not report a plugin as overshadowing itself", func() {
+				sess := r.run("plugin", "list")
+
+				Expect(sess.Err).NotTo(gbytes.Say("overshadowed by a similarly named plugin"))
+
+				pluginPath := filepath.Join(workingDir, "kratix-hi")
+				Expect(strings.Count(string(sess.Out.Contents()), pluginPath)).To(Equal(1))
 			})
 		})
 	})
