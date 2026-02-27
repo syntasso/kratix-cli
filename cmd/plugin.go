@@ -166,6 +166,7 @@ func (v *CommandOverrideVerifier) Verify(path string) []error {
 		return []error{fmt.Errorf("unable to verify path with nil root")}
 	}
 
+	normalisedPath := filepath.Clean(path)
 	binName := filepath.Base(path)
 
 	cmdPath := strings.Split(binName, "-")
@@ -176,9 +177,11 @@ func (v *CommandOverrideVerifier) Verify(path string) []error {
 	var errs []error
 
 	if existingPath, ok := v.seenPlugins[binName]; ok {
-		errs = append(errs, fmt.Errorf("warning: %s is overshadowed by a similarly named plugin: %s", path, existingPath))
+		if existingPath != normalisedPath {
+			errs = append(errs, fmt.Errorf("warning: %s is overshadowed by a similarly named plugin: %s", path, existingPath))
+		}
 	} else {
-		v.seenPlugins[binName] = path
+		v.seenPlugins[binName] = normalisedPath
 	}
 
 	if cmd, _, err := v.root.Find(cmdPath); err == nil {
@@ -199,7 +202,7 @@ func isExecutable(fullPath string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	
+
 	if m := info.Mode(); !m.IsDir() && m&0o111 != 0 {
 		return true, nil
 	}
@@ -211,11 +214,17 @@ func uniquePathsList(paths []string) []string {
 	seen := map[string]bool{}
 	var newPaths []string
 	for _, p := range paths {
-		if seen[p] {
+		trimmed := strings.TrimSpace(p)
+		if trimmed == "" {
 			continue
 		}
-		seen[p] = true
-		newPaths = append(newPaths, p)
+
+		normalised := filepath.Clean(trimmed)
+		if seen[normalised] {
+			continue
+		}
+		seen[normalised] = true
+		newPaths = append(newPaths, normalised)
 	}
 	return newPaths
 }
