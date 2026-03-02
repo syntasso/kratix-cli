@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
 	stage "github.com/syntasso/kratix-cli/stages/pulumi-promise/internal/stage"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -25,29 +23,22 @@ func main() {
 	}
 }
 
+<<<<<<< HEAD
 func transformInputToStackOutput(componentToken string) error {
-	inputFile := stage.GetEnvWithDefault("KRATIX_INPUT_FILE", stage.DefaultInputFilePath)
-	outputFile := stage.GetEnvWithDefault("KRATIX_OUTPUT_FILE", stage.DefaultOutputFilePath)
+	inputFile := stage.ResolveInputFilePath()
+	outputFile := stage.ResolveOutputFilePath()
 
-	requestBytes, err := os.ReadFile(inputFile)
+	request, err := stage.ReadRequestFromFile(inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to read object file from %s: %w", inputFile, err)
+		return err
 	}
 
-	request := &unstructured.Unstructured{}
-	if err := yaml.Unmarshal(requestBytes, request); err != nil {
-		return fmt.Errorf("failed to unmarshal object file: %w", err)
+	requestName, err := stage.RequireRequestName(request)
+	if err != nil {
+		return err
 	}
 
-	requestName := request.GetName()
-	if requestName == "" {
-		return fmt.Errorf("missing required field: metadata.name")
-	}
-
-	requestNamespace := request.GetNamespace()
-	if requestNamespace == "" {
-		requestNamespace = stage.DefaultNamespace
-	}
+	requestNamespace := stage.RequestNamespaceWithDefault(request)
 
 	programName := stage.BuildProgramName(requestName, requestNamespace, request.GetKind(), componentToken)
 	stackResourceName := buildStackResourceName(programName)
@@ -71,16 +62,7 @@ func transformInputToStackOutput(componentToken string) error {
 		return fmt.Errorf("failed to set spec.stack: %w", err)
 	}
 
-	outputBytes, err := yaml.Marshal(output)
-	if err != nil {
-		return fmt.Errorf("failed to marshal Stack object: %w", err)
-	}
-
-	if err := os.WriteFile(outputFile, outputBytes, 0o644); err != nil {
-		return fmt.Errorf("failed to write object file to %s: %w", outputFile, err)
-	}
-
-	return nil
+	return stage.WriteOutputObject(outputFile, stackKind, output)
 }
 
 func buildStackResourceName(programName string) string {
@@ -92,7 +74,7 @@ func buildStackResourceName(programName string) string {
 }
 
 func getRequiredEnv(key string) string {
-	value := os.Getenv(key)
+	value := stage.GetEnvWithDefault(key, "")
 	if value == "" {
 		log.Fatalf("missing required environment variable %s", key)
 	}

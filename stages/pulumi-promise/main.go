@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/syntasso/kratix-cli/internal/pulumi"
 	stage "github.com/syntasso/kratix-cli/stages/pulumi-promise/internal/stage"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -30,38 +28,25 @@ func main() {
 }
 
 func transformInputToProgramOutput(componentToken, schemaSource string) error {
-	inputFile := getEnvWithDefault("KRATIX_INPUT_FILE", stage.DefaultInputFilePath)
-	outputFile := getEnvWithDefault("KRATIX_OUTPUT_FILE", stage.DefaultOutputFilePath)
+	inputFile := stage.ResolveInputFilePath()
+	outputFile := stage.ResolveOutputFilePath()
 
-	requestBytes, err := os.ReadFile(inputFile)
+	request, err := stage.ReadRequestFromFile(inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to read object file from %s: %w", inputFile, err)
+		return err
 	}
 
-	request := &unstructured.Unstructured{}
-	if err := yaml.Unmarshal(requestBytes, request); err != nil {
-		return fmt.Errorf("failed to unmarshal object file: %w", err)
+	specMap, err := stage.RequireSpecMap(request)
+	if err != nil {
+		return err
 	}
 
-	spec, ok := request.Object["spec"]
-	if !ok {
-		return fmt.Errorf("missing required field: spec")
+	requestName, err := stage.RequireRequestName(request)
+	if err != nil {
+		return err
 	}
 
-	specMap, ok := spec.(map[string]any)
-	if !ok {
-		return fmt.Errorf("invalid field: spec must be an object")
-	}
-
-	requestName := request.GetName()
-	if requestName == "" {
-		return fmt.Errorf("missing required field: metadata.name")
-	}
-
-	requestNamespace := request.GetNamespace()
-	if requestNamespace == "" {
-		requestNamespace = stage.DefaultNamespace
-	}
+	requestNamespace := stage.RequestNamespaceWithDefault(request)
 
 	resourceName := stage.BuildProgramResourceName(componentToken)
 	programName := stage.BuildProgramName(requestName, requestNamespace, request.GetKind(), componentToken)
@@ -93,16 +78,7 @@ func transformInputToProgramOutput(componentToken, schemaSource string) error {
 		}
 	}
 
-	outputBytes, err := yaml.Marshal(output)
-	if err != nil {
-		return fmt.Errorf("failed to marshal Program object: %w", err)
-	}
-
-	if err := os.WriteFile(outputFile, outputBytes, 0o644); err != nil {
-		return fmt.Errorf("failed to write object file to %s: %w", outputFile, err)
-	}
-
-	return nil
+	return stage.WriteOutputObject(outputFile, programKind, output)
 }
 
 type schemaConfigVariable struct {
@@ -159,12 +135,8 @@ func parseConfigVariable(raw json.RawMessage) (schemaConfigVariable, error) {
 	return variable, nil
 }
 
-func getEnvWithDefault(key, defaultValue string) string {
-	return stage.GetEnvWithDefault(key, defaultValue)
-}
-
 func getEnvOrDie(key string) string {
-	value := os.Getenv(key)
+	value := stage.GetEnvWithDefault(key, "")
 	if value == "" {
 		log.Fatalf("expected %s to be set", key)
 	}
