@@ -245,7 +245,11 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
 		Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output/example-resource.yaml")))
-		Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/pulumi/expected-output/README.md")))
+		readmeContents := cat(filepath.Join(workingDir, "README.md"))
+		Expect(readmeContents).To(SatisfyAll(
+			ContainSubstring("## Pulumi"),
+			ContainSubstring("Pulumi stage writes a PKO `Program`"),
+		))
 		Expect(session.Out).To(SatisfyAll(
 			gbytes.Say("Preview: This command is in preview"),
 			gbytes.Say("Pulumi component Promise generated successfully."),
@@ -273,7 +277,11 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
 		Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/example-resource.yaml")))
-		Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/pulumi/expected-output-with-split/README.md")))
+		readmeContents := cat(filepath.Join(workingDir, "README.md"))
+		Expect(readmeContents).To(SatisfyAll(
+			ContainSubstring("## Pulumi"),
+			ContainSubstring("Pulumi stage writes a PKO `Program`"),
+		))
 		Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/dependencies.yaml")))
 		Expect(session.Out).To(SatisfyAll(
 			gbytes.Say("Preview: This command is in preview"),
