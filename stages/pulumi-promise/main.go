@@ -3,32 +3,22 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"hash/fnv"
 	"log"
 	"os"
-	"regexp"
-	"sort"
-	"strings"
 
 	"github.com/syntasso/kratix-cli/internal/pulumi"
+	stage "github.com/syntasso/kratix-cli/stages/pulumi-promise/internal/stage"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
 
 const (
-	defaultInputFilePath  = "/kratix/input/object.yaml"
-	defaultOutputFilePath = "/kratix/output/object.yaml"
-	defaultNamespace      = "default"
-
 	programAPIVersion = "pulumi.com/v1"
 	programKind       = "Program"
 
 	pulumiComponentTokenEnvVar = "PULUMI_COMPONENT_TOKEN"
 	pulumiSchemaSourceEnvVar   = "PULUMI_SCHEMA_SOURCE"
 )
-
-var invalidNameChars = regexp.MustCompile(`[^a-z0-9-]`)
-var repeatedDashes = regexp.MustCompile(`-+`)
 
 func main() {
 	componentToken := getEnvOrDie(pulumiComponentTokenEnvVar)
@@ -40,8 +30,8 @@ func main() {
 }
 
 func transformInputToProgramOutput(componentToken, schemaSource string) error {
-	inputFile := getEnvWithDefault("KRATIX_INPUT_FILE", defaultInputFilePath)
-	outputFile := getEnvWithDefault("KRATIX_OUTPUT_FILE", defaultOutputFilePath)
+	inputFile := getEnvWithDefault("KRATIX_INPUT_FILE", stage.DefaultInputFilePath)
+	outputFile := getEnvWithDefault("KRATIX_OUTPUT_FILE", stage.DefaultOutputFilePath)
 
 	requestBytes, err := os.ReadFile(inputFile)
 	if err != nil {
@@ -70,11 +60,11 @@ func transformInputToProgramOutput(componentToken, schemaSource string) error {
 
 	requestNamespace := request.GetNamespace()
 	if requestNamespace == "" {
-		requestNamespace = defaultNamespace
+		requestNamespace = stage.DefaultNamespace
 	}
 
-	resourceName := buildProgramResourceName(componentToken)
-	programName := buildProgramName(requestName, requestNamespace, request.GetKind(), componentToken)
+	resourceName := stage.BuildProgramResourceName(componentToken)
+	programName := stage.BuildProgramName(requestName, requestNamespace, request.GetKind(), componentToken)
 	programConfiguration, err := buildProgramConfiguration(schemaSource)
 	if err != nil {
 		return err
@@ -132,7 +122,7 @@ func buildProgramConfiguration(schemaSource string) (map[string]any, error) {
 	}
 
 	configuration := make(map[string]any, len(schemaDoc.Config.Variables))
-	for _, key := range sortedRawKeys(schemaDoc.Config.Variables) {
+	for _, key := range stage.SortedRawKeys(schemaDoc.Config.Variables) {
 		variable, err := parseConfigVariable(schemaDoc.Config.Variables[key])
 		if err != nil {
 			return nil, fmt.Errorf("load schema for Program configuration: parse config variable %q: %w", key, err)
@@ -169,67 +159,8 @@ func parseConfigVariable(raw json.RawMessage) (schemaConfigVariable, error) {
 	return variable, nil
 }
 
-func sortedRawKeys(values map[string]json.RawMessage) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	return sortedStrings(keys)
-}
-
-func sortedStrings(values []string) []string {
-	sortedValues := append([]string(nil), values...)
-	sort.Strings(sortedValues)
-	return sortedValues
-}
-
-func buildProgramName(requestName, requestNamespace, requestKind, componentToken string) string {
-	base := sanitizeKubernetesName(requestName)
-	hashValue := shortHash(fmt.Sprintf("%s/%s/%s/%s", requestNamespace, requestKind, requestName, componentToken))
-	name := fmt.Sprintf("%s-%s", base, hashValue)
-	if len(name) <= 63 {
-		return name
-	}
-
-	maxBaseLen := 63 - len(hashValue) - 1
-	if maxBaseLen < 1 {
-		return hashValue
-	}
-	return fmt.Sprintf("%s-%s", strings.Trim(base[:maxBaseLen], "-"), hashValue)
-}
-
-func buildProgramResourceName(componentToken string) string {
-	resourceName := sanitizeKubernetesName(strings.ReplaceAll(componentToken, ":", "-"))
-	if len(resourceName) > 63 {
-		return strings.Trim(resourceName[:63], "-")
-	}
-	return resourceName
-}
-
-func sanitizeKubernetesName(input string) string {
-	value := strings.ToLower(input)
-	value = strings.ReplaceAll(value, "_", "-")
-	value = invalidNameChars.ReplaceAllString(value, "-")
-	value = repeatedDashes.ReplaceAllString(value, "-")
-	value = strings.Trim(value, "-")
-	if value == "" {
-		return "program"
-	}
-	return value
-}
-
-func shortHash(value string) string {
-	h := fnv.New32a()
-	_, _ = h.Write([]byte(value))
-	return fmt.Sprintf("%08x", h.Sum32())
-}
-
 func getEnvWithDefault(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
+	return stage.GetEnvWithDefault(key, defaultValue)
 }
 
 func getEnvOrDie(key string) string {
