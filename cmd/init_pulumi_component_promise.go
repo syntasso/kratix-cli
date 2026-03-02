@@ -25,7 +25,6 @@ const (
 	pulumiComponentContainerName  = "from-api-to-pulumi-pko-program"
 	pulumiComponentContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"
 	pulumiStackContainerName      = "from-api-to-pulumi-pko-stack"
-	pulumiStackContainerImage     = "ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0"
 )
 
 var (
@@ -111,7 +110,10 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 		},
 		{
 			Name:  pulumiStackContainerName,
-			Image: pulumiStackContainerImage,
+			Image: pulumiComponentContainerImage,
+			Command: []string{
+				"/from-api-to-pulumi-pko-stack",
+			},
 			Env: []corev1.EnvVar{
 				{
 					Name:  "PULUMI_COMPONENT_TOKEN",

@@ -68,7 +68,8 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 		))
 		stackContainer := pipelines[0].Spec.Containers[1]
 		Expect(stackContainer.Name).To(Equal("from-api-to-pulumi-pko-stack"))
-		Expect(stackContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0"))
+		Expect(stackContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"))
+		Expect(stackContainer.Command).To(Equal([]string{"/from-api-to-pulumi-pko-stack"}))
 		Expect(stackContainer.Env).To(ContainElements(
 			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
 		))

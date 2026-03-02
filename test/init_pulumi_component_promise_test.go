@@ -242,7 +242,8 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: from-api-to-pulumi-pko-program"),
 			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"),
 			ContainSubstring("name: from-api-to-pulumi-pko-stack"),
-			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0"),
+			ContainSubstring("command:"),
+			ContainSubstring("- /from-api-to-pulumi-pko-stack"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
@@ -278,7 +279,8 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: from-api-to-pulumi-pko-program"),
 			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"),
 			ContainSubstring("name: from-api-to-pulumi-pko-stack"),
-			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0"),
+			ContainSubstring("command:"),
+			ContainSubstring("- /from-api-to-pulumi-pko-stack"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
