@@ -57,14 +57,20 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 		var pipelines []v1alpha1.Pipeline
 		Expect(yaml.Unmarshal(workflowBytes, &pipelines)).To(Succeed())
 		Expect(pipelines).To(HaveLen(1))
-		Expect(pipelines[0].Spec.Containers).To(HaveLen(1))
+		Expect(pipelines[0].Spec.Containers).To(HaveLen(2))
 
-		container := pipelines[0].Spec.Containers[0]
-		Expect(container.Name).To(Equal("from-api-to-pulumi-pko-program"))
-		Expect(container.Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"))
-		Expect(container.Env).To(ContainElements(
+		programContainer := pipelines[0].Spec.Containers[0]
+		Expect(programContainer.Name).To(Equal("from-api-to-pulumi-pko-program"))
+		Expect(programContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"))
+		Expect(programContainer.Env).To(ContainElements(
 			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
 			corev1.EnvVar{Name: "PULUMI_SCHEMA_SOURCE", Value: "./schema.valid.json"},
+		))
+		stackContainer := pipelines[0].Spec.Containers[1]
+		Expect(stackContainer.Name).To(Equal("from-api-to-pulumi-pko-stack"))
+		Expect(stackContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0"))
+		Expect(stackContainer.Env).To(ContainElements(
+			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
 		))
 
 		stageBinaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise")

@@ -215,10 +215,19 @@ func writePromiseFiles(outputDir string, filesToWrite map[string]any) error {
 }
 
 func generateResourceConfigurePipelines(containerName, containerImage string, envs []corev1.EnvVar) []unstructured.Unstructured {
-	container := v1alpha1.Container{
-		Name:  containerName,
-		Image: containerImage,
-		Env:   envs,
+	return generateResourceConfigurePipelinesWithContainers([]v1alpha1.Container{
+		{
+			Name:  containerName,
+			Image: containerImage,
+			Env:   envs,
+		},
+	})
+}
+
+func generateResourceConfigurePipelinesWithContainers(containers []v1alpha1.Container) []unstructured.Unstructured {
+	pipelineContainers := make([]any, len(containers))
+	for i, container := range containers {
+		pipelineContainers[i] = container
 	}
 
 	pipeline := unstructured.Unstructured{
@@ -229,7 +238,7 @@ func generateResourceConfigurePipelines(containerName, containerImage string, en
 				"name": "instance-configure",
 			},
 			"spec": map[string]any{
-				"containers": []any{container},
+				"containers": pipelineContainers,
 			},
 		},
 	}

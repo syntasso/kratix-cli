@@ -11,3 +11,8 @@
         value: ./schema.valid.json
       image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0
       name: from-api-to-pulumi-pko-program
+    - env:
+      - name: PULUMI_COMPONENT_TOKEN
+        value: pkg:index:Database
+      image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0
+      name: from-api-to-pulumi-pko-stack

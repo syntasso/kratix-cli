@@ -25,16 +25,22 @@ kratix add container resource/configure/pipeline0 --image syntasso/postgres-reso
 {{- if eq .SubCommand "pulumi-component-promise" }}
 ### Pulumi PKO output
 
-The generated Pulumi stage writes a PKO `Program` with deterministic values from existing inputs:
+The generated Pulumi workflow runs two containers from the same stage codebase:
+- `from-api-to-pulumi-pko-program` emits a PKO `Program`.
+- `from-api-to-pulumi-pko-stack` emits a PKO `Stack` after the `Program` output is available.
+
+The `Program` container writes deterministic values from existing inputs:
 - `program.resources.<component>.type` from `--component` selection.
 - `program.resources.<component>.properties` from request `spec`.
 - deterministic metadata, namespace and naming from the stage contract.
 
-The stage also reads `PULUMI_SCHEMA_SOURCE` and auto-generates `program.configuration` entries only when values are explicitly trusted in schema config variables (`type`, `default`, `secret`).
+The `Program` container also reads `PULUMI_SCHEMA_SOURCE` and auto-generates `program.configuration` entries only when values are explicitly trusted in schema config variables (`type`, `default`, `secret`).
 
-This Program generation introduces no additional required environment variables for PKO Program required fields.
+The `Stack` container writes deterministic metadata passthrough, `spec.programRef.name`, and `spec.stack` from known request inputs and component identity.
+It does not set `spec.backend`, because backend values cannot be determined automatically from non-user-provided stage data.
 
-If you need optional Pulumi runtime intent (for example resource options, variables, outputs, or environment-specific wiring), write a custom stage container that updates the generated Program before it is written to stage output.
+This PKO object generation introduces no additional required environment variables for either the Program or Stack.
+If you need additional Pulumi runtime intent, write and add a custom stage container to the Workflow that updates the generated Program or Stack before it is written to stage output.
 {{ end }}
 
 

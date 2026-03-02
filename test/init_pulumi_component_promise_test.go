@@ -241,6 +241,8 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: instance-configure"),
 			ContainSubstring("name: from-api-to-pulumi-pko-program"),
 			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"),
+			ContainSubstring("name: from-api-to-pulumi-pko-stack"),
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
@@ -248,7 +250,9 @@ var _ = Describe("init pulumi-component-promise", func() {
 		readmeContents := cat(filepath.Join(workingDir, "README.md"))
 		Expect(readmeContents).To(SatisfyAll(
 			ContainSubstring("## Pulumi"),
-			ContainSubstring("Pulumi stage writes a PKO `Program`"),
+			ContainSubstring("workflow runs two containers"),
+			ContainSubstring("spec.stack"),
+			ContainSubstring("does not set `spec.backend`"),
 		))
 		Expect(session.Out).To(SatisfyAll(
 			gbytes.Say("Preview: This command is in preview"),
@@ -273,6 +277,8 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: instance-configure"),
 			ContainSubstring("name: from-api-to-pulumi-pko-program"),
 			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"),
+			ContainSubstring("name: from-api-to-pulumi-pko-stack"),
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
@@ -280,7 +286,9 @@ var _ = Describe("init pulumi-component-promise", func() {
 		readmeContents := cat(filepath.Join(workingDir, "README.md"))
 		Expect(readmeContents).To(SatisfyAll(
 			ContainSubstring("## Pulumi"),
-			ContainSubstring("Pulumi stage writes a PKO `Program`"),
+			ContainSubstring("workflow runs two containers"),
+			ContainSubstring("spec.stack"),
+			ContainSubstring("does not set `spec.backend`"),
 		))
 		Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/dependencies.yaml")))
 		Expect(session.Out).To(SatisfyAll(

@@ -24,6 +24,8 @@ const (
 `
 	pulumiComponentContainerName  = "from-api-to-pulumi-pko-program"
 	pulumiComponentContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"
+	pulumiStackContainerName      = "from-api-to-pulumi-pko-stack"
+	pulumiStackContainerImage     = "ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-stack:v0.1.0"
 )
 
 var (
@@ -92,14 +94,30 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 		return err
 	}
 
-	pipelines := generateResourceConfigurePipelines(pulumiComponentContainerName, pulumiComponentContainerImage, []corev1.EnvVar{
+	pipelines := generateResourceConfigurePipelinesWithContainers([]v1alpha1.Container{
 		{
-			Name:  "PULUMI_COMPONENT_TOKEN",
-			Value: component.Token,
+			Name:  pulumiComponentContainerName,
+			Image: pulumiComponentContainerImage,
+			Env: []corev1.EnvVar{
+				{
+					Name:  "PULUMI_COMPONENT_TOKEN",
+					Value: component.Token,
+				},
+				{
+					Name:  "PULUMI_SCHEMA_SOURCE",
+					Value: pulumiSchemaPath,
+				},
+			},
 		},
 		{
-			Name:  "PULUMI_SCHEMA_SOURCE",
-			Value: pulumiSchemaPath,
+			Name:  pulumiStackContainerName,
+			Image: pulumiStackContainerImage,
+			Env: []corev1.EnvVar{
+				{
+					Name:  "PULUMI_COMPONENT_TOKEN",
+					Value: component.Token,
+				},
+			},
 		},
 	})
 
