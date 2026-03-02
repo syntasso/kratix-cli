@@ -76,6 +76,7 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 			"KRATIX_INPUT_FILE="+filepath.Join(workingDir, "example-resource.yaml"),
 			"KRATIX_OUTPUT_FILE="+outputPath,
 			"PULUMI_COMPONENT_TOKEN=pkg:index:Database",
+			"PULUMI_SCHEMA_SOURCE="+filepath.Join(workingDir, "schema.valid.json"),
 		)
 
 		stageSession, err := gexec.Start(stageCmd, GinkgoWriter, GinkgoWriter)

@@ -38,6 +38,7 @@ var _ = Describe("From request to Pulumi Program stage", func() {
 			"KRATIX_INPUT_FILE":      "assets/test-object.yaml",
 			"KRATIX_OUTPUT_FILE":     filepath.Join(tmpDir, "output.yaml"),
 			"PULUMI_COMPONENT_TOKEN": "pkg:index:Database",
+			"PULUMI_SCHEMA_SOURCE":   "assets/test-schema.json",
 		}
 	})
 
@@ -61,6 +62,15 @@ var _ = Describe("From request to Pulumi Program stage", func() {
 		Expect(output).To(MatchRegexp("annotations:"))
 		Expect(output).To(MatchRegexp("image-registry: ghcr.io"))
 		Expect(output).To(MatchRegexp("program:"))
+		Expect(output).To(MatchRegexp("configuration:"))
+		Expect(output).To(MatchRegexp("pkg:index:featureFlag:"))
+		Expect(output).To(MatchRegexp("default: true"))
+		Expect(output).To(MatchRegexp("pkg:index:region:"))
+		Expect(output).To(MatchRegexp("default: eu-west-1"))
+		Expect(output).To(MatchRegexp("pkg:index:sensitiveValue:"))
+		Expect(output).To(MatchRegexp("secret: true"))
+		Expect(output).To(MatchRegexp("pkg:index:typeOnly:"))
+		Expect(output).To(MatchRegexp("type: integer"))
 		Expect(output).To(MatchRegexp("resources:"))
 		Expect(output).To(MatchRegexp("pkg-index-database:"))
 		Expect(output).To(MatchRegexp("type: pkg:index:Database"))
@@ -107,5 +117,21 @@ var _ = Describe("From request to Pulumi Program stage", func() {
 
 		Expect(session).To(gexec.Exit(1))
 		Expect(session.Err).To(gbytes.Say("expected PULUMI_COMPONENT_TOKEN to be set"))
+	})
+
+	It("fails if the Pulumi schema source env var is not set", func() {
+		delete(envVars, "PULUMI_SCHEMA_SOURCE")
+		session := runWithEnv(envVars)
+
+		Expect(session).To(gexec.Exit(1))
+		Expect(session.Err).To(gbytes.Say("expected PULUMI_SCHEMA_SOURCE to be set"))
+	})
+
+	It("returns an explicit error when schema is invalid", func() {
+		envVars["PULUMI_SCHEMA_SOURCE"] = "assets/test-schema-bad.json"
+		session := runWithEnv(envVars)
+
+		Expect(session).To(gexec.Exit(1))
+		Expect(session.Err).To(gbytes.Say("load schema for Program configuration: load schema: parse input schema as JSON"))
 	})
 })

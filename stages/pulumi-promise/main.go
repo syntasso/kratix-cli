@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
+	"github.com/syntasso/kratix-cli/internal/pulumi"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
@@ -21,6 +24,7 @@ const (
 	programKind       = "Program"
 
 	pulumiComponentTokenEnvVar = "PULUMI_COMPONENT_TOKEN"
+	pulumiSchemaSourceEnvVar   = "PULUMI_SCHEMA_SOURCE"
 )
 
 var invalidNameChars = regexp.MustCompile(`[^a-z0-9-]`)
@@ -28,13 +32,14 @@ var repeatedDashes = regexp.MustCompile(`-+`)
 
 func main() {
 	componentToken := getEnvOrDie(pulumiComponentTokenEnvVar)
+	schemaSource := getEnvOrDie(pulumiSchemaSourceEnvVar)
 
-	if err := transformInputToProgramOutput(componentToken); err != nil {
+	if err := transformInputToProgramOutput(componentToken, schemaSource); err != nil {
 		log.Fatalf("%v", err)
 	}
 }
 
-func transformInputToProgramOutput(componentToken string) error {
+func transformInputToProgramOutput(componentToken, schemaSource string) error {
 	inputFile := getEnvWithDefault("KRATIX_INPUT_FILE", defaultInputFilePath)
 	outputFile := getEnvWithDefault("KRATIX_OUTPUT_FILE", defaultOutputFilePath)
 
@@ -70,6 +75,10 @@ func transformInputToProgramOutput(componentToken string) error {
 
 	resourceName := buildProgramResourceName(componentToken)
 	programName := buildProgramName(requestName, requestNamespace, request.GetKind(), componentToken)
+	programConfiguration, err := buildProgramConfiguration(schemaSource)
+	if err != nil {
+		return err
+	}
 
 	output := &unstructured.Unstructured{}
 	output.SetAPIVersion(programAPIVersion)
@@ -88,6 +97,12 @@ func transformInputToProgramOutput(componentToken string) error {
 		return fmt.Errorf("failed to set program.resources: %w", err)
 	}
 
+	if len(programConfiguration) > 0 {
+		if err := unstructured.SetNestedMap(output.Object, programConfiguration, "program", "configuration"); err != nil {
+			return fmt.Errorf("failed to set program.configuration: %w", err)
+		}
+	}
+
 	outputBytes, err := yaml.Marshal(output)
 	if err != nil {
 		return fmt.Errorf("failed to marshal Program object: %w", err)
@@ -98,6 +113,74 @@ func transformInputToProgramOutput(componentToken string) error {
 	}
 
 	return nil
+}
+
+type schemaConfigVariable struct {
+	Type    string `json:"type"`
+	Default any    `json:"default"`
+	Secret  *bool  `json:"secret"`
+}
+
+func buildProgramConfiguration(schemaSource string) (map[string]any, error) {
+	schemaDoc, err := pulumi.LoadSchema(schemaSource)
+	if err != nil {
+		return nil, fmt.Errorf("load schema for Program configuration: %w", err)
+	}
+
+	if len(schemaDoc.Config.Variables) == 0 {
+		return nil, nil
+	}
+
+	configuration := make(map[string]any, len(schemaDoc.Config.Variables))
+	for _, key := range sortedRawKeys(schemaDoc.Config.Variables) {
+		variable, err := parseConfigVariable(schemaDoc.Config.Variables[key])
+		if err != nil {
+			return nil, fmt.Errorf("load schema for Program configuration: parse config variable %q: %w", key, err)
+		}
+
+		entry := map[string]any{}
+		if variable.Type != "" {
+			entry["type"] = variable.Type
+		}
+		if variable.Default != nil {
+			entry["default"] = variable.Default
+		}
+		if variable.Secret != nil {
+			entry["secret"] = *variable.Secret
+		}
+
+		if len(entry) == 0 {
+			continue
+		}
+		configuration[key] = entry
+	}
+
+	if len(configuration) == 0 {
+		return nil, nil
+	}
+	return configuration, nil
+}
+
+func parseConfigVariable(raw json.RawMessage) (schemaConfigVariable, error) {
+	var variable schemaConfigVariable
+	if err := json.Unmarshal(raw, &variable); err != nil {
+		return schemaConfigVariable{}, err
+	}
+	return variable, nil
+}
+
+func sortedRawKeys(values map[string]json.RawMessage) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	return sortedStrings(keys)
+}
+
+func sortedStrings(values []string) []string {
+	sortedValues := append([]string(nil), values...)
+	sort.Strings(sortedValues)
+	return sortedValues
 }
 
 func buildProgramName(requestName, requestNamespace, requestKind, componentToken string) string {

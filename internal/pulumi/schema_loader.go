@@ -19,8 +19,14 @@ const schemaURLTimeout = 15 * time.Second
 type SchemaDocument struct {
 	Name      string                     `json:"name"`
 	Version   string                     `json:"version"`
+	Config    SchemaConfig               `json:"config"`
 	Resources map[string]SchemaResource  `json:"resources"`
 	Types     map[string]json.RawMessage `json:"types"`
+}
+
+// SchemaConfig contains package-level config variables.
+type SchemaConfig struct {
+	Variables map[string]json.RawMessage `json:"variables"`
 }
 
 // SchemaResource contains the component metadata and input shape for a Pulumi resource.
