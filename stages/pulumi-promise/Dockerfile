@@ -9,12 +9,12 @@ RUN --mount=type=cache,id=go-mod-cache,target=/go/pkg/mod,sharing=locked \
   go mod download
 COPY internal/pulumi internal/pulumi
 COPY stages/pulumi-promise stages/pulumi-promise
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -o from-api-to-pulumi-pko-program ./stages/pulumi-promise
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -o from-api-to-pulumi-pko-stack ./stages/pulumi-promise/stack
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -o pulumi-generator ./stages/pulumi-promise
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -o pulumi-stack-generator ./stages/pulumi-promise/stack
 
 FROM --platform=${TARGETARCH:-$BUILDPLATFORM} gcr.io/distroless/cc:nonroot
 WORKDIR /
-COPY --from=builder /workspace/from-api-to-pulumi-pko-program .
-COPY --from=builder /workspace/from-api-to-pulumi-pko-stack .
+COPY --from=builder /workspace/pulumi-generator .
+COPY --from=builder /workspace/pulumi-stack-generator .
 USER 65532:65532
-ENTRYPOINT ["/from-api-to-pulumi-pko-program"]
+ENTRYPOINT ["/pulumi-generator"]

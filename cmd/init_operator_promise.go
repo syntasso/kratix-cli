@@ -107,7 +107,19 @@ func InitPromiseFromOperator(cmd *cobra.Command, args []string) error {
 	pipelines := generateResourceConfigurePipelines(operatorContainerName, operatorContainerImage, envs)
 
 	flags := fmt.Sprintf("--operator-manifests %s --api-schema-from %s", operatorManifestsDir, targetCrdName)
-	filesToWrite, err := getFilesToWrite("operator-promise", promiseName, split, workflowDirectory, flags, nil, dependencies, crd, pipelines, exampleResource)
+	filesToWrite, err := getFilesToWrite(
+		"operator-promise",
+		promiseName,
+		split,
+		workflowDirectory,
+		flags,
+		nil,
+		dependencies,
+		crd,
+		pipelines,
+		exampleResource,
+		baseReadmeTemplateValues("operator-promise", flags, promiseName, crd),
+	)
 	if err != nil {
 		return err
 	}
@@ -260,20 +272,28 @@ func topLevelRequiredFields(crd *apiextensionsv1.CustomResourceDefinition) map[s
 	return m
 }
 
-func getFilesToWrite(subCommand, promiseName string, split bool, workflowDirectory, extraFlags string, destinationSelectors []v1alpha1.PromiseScheduling, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured) (map[string]any, error) {
-	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md.tpl")
-	if err != nil {
-		return nil, err
-	}
-
-	templatedReadme := bytes.NewBuffer([]byte{})
-	err = readmeTemplate.Execute(templatedReadme, promiseTemplateValues{
+func baseReadmeTemplateValues(subCommand, extraFlags, promiseName string, crd *apiextensionsv1.CustomResourceDefinition) promiseTemplateValues {
+	return promiseTemplateValues{
 		SubCommand: subCommand,
 		ExtraFlags: extraFlags,
 		Name:       promiseName,
 		Group:      crd.Spec.Group,
 		Kind:       crd.Spec.Names.Kind,
-	})
+	}
+}
+
+func getFilesToWrite(subCommand, promiseName string, split bool, workflowDirectory, extraFlags string, destinationSelectors []v1alpha1.PromiseScheduling, dependencies []v1alpha1.Dependency, crd *apiextensionsv1.CustomResourceDefinition, workflow []unstructured.Unstructured, exampleResource *unstructured.Unstructured, readmeTemplateValues any) (map[string]any, error) {
+	readmeTemplate, err := template.ParseFS(promiseTemplates, "templates/promise/README.md.tpl")
+	if err != nil {
+		return nil, err
+	}
+
+	if readmeTemplateValues == nil {
+		readmeTemplateValues = baseReadmeTemplateValues(subCommand, extraFlags, promiseName, crd)
+	}
+
+	templatedReadme := bytes.NewBuffer([]byte{})
+	err = readmeTemplate.Execute(templatedReadme, readmeTemplateValues)
 
 	if err != nil {
 		return nil, err

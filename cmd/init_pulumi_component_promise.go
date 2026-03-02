@@ -22,15 +22,18 @@ const (
   # initialize a new promise from a remote Pulumi package schema
   kratix init pulumi-component-promise mypromise --schema https://www.pulumi.com/registry/packages/aws-iam/schema.json --component aws-iam:index:User --group syntasso.io --kind User
 `
-	pulumiComponentContainerName  = "from-api-to-pulumi-pko-program"
-	pulumiComponentContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"
-	pulumiStackContainerName      = "from-api-to-pulumi-pko-stack"
 )
 
 var (
 	pulumiSchemaPath string
 	pulumiComponent  string
 )
+
+type pulumiPromiseTemplateValues struct {
+	promiseTemplateValues
+	PulumiGeneratorName      string
+	PulumiStackGeneratorName string
+}
 
 var pulumiComponentPromiseCmd = &cobra.Command{
 	Use:   pulumiComponentPromiseCommandName + " PROMISE-NAME --schema PATH_OR_URL --group PROMISE-API-GROUP --kind PROMISE-API-KIND [--component TOKEN] [--version] [--plural] [--split] [--dir DIR]",
@@ -95,8 +98,11 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 
 	pipelines := generateResourceConfigurePipelinesWithContainers([]v1alpha1.Container{
 		{
-			Name:  pulumiComponentContainerName,
-			Image: pulumiComponentContainerImage,
+			Name:  pulumiProgramGeneratorContainerName,
+			Image: pulumiGeneratorImage(),
+			Command: []string{
+				pulumiProgramGeneratorCommand,
+			},
 			Env: []corev1.EnvVar{
 				{
 					Name:  "PULUMI_COMPONENT_TOKEN",
@@ -109,10 +115,10 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 			},
 		},
 		{
-			Name:  pulumiStackContainerName,
-			Image: pulumiComponentContainerImage,
+			Name:  pulumiStackGeneratorContainerName,
+			Image: pulumiGeneratorImage(),
 			Command: []string{
-				"/from-api-to-pulumi-pko-stack",
+				pulumiStackGeneratorCommand,
 			},
 			Env: []corev1.EnvVar{
 				{
@@ -146,6 +152,11 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 		crd,
 		pipelines,
 		exampleResource,
+		pulumiPromiseTemplateValues{
+			promiseTemplateValues:    baseReadmeTemplateValues(pulumiComponentPromiseCommandName, extraFlags, promiseName, crd),
+			PulumiGeneratorName:      pulumiProgramGeneratorContainerName,
+			PulumiStackGeneratorName: pulumiStackGeneratorContainerName,
+		},
 	)
 	if err != nil {
 		return err

@@ -33,7 +33,7 @@ var _ = Describe("From request to Pulumi Stack stage", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = os.MkdirTemp("", "pulumi-stack-stage")
+		tmpDir, err = os.MkdirTemp("", "pulumi-stack-generator")
 		Expect(err).NotTo(HaveOccurred())
 
 		envVars = map[string]string{

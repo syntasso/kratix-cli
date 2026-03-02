@@ -239,11 +239,15 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(promiseContents).To(MatchYAML(cat("assets/pulumi/expected-output/promise.yaml")))
 		Expect(promiseContents).To(SatisfyAll(
 			ContainSubstring("name: instance-configure"),
-			ContainSubstring("name: from-api-to-pulumi-pko-program"),
-			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"),
-			ContainSubstring("name: from-api-to-pulumi-pko-stack"),
+			ContainSubstring("name: pulumi-program-generator"),
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"),
+<<<<<<< HEAD
+=======
+			ContainSubstring("- /pulumi-program-generator"),
+>>>>>>> 0797404 (fixup! refactor(pulumi): rename stage image and container identifiers)
+			ContainSubstring("name: pulumi-stack-generator"),
 			ContainSubstring("command:"),
-			ContainSubstring("- /from-api-to-pulumi-pko-stack"),
+			ContainSubstring("- /pulumi-stack-generator"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
@@ -276,11 +280,12 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(resourceConfigureWorkflowContents).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
 		Expect(resourceConfigureWorkflowContents).To(SatisfyAll(
 			ContainSubstring("name: instance-configure"),
-			ContainSubstring("name: from-api-to-pulumi-pko-program"),
-			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"),
-			ContainSubstring("name: from-api-to-pulumi-pko-stack"),
+			ContainSubstring("name: pulumi-program-generator"),
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"),
+			ContainSubstring("- /pulumi-program-generator"),
+			ContainSubstring("name: pulumi-stack-generator"),
 			ContainSubstring("command:"),
-			ContainSubstring("- /from-api-to-pulumi-pko-stack"),
+			ContainSubstring("- /pulumi-stack-generator"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))

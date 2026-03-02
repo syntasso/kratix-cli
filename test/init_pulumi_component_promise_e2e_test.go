@@ -60,16 +60,16 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 		Expect(pipelines[0].Spec.Containers).To(HaveLen(2))
 
 		programContainer := pipelines[0].Spec.Containers[0]
-		Expect(programContainer.Name).To(Equal("from-api-to-pulumi-pko-program"))
-		Expect(programContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"))
+		Expect(programContainer.Name).To(Equal("pulumi-program-generator"))
+		Expect(programContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"))
 		Expect(programContainer.Env).To(ContainElements(
 			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
 			corev1.EnvVar{Name: "PULUMI_SCHEMA_SOURCE", Value: "./schema.valid.json"},
 		))
 		stackContainer := pipelines[0].Spec.Containers[1]
-		Expect(stackContainer.Name).To(Equal("from-api-to-pulumi-pko-stack"))
-		Expect(stackContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"))
-		Expect(stackContainer.Command).To(Equal([]string{"/from-api-to-pulumi-pko-stack"}))
+		Expect(stackContainer.Name).To(Equal("pulumi-stack-generator"))
+		Expect(stackContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"))
+		Expect(stackContainer.Command).To(Equal([]string{"/pulumi-stack-generator"}))
 		Expect(stackContainer.Env).To(ContainElements(
 			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
 		))

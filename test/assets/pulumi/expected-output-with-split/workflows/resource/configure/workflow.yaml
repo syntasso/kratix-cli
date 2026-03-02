@@ -4,17 +4,19 @@
     name: instance-configure
   spec:
     containers:
-    - env:
-      - name: PULUMI_COMPONENT_TOKEN
-        value: pkg:index:Database
-      - name: PULUMI_SCHEMA_SOURCE
-        value: ./schema.valid.json
-      image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0
-      name: from-api-to-pulumi-pko-program
-    - env:
-      - name: PULUMI_COMPONENT_TOKEN
-        value: pkg:index:Database
-      command:
-      - /from-api-to-pulumi-pko-stack
-      image: ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0
-      name: from-api-to-pulumi-pko-stack
+      - env:
+          - name: PULUMI_COMPONENT_TOKEN
+            value: pkg:index:Database
+          - name: PULUMI_SCHEMA_SOURCE
+            value: ./schema.valid.json
+        command:
+          - /pulumi-program-generator
+        image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0
+        name: pulumi-program-generator
+      - env:
+          - name: PULUMI_COMPONENT_TOKEN
+            value: pkg:index:Database
+        command:
+          - /pulumi-stack-generator
+        image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0
+        name: pulumi-stack-generator

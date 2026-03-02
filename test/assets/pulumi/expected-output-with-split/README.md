@@ -27,8 +27,8 @@
   ### Pulumi PKO output
 
   The generated Pulumi workflow runs two containers from the same stage codebase:
-  - `from-api-to-pulumi-pko-program` emits a PKO `Program`.
-  - `from-api-to-pulumi-pko-stack` emits a PKO `Stack` after the `Program` output is available.
+  - `pulumi-generator` emits a PKO `Program`.
+  - `pulumi-stack-generator` emits a PKO `Stack` after the `Program` output is available.
 
   The `Program` container writes deterministic values from existing inputs:
   - `program.resources.<component>.type` from `--component` selection.
