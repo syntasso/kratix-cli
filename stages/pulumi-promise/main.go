@@ -84,8 +84,8 @@ func transformInputToProgramOutput(componentToken string) error {
 			"type":       componentToken,
 			"properties": specMap,
 		},
-	}, "spec", "resources"); err != nil {
-		return fmt.Errorf("failed to set spec.resources: %w", err)
+	}, "program", "resources"); err != nil {
+		return fmt.Errorf("failed to set program.resources: %w", err)
 	}
 
 	outputBytes, err := yaml.Marshal(output)

@@ -60,6 +60,7 @@ var _ = Describe("From request to Pulumi Program stage", func() {
 		Expect(output).To(MatchRegexp("app.kubernetes.io/name: test-object"))
 		Expect(output).To(MatchRegexp("annotations:"))
 		Expect(output).To(MatchRegexp("image-registry: ghcr.io"))
+		Expect(output).To(MatchRegexp("program:"))
 		Expect(output).To(MatchRegexp("resources:"))
 		Expect(output).To(MatchRegexp("pkg-index-database:"))
 		Expect(output).To(MatchRegexp("type: pkg:index:Database"))

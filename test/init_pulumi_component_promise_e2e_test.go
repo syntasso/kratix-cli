@@ -101,7 +101,7 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 		Expect(programObject.GetName()).To(MatchRegexp(`^example-request-[0-9a-f]{8}$`))
 		Expect(programObject.GetNamespace()).To(Equal("default"))
 
-		resources, found, err := unstructured.NestedMap(programObject.Object, "spec", "resources")
+		resources, found, err := unstructured.NestedMap(programObject.Object, "program", "resources")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(found).To(BeTrue())
 		Expect(resources).To(HaveKey("pkg-index-database"))
