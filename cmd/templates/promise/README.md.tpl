@@ -22,7 +22,7 @@ To add workflow containers, you can use the `kratix add container` command:
 kratix add container resource/configure/pipeline0 --image syntasso/postgres-resource:v1.0.0
 ```
 
-{{ if eq .SubCommand "pulumi-component-promise" }}
+{{- if eq .SubCommand "pulumi-component-promise" }}
 ### Pulumi PKO output
 
 The generated Pulumi stage writes a PKO `Program` with deterministic values from existing inputs:
