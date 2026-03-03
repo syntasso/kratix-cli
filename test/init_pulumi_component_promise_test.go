@@ -240,13 +240,9 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(promiseContents).To(SatisfyAll(
 			ContainSubstring("name: instance-configure"),
 			ContainSubstring("name: pulumi-program-generator"),
-			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"),
-<<<<<<< HEAD
-=======
 			ContainSubstring("- /pulumi-program-generator"),
->>>>>>> 0797404 (fixup! refactor(pulumi): rename stage image and container identifiers)
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"),
 			ContainSubstring("name: pulumi-stack-generator"),
-			ContainSubstring("command:"),
 			ContainSubstring("- /pulumi-stack-generator"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
@@ -257,7 +253,6 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("## Pulumi"),
 			ContainSubstring("workflow runs two containers"),
 			ContainSubstring("spec.stack"),
-			ContainSubstring("does not set `spec.backend`"),
 		))
 		Expect(session.Out).To(SatisfyAll(
 			gbytes.Say("Preview: This command is in preview"),
@@ -295,7 +290,6 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("## Pulumi"),
 			ContainSubstring("workflow runs two containers"),
 			ContainSubstring("spec.stack"),
-			ContainSubstring("does not set `spec.backend`"),
 		))
 		Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/dependencies.yaml")))
 		Expect(session.Out).To(SatisfyAll(

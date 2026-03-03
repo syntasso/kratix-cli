@@ -62,6 +62,7 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 		programContainer := pipelines[0].Spec.Containers[0]
 		Expect(programContainer.Name).To(Equal("pulumi-program-generator"))
 		Expect(programContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"))
+		Expect(programContainer.Command).To(Equal([]string{"/pulumi-program-generator"}))
 		Expect(programContainer.Env).To(ContainElements(
 			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
 			corev1.EnvVar{Name: "PULUMI_SCHEMA_SOURCE", Value: "./schema.valid.json"},
@@ -74,7 +75,7 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
 		))
 
-		stageBinaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise")
+		stageBinaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise/program")
 		Expect(err).NotTo(HaveOccurred())
 
 		outputPath := filepath.Join(workingDir, "program-output.yaml")

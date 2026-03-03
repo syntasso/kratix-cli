@@ -27,8 +27,8 @@
   ### Pulumi PKO output
 
   The generated Pulumi workflow runs two containers from the same stage codebase:
-  - `pulumi-generator` emits a PKO `Program`.
-  - `pulumi-stack-generator` emits a PKO `Stack` after the `Program` output is available.
+  - `/pulumi-program-generator` entrypoint emits a PKO `Program`.
+  - `/pulumi-stack-generator` entrypoint emits a PKO `Stack`.
 
   The `Program` container writes deterministic values from existing inputs:
   - `program.resources.<component>.type` from `--component` selection.
@@ -38,7 +38,6 @@
   The `Program` container also reads `PULUMI_SCHEMA_SOURCE` and auto-generates `program.configuration` entries only when values are explicitly trusted in schema config variables (`type`, `default`, `secret`).
 
   The `Stack` container writes deterministic metadata passthrough, `spec.programRef.name`, and `spec.stack` from known request inputs and component identity.
-  It does not set `spec.backend`, because backend values cannot be determined automatically from non-user-provided stage data.
 
 
   This PKO object generation introduces no additional required environment variables for either the Program or Stack.

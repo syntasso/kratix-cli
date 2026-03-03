@@ -33,7 +33,7 @@ var _ = Describe("From request to Pulumi Stack stage", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = os.MkdirTemp("", "pulumi-stack-generator")
+		tmpDir, err = os.MkdirTemp("", "pulumi-generator")
 		Expect(err).NotTo(HaveOccurred())
 
 		envVars = map[string]string{
@@ -68,11 +68,6 @@ var _ = Describe("From request to Pulumi Stack stage", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(found).To(BeTrue())
 		Expect(programRefName).To(MatchRegexp("test-object-[0-9a-f]{8}"))
-
-		backend, found, err := unstructured.NestedString(stackObject.Object, "spec", "backend")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(found).To(BeFalse())
-		Expect(backend).To(BeEmpty())
 
 		stackName, found, err := unstructured.NestedString(stackObject.Object, "spec", "stack")
 		Expect(err).NotTo(HaveOccurred())

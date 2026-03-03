@@ -23,7 +23,6 @@ func main() {
 	}
 }
 
-<<<<<<< HEAD
 func transformInputToStackOutput(componentToken string) error {
 	inputFile := stage.ResolveInputFilePath()
 	outputFile := stage.ResolveOutputFilePath()

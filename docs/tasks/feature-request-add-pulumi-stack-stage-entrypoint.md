@@ -30,30 +30,19 @@ When making this change, treat this like a bug fix
    - `spec.programRef.name` from the existing deterministic Program naming contract.
 4. Treat `schema.json` + request `spec` as insufficient for operator-intent Stack runtime fields, so these must not be auto-generated.
 5. Do not infer or default stack runtime intent:
-   - do not guess backend or stack names,
    - do not guess auth/env reference wiring,
    - do not guess policy or runtime control fields.
 
-### Slice 3: Operator-supplied Stack runtime configuration via env vars
-When making this change, treat this like a feature for additional configuration
-1. Support user inputs via environment variables for fields that require operator intent or environment-specific choices.
-2. Use the same rules as the Program feature contract:
-   - only required fields that cannot be inferred or auto-generated should be provided via environment variables,
-   - clear, explicit environment variable names,
-   - independent simple variable types where possible,
-   - JSON payloads only where structured objects are required.
-3. Define an explicit environment variable contract for stack runtime configuration:
-   - `PULUMI_STACK_BACKEND` -> `spec.backend` (required)
-   - `PULUMI_STACK_NAME` -> `spec.stack` (required)
-4. Validate and parse environment variables early, and fail with explicit, actionable errors when values are missing, invalid, or malformed.
-5. Do not apply implicit defaults for operator-intent fields.
+### Slice 3: Deterministic stack identity
+1. Set `spec.stack` from deterministic stage inputs only.
+2. Validate deterministic field generation early, and fail with explicit, actionable errors when required request metadata is missing.
+3. Do not apply implicit defaults for operator-intent fields.
 
 ### Slice 4: Init/readme documentation aligned with existing style
 1. Update `kratix init pulumi-component-promise` generated docs to describe:
    - two-container workflow model (`Program` container + `Stack` container),
    - separate stage entry points in the same stage codebase,
    - deterministic Stack fields that are auto-generated,
-   - required stack environment variables (only `PULUMI_STACK_BACKEND` and `PULUMI_STACK_NAME`) and example values,
    - an alternative option of writing a custom stage to update generated files before writing to outputs.
 2. Match existing patterns and tone in current Pulumi docs and keep wording in British English.
 
@@ -67,12 +56,11 @@ Automated tests in `stages/pulumi-promise/test` should cover:
 1. New entry point emits valid `Stack` with required PKO fields.
 2. `spec.programRef.name` deterministically matches Program naming contract.
 3. Deterministic slice emits only deterministic Stack fields and does not populate operator-intent fields.
-4. Required env vars are validated with explicit failures.
-5. Existing Program entry point tests remain unchanged and green.
+4. Existing Program entry point tests remain unchanged and green.
 
 CLI init tests should also cover:
 1. Generated workflow includes a second container for stack emission.
-2. Generated README explains the two-container model and stack env vars without brittle exact-text assertions.
+2. Generated README explains the two-container model and deterministic stack field generation without brittle exact-text assertions.
 
 Run via:
 ```bash
@@ -87,9 +75,9 @@ go test ./test/... -ginkgo.focus="init pulumi-component-promise"
 1. A new stage entry point in `stages/pulumi-promise` emits PKO `Stack` resources.
 2. Workflow generation uses a second container for stack emission instead of extending the existing container.
 3. Deterministic Stack output references the Program and emits only contract-safe deterministic fields.
-4. Only required Stack fields that cannot be inferred or auto-generated are accepted via explicit environment variable inputs, with early validation.
+4. Stack field generation remains deterministic from existing stage inputs and contracts.
 5. Program stage behaviour remains backward compatible.
-6. Tests and generated docs are updated and pass, with junior-friendly clarity, and generated docs include both env var and custom-stage options.
+6. Tests and generated docs are updated and pass, with junior-friendly clarity, and generated docs include custom-stage extension options.
 
 ## Sources
 - Pulumi Kubernetes Operator API docs (Program/Stack types): https://pkg.go.dev/github.com/pulumi/pulumi-kubernetes-operator/v2/operator/api/pulumi/v1
