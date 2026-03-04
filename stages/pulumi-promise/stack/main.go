@@ -17,8 +17,10 @@ const (
 
 func main() {
 	componentToken := getRequiredEnv(pulumiComponentTokenEnvVar)
+	log.Printf("starting transformation (componentToken=%q)", componentToken)
 
 	if err := transformInputToStackOutput(componentToken); err != nil {
+		log.Printf("failed: %v", err)
 		log.Fatalf("%v", err)
 	}
 }
@@ -26,14 +28,18 @@ func main() {
 func transformInputToStackOutput(componentToken string) error {
 	inputFile := stage.ResolveInputFilePath()
 	outputFile := stage.ResolveStackOutputFilePath()
+	log.Printf("using input file %q and output file %q", inputFile, outputFile)
 
 	request, err := stage.ReadRequestFromFile(inputFile)
 	if err != nil {
+		log.Printf("unable to read request from %q: %v", inputFile, err)
 		return err
 	}
+	log.Printf("loaded request (name=%q, kind=%q, namespace=%q)", request.GetName(), request.GetKind(), request.GetNamespace())
 
 	requestName, err := stage.RequireRequestName(request)
 	if err != nil {
+		log.Printf("request validation failed: %v", err)
 		return err
 	}
 
@@ -42,6 +48,7 @@ func transformInputToStackOutput(componentToken string) error {
 	programName := stage.BuildProgramName(requestName, requestNamespace, request.GetKind(), componentToken)
 	stackResourceName := buildStackResourceName(programName)
 	stackName := stackResourceName
+	log.Printf("computed names (programName=%q, stackName=%q)", programName, stackName)
 
 	output := &unstructured.Unstructured{}
 	output.SetAPIVersion(stackAPIVersion)
@@ -61,7 +68,13 @@ func transformInputToStackOutput(componentToken string) error {
 		return fmt.Errorf("failed to set spec.stack: %w", err)
 	}
 
-	return stage.WriteOutputObject(outputFile, stackKind, output)
+	if err := stage.WriteOutputObject(outputFile, stackKind, output); err != nil {
+		log.Printf("failed to write Stack to %q: %v", outputFile, err)
+		return err
+	}
+
+	log.Printf("wrote Stack %q to %q", stackResourceName, outputFile)
+	return nil
 }
 
 func buildStackResourceName(programName string) string {

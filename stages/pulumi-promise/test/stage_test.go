@@ -49,6 +49,9 @@ var _ = Describe("From request to Pulumi Program stage", func() {
 	It("creates a Program CR in the output", func() {
 		session := runWithEnv(envVars)
 		Expect(session).To(gexec.Exit(0))
+		Expect(session.Err).To(gbytes.Say("starting transformation"))
+		Expect(session.Err).To(gbytes.Say("wrote Program"))
+
 		outputBytes, err := os.ReadFile(envVars["KRATIX_OUTPUT_FILE"])
 		Expect(err).NotTo(HaveOccurred())
 		output := string(outputBytes)

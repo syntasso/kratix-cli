@@ -21,8 +21,10 @@ const (
 func main() {
 	componentToken := getEnvOrDie(pulumiComponentTokenEnvVar)
 	schemaSource := getEnvOrDie(pulumiSchemaSourceEnvVar)
+	log.Printf("starting transformation (componentToken=%q, schemaSource=%q)", componentToken, schemaSource)
 
 	if err := transformInputToProgramOutput(componentToken, schemaSource); err != nil {
+		log.Printf("failed: %v", err)
 		log.Fatalf("%v", err)
 	}
 }
@@ -30,19 +32,25 @@ func main() {
 func transformInputToProgramOutput(componentToken, schemaSource string) error {
 	inputFile := stage.ResolveInputFilePath()
 	outputFile := stage.ResolveProgramOutputFilePath()
+	log.Printf("using input file %q and output file %q", inputFile, outputFile)
 
 	request, err := stage.ReadRequestFromFile(inputFile)
 	if err != nil {
+		log.Printf("unable to read request from %q: %v", inputFile, err)
 		return err
 	}
+	log.Printf("loaded request (name=%q, kind=%q, namespace=%q)", request.GetName(), request.GetKind(), request.GetNamespace())
 
 	specMap, err := stage.RequireSpecMap(request)
 	if err != nil {
+		log.Printf("request validation failed: %v", err)
 		return err
 	}
+	log.Printf("request spec is present with %d top-level field(s)", len(specMap))
 
 	requestName, err := stage.RequireRequestName(request)
 	if err != nil {
+		log.Printf("request validation failed: %v", err)
 		return err
 	}
 
@@ -50,10 +58,13 @@ func transformInputToProgramOutput(componentToken, schemaSource string) error {
 
 	resourceName := stage.BuildProgramResourceName(componentToken)
 	programName := stage.BuildProgramName(requestName, requestNamespace, request.GetKind(), componentToken)
+	log.Printf("computed names (programName=%q, resourceName=%q)", programName, resourceName)
 	programConfiguration, err := buildProgramConfiguration(schemaSource)
 	if err != nil {
+		log.Printf("failed to build configuration from schema %q: %v", schemaSource, err)
 		return err
 	}
+	log.Printf("built configuration entries=%d", len(programConfiguration))
 
 	output := &unstructured.Unstructured{}
 	output.SetAPIVersion(programAPIVersion)
@@ -78,7 +89,13 @@ func transformInputToProgramOutput(componentToken, schemaSource string) error {
 		}
 	}
 
-	return stage.WriteOutputObject(outputFile, programKind, output)
+	if err := stage.WriteOutputObject(outputFile, programKind, output); err != nil {
+		log.Printf("failed to write Program to %q: %v", outputFile, err)
+		return err
+	}
+
+	log.Printf("wrote Program %q to %q", programName, outputFile)
+	return nil
 }
 
 type schemaConfigVariable struct {
@@ -88,12 +105,14 @@ type schemaConfigVariable struct {
 }
 
 func buildProgramConfiguration(schemaSource string) (map[string]any, error) {
+	log.Printf("loading schema from %q", schemaSource)
 	schemaDoc, err := pulumi.LoadSchema(schemaSource)
 	if err != nil {
 		return nil, fmt.Errorf("load schema for Program configuration: %w", err)
 	}
 
 	if len(schemaDoc.Config.Variables) == 0 {
+		log.Printf("schema has no config variables")
 		return nil, nil
 	}
 
@@ -122,6 +141,7 @@ func buildProgramConfiguration(schemaSource string) (map[string]any, error) {
 	}
 
 	if len(configuration) == 0 {
+		log.Printf("no trusted configuration values found in schema")
 		return nil, nil
 	}
 	return configuration, nil

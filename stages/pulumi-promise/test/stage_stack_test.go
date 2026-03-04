@@ -50,6 +50,8 @@ var _ = Describe("From request to Pulumi Stack stage", func() {
 	It("creates a Stack CR in the output", func() {
 		session := runStackWithEnv(envVars)
 		Expect(session).To(gexec.Exit(0))
+		Expect(session.Err).To(gbytes.Say("starting transformation"))
+		Expect(session.Err).To(gbytes.Say("wrote Stack"))
 
 		outputBytes, err := os.ReadFile(envVars["KRATIX_OUTPUT_FILE"])
 		Expect(err).NotTo(HaveOccurred())
