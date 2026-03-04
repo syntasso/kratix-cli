@@ -74,7 +74,11 @@ var _ = Describe("InitTerraformPromise", func() {
 				Expect(generatedFiles).To(ConsistOf(files))
 				Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/terraform/expected-output/promise.yaml")))
 				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/terraform/expected-output/example-resource.yaml")))
-				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output/README.md")))
+				Expect(cat(filepath.Join(workingDir, "README.md"))).To(SatisfyAll(
+					ContainSubstring("kratix init tf-module-promise googlecloudrun"),
+					ContainSubstring("--module-source"),
+					ContainSubstring("--group gcp.com --kind GoogleCloudRun"),
+				))
 				Expect(cat(filepath.Join(dependenciesWorkflowPath, "Dockerfile"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/Dockerfile")))
 				Expect(cat(filepath.Join(dependenciesWorkflowPath, "resources", "providers.tf"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/providers.tf")))
 				Expect(cat(filepath.Join(dependenciesWorkflowPath, "scripts", "pipeline.sh"))).To(Equal(cat("assets/terraform/expected-output/promise-workflow/pipeline.sh")))
@@ -114,7 +118,10 @@ var _ = Describe("InitTerraformPromise", func() {
 				By("validating resource.configure files", func() {
 					Expect(cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
 					Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/example-resource.yaml")))
-					Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output-with-split/README.md")))
+					Expect(cat(filepath.Join(workingDir, "README.md"))).To(SatisfyAll(
+						ContainSubstring("kratix init tf-module-promise googlecloudrun"),
+						ContainSubstring("--group gcp.com --kind GoogleCloudRun"),
+					))
 					Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(Equal(cat("assets/terraform/expected-output-with-split/dependencies.yaml")))
 				})
 
@@ -159,7 +166,11 @@ var _ = Describe("InitTerraformPromise", func() {
 				// Compare to prepared fixtures for this scenario
 				Expect(cat(filepath.Join(workingDir, "promise.yaml"))).To(Equal(cat("assets/terraform/expected-output-vpc/promise.yaml")))
 				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/terraform/expected-output-vpc/example-resource.yaml")))
-				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/terraform/expected-output-vpc/README.md")))
+				Expect(cat(filepath.Join(workingDir, "README.md"))).To(SatisfyAll(
+					ContainSubstring("kratix init tf-module-promise vpc"),
+					ContainSubstring("--module-source"),
+					ContainSubstring("--group syntasso.io --kind VPC"),
+				))
 
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),

@@ -14,10 +14,14 @@ func TestTest(t *testing.T) {
 }
 
 var binaryPath string
+var stackBinaryPath string
 
 var _ = BeforeSuite(func() {
 	var err error
-	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise")
+	binaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise/program")
+	Expect(err).NotTo(HaveOccurred())
+
+	stackBinaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise/stack")
 	Expect(err).NotTo(HaveOccurred())
 })
 

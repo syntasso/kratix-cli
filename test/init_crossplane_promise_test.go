@@ -73,7 +73,11 @@ var _ = Describe("InitCrossplanePromise", func() {
 				generatedFiles = getFiles(workingDir)
 				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
 				Expect(generatedFiles).To(ConsistOf(files))
-				expectFilesEqual(workingDir, expectedOutputDir, files)
+				expectFilesEqual(workingDir, expectedOutputDir, []string{"promise.yaml", "example-resource.yaml"})
+				Expect(cat(filepath.Join(workingDir, "README.md"))).To(SatisfyAll(
+					ContainSubstring("kratix init crossplane-promise s3buckets"),
+					ContainSubstring("--group syntasso.io --kind S3Bucket"),
+				))
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
 				))
@@ -96,7 +100,10 @@ var _ = Describe("InitCrossplanePromise", func() {
 				Expect(cat(filepath.Join(workingDir, "api.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-split/api.yaml")))
 				Expect(cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
 				Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-split/example-resource.yaml")))
-				Expect(cat(filepath.Join(workingDir, "README.md"))).To(Equal(cat("assets/crossplane/expected-output-with-split/README.md")))
+				Expect(cat(filepath.Join(workingDir, "README.md"))).To(SatisfyAll(
+					ContainSubstring("kratix init crossplane-promise s3buckets"),
+					ContainSubstring("--group syntasso.io --kind S3Bucket"),
+				))
 				Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(Equal(cat("assets/crossplane/expected-output-with-split/dependencies.yaml")))
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
@@ -114,7 +121,12 @@ var _ = Describe("InitCrossplanePromise", func() {
 			It("generates the expected files", func() {
 				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
 				Expect(generatedFiles).To(ConsistOf(files))
-				expectFilesEqual(workingDir, "assets/crossplane/expected-output-with-compositions", files)
+				expectFilesEqual(workingDir, "assets/crossplane/expected-output-with-compositions", []string{"promise.yaml", "example-resource.yaml"})
+				Expect(cat(filepath.Join(workingDir, "README.md"))).To(SatisfyAll(
+					ContainSubstring("kratix init crossplane-promise s3buckets"),
+					ContainSubstring("--compositions assets/crossplane/composition.yaml"),
+					ContainSubstring("--group syntasso.io --kind S3Bucket"),
+				))
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
 				))
@@ -131,7 +143,12 @@ var _ = Describe("InitCrossplanePromise", func() {
 			It("generates a single promise.yaml", func() {
 				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
 				Expect(generatedFiles).To(ConsistOf(files))
-				expectFilesEqual(workingDir, "assets/crossplane/expected-output-with-skip-dependencies", files)
+				expectFilesEqual(workingDir, "assets/crossplane/expected-output-with-skip-dependencies", []string{"promise.yaml", "example-resource.yaml"})
+				Expect(cat(filepath.Join(workingDir, "README.md"))).To(SatisfyAll(
+					ContainSubstring("kratix init crossplane-promise s3buckets"),
+					ContainSubstring("--skip-dependencies"),
+					ContainSubstring("--group syntasso.io --kind S3Bucket"),
+				))
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
 				))

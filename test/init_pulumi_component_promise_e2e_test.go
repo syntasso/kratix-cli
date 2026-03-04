@@ -57,17 +57,25 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 		var pipelines []v1alpha1.Pipeline
 		Expect(yaml.Unmarshal(workflowBytes, &pipelines)).To(Succeed())
 		Expect(pipelines).To(HaveLen(1))
-		Expect(pipelines[0].Spec.Containers).To(HaveLen(1))
+		Expect(pipelines[0].Spec.Containers).To(HaveLen(2))
 
-		container := pipelines[0].Spec.Containers[0]
-		Expect(container.Name).To(Equal("from-api-to-pulumi-pko-program"))
-		Expect(container.Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program:v0.1.0"))
-		Expect(container.Env).To(ContainElements(
+		programContainer := pipelines[0].Spec.Containers[0]
+		Expect(programContainer.Name).To(Equal("pulumi-program-generator"))
+		Expect(programContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"))
+		Expect(programContainer.Command).To(Equal([]string{"/pulumi-program-generator"}))
+		Expect(programContainer.Env).To(ContainElements(
 			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
 			corev1.EnvVar{Name: "PULUMI_SCHEMA_SOURCE", Value: "./schema.valid.json"},
 		))
+		stackContainer := pipelines[0].Spec.Containers[1]
+		Expect(stackContainer.Name).To(Equal("pulumi-stack-generator"))
+		Expect(stackContainer.Image).To(Equal("ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"))
+		Expect(stackContainer.Command).To(Equal([]string{"/pulumi-stack-generator"}))
+		Expect(stackContainer.Env).To(ContainElements(
+			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
+		))
 
-		stageBinaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise")
+		stageBinaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise/program")
 		Expect(err).NotTo(HaveOccurred())
 
 		outputPath := filepath.Join(workingDir, "program-output.yaml")
@@ -76,6 +84,7 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 			"KRATIX_INPUT_FILE="+filepath.Join(workingDir, "example-resource.yaml"),
 			"KRATIX_OUTPUT_FILE="+outputPath,
 			"PULUMI_COMPONENT_TOKEN=pkg:index:Database",
+			"PULUMI_SCHEMA_SOURCE="+filepath.Join(workingDir, "schema.valid.json"),
 		)
 
 		stageSession, err := gexec.Start(stageCmd, GinkgoWriter, GinkgoWriter)
@@ -101,7 +110,7 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 		Expect(programObject.GetName()).To(MatchRegexp(`^example-request-[0-9a-f]{8}$`))
 		Expect(programObject.GetNamespace()).To(Equal("default"))
 
-		resources, found, err := unstructured.NestedMap(programObject.Object, "spec", "resources")
+		resources, found, err := unstructured.NestedMap(programObject.Object, "program", "resources")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(found).To(BeTrue())
 		Expect(resources).To(HaveKey("pkg-index-database"))

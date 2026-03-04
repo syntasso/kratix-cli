@@ -1,0 +1,21 @@
+{
+  "config": {
+    "variables": {
+      "pkg:index:featureFlag": {
+        "type": "boolean",
+        "default": true
+      },
+      "pkg:index:region": {
+        "type": "string",
+        "default": "eu-west-1"
+      },
+      "pkg:index:sensitiveValue": {
+        "type": "string",
+        "secret": true
+      },
+      "pkg:index:typeOnly": {
+        "type": "integer"
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-IMG_TAG ?= ghcr.io/syntasso/kratix-cli/from-api-to-pulumi-pko-program
+IMG_TAG ?= ghcr.io/syntasso/kratix-cli/pulumi-generator
 VERSION ?= dev
 DRY_RUN ?= 0
 # There are dependencies on code elsewhere in this repo
