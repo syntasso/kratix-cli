@@ -2,7 +2,7 @@ package cmd
 
 const (
 	pulumiGeneratorImageRepository = "ghcr.io/syntasso/kratix-cli/pulumi-generator"
-	pulumiGeneratorImageVersion    = "v0.1.0"
+	pulumiGeneratorImageVersion    = "v0.1.1"
 
 	pulumiProgramGeneratorContainerName = "pulumi-program-generator"
 	pulumiStackGeneratorContainerName   = "pulumi-stack-generator"
