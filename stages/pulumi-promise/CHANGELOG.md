@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.0...pulumi-promise-v0.1.1) (2026-03-04)
+
+
+### Features
+
+* PKO program and stack stage output for Pulumi Init workflow ([#210](https://github.com/syntasso/kratix-cli/issues/210)) ([4564971](https://github.com/syntasso/kratix-cli/commit/45649715587401aa3a47e937af4faaae245c7ff7))
+
 ## [0.1.0](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.0...pulumi-promise-v0.1.0) (2026-02-24)
 
 
