@@ -29,7 +29,7 @@ func main() {
 
 func transformInputToProgramOutput(componentToken, schemaSource string) error {
 	inputFile := stage.ResolveInputFilePath()
-	outputFile := stage.ResolveOutputFilePath()
+	outputFile := stage.ResolveProgramOutputFilePath()
 
 	request, err := stage.ReadRequestFromFile(inputFile)
 	if err != nil {

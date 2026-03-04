@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	DefaultInputFilePath  = "/kratix/input/object.yaml"
-	DefaultOutputFilePath = "/kratix/output/object.yaml"
-	DefaultNamespace      = "default"
+	DefaultInputFilePath         = "/kratix/input/object.yaml"
+	DefaultProgramOutputFilePath = "/kratix/output/program.yaml"
+	DefaultStackOutputFilePath   = "/kratix/output/stack.yaml"
+	DefaultNamespace             = "default"
 )
 
 var invalidNameChars = regexp.MustCompile(`[^a-z0-9-]`)

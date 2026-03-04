@@ -12,8 +12,12 @@ func ResolveInputFilePath() string {
 	return GetEnvWithDefault("KRATIX_INPUT_FILE", DefaultInputFilePath)
 }
 
-func ResolveOutputFilePath() string {
-	return GetEnvWithDefault("KRATIX_OUTPUT_FILE", DefaultOutputFilePath)
+func ResolveProgramOutputFilePath() string {
+	return GetEnvWithDefault("KRATIX_OUTPUT_FILE", DefaultProgramOutputFilePath)
+}
+
+func ResolveStackOutputFilePath() string {
+	return GetEnvWithDefault("KRATIX_OUTPUT_FILE", DefaultStackOutputFilePath)
 }
 
 func ReadRequestFromFile(inputFile string) (*unstructured.Unstructured, error) {

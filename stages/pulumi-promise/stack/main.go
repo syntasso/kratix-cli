@@ -25,7 +25,7 @@ func main() {
 
 func transformInputToStackOutput(componentToken string) error {
 	inputFile := stage.ResolveInputFilePath()
-	outputFile := stage.ResolveOutputFilePath()
+	outputFile := stage.ResolveStackOutputFilePath()
 
 	request, err := stage.ReadRequestFromFile(inputFile)
 	if err != nil {

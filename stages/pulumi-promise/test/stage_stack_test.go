@@ -83,12 +83,12 @@ var _ = Describe("From request to Pulumi Stack stage", func() {
 		Expect(session.Err).To(gbytes.Say("failed to read object file from /kratix/input/object.yaml"))
 	})
 
-	It("tries to write to /kratix/output/object.yaml if KRATIX_OUTPUT_FILE is not set", func() {
+	It("tries to write to /kratix/output/stack.yaml if KRATIX_OUTPUT_FILE is not set", func() {
 		delete(envVars, "KRATIX_OUTPUT_FILE")
 		session := runStackWithEnv(envVars)
 
 		Expect(session).To(gexec.Exit(1))
-		Expect(session.Err).To(gbytes.Say("failed to write object file to /kratix/output/object.yaml"))
+		Expect(session.Err).To(gbytes.Say("failed to write object file to /kratix/output/stack.yaml"))
 	})
 
 	It("fails if the Pulumi component token env var is not set", func() {
