@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.14.1](https://github.com/syntasso/kratix-cli/compare/v0.14.0...v0.14.1) (2026-03-04)
+
+
+### Features
+
+* PKO program and stack stage output for Pulumi Init workflow ([#210](https://github.com/syntasso/kratix-cli/issues/210)) ([4564971](https://github.com/syntasso/kratix-cli/commit/45649715587401aa3a47e937af4faaae245c7ff7))
+
+
+### Bug Fixes
+
+* don't error on duplicate paths when listing plugins ([45204d0](https://github.com/syntasso/kratix-cli/commit/45204d03a7890600f5f10cc9741772c4b1b315ec))
+
+
+### Chores
+
+* add pulumi stage to release pipeline ([ae8e1a3](https://github.com/syntasso/kratix-cli/commit/ae8e1a3c297bd12b7113020f26c67a464626ce5f))
+* bump versions for release ([1293c03](https://github.com/syntasso/kratix-cli/commit/1293c03c6d738a1210152b472b4ceb91a2bac2d4))
+* **main:** release pulumi-promise 0.1.1 ([#212](https://github.com/syntasso/kratix-cli/issues/212)) ([97dbc94](https://github.com/syntasso/kratix-cli/commit/97dbc94053ea5cfe994940134dfe5379e9dca187))
+
 ## [0.14.0](https://github.com/syntasso/kratix-cli/compare/v0.13.0...v0.14.0) (2026-02-24)
 
 
