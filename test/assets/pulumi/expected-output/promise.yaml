@@ -25,7 +25,6 @@ spec:
             openAPIV3Schema:
               properties:
                 spec:
-                  default: {}
                   properties:
                     name:
                       type: string

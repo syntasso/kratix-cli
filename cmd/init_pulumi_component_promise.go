@@ -209,7 +209,6 @@ func buildPulumiCRD(specSchema map[string]any) (*apiextensionsv1.CustomResourceD
 	if err := json.Unmarshal(specSchemaBytes, &specProps); err != nil {
 		return nil, fmt.Errorf("build Promise CRD: parse translated schema: %w", err)
 	}
-	specProps.Default = &apiextensionsv1.JSON{Raw: []byte(`{}`)}
 
 	return &apiextensionsv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
