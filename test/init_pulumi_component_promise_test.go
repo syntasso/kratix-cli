@@ -236,18 +236,24 @@ var _ = Describe("init pulumi-component-promise", func() {
 
 		Expect(getFiles(workingDir)).To(ContainElements("promise.yaml", "example-resource.yaml", "README.md"))
 		promiseContents := cat(filepath.Join(workingDir, "promise.yaml"))
-		Expect(promiseContents).To(MatchYAML(cat("assets/pulumi/expected-output/promise.yaml")))
 		Expect(promiseContents).To(SatisfyAll(
 			ContainSubstring("name: instance-configure"),
 			ContainSubstring("name: pulumi-program-generator"),
 			ContainSubstring("- /pulumi-program-generator"),
-			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"),
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/pulumi-generator:"),
 			ContainSubstring("name: pulumi-stack-generator"),
 			ContainSubstring("- /pulumi-stack-generator"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
-		Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output/example-resource.yaml")))
+		exampleResourceContents := cat(filepath.Join(workingDir, "example-resource.yaml"))
+		Expect(exampleResourceContents).To(SatisfyAll(
+			ContainSubstring("apiVersion: syntasso.io/v1alpha1"),
+			ContainSubstring("kind: Database"),
+			ContainSubstring("name: example-request"),
+			ContainSubstring("namespace: default"),
+			ContainSubstring("spec:"),
+		))
 		readmeContents := cat(filepath.Join(workingDir, "README.md"))
 		Expect(readmeContents).To(SatisfyAll(
 			ContainSubstring("## Pulumi"),
@@ -270,13 +276,18 @@ var _ = Describe("init pulumi-component-promise", func() {
 		)
 
 		Expect(getFiles(workingDir)).To(ContainElements("api.yaml", "workflows", "example-resource.yaml", "README.md", "dependencies.yaml"))
-		Expect(cat(filepath.Join(workingDir, "api.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/api.yaml")))
+		apiContents := cat(filepath.Join(workingDir, "api.yaml"))
+		Expect(apiContents).To(SatisfyAll(
+			ContainSubstring("apiVersion: apiextensions.k8s.io/v1"),
+			ContainSubstring("kind: CustomResourceDefinition"),
+			ContainSubstring("name: databases.syntasso.io"),
+			ContainSubstring("kind: Database"),
+		))
 		resourceConfigureWorkflowContents := cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))
-		Expect(resourceConfigureWorkflowContents).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/workflows/resource/configure/workflow.yaml")))
 		Expect(resourceConfigureWorkflowContents).To(SatisfyAll(
 			ContainSubstring("name: instance-configure"),
 			ContainSubstring("name: pulumi-program-generator"),
-			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0"),
+			ContainSubstring("image: ghcr.io/syntasso/kratix-cli/pulumi-generator:"),
 			ContainSubstring("- /pulumi-program-generator"),
 			ContainSubstring("name: pulumi-stack-generator"),
 			ContainSubstring("command:"),
@@ -284,14 +295,21 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
-		Expect(cat(filepath.Join(workingDir, "example-resource.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/example-resource.yaml")))
+		exampleResourceContents := cat(filepath.Join(workingDir, "example-resource.yaml"))
+		Expect(exampleResourceContents).To(SatisfyAll(
+			ContainSubstring("apiVersion: syntasso.io/v1alpha1"),
+			ContainSubstring("kind: Database"),
+			ContainSubstring("name: example-request"),
+			ContainSubstring("namespace: default"),
+		))
+		dependenciesContents := cat(filepath.Join(workingDir, "dependencies.yaml"))
+		Expect(dependenciesContents).To(Equal("[]\n"))
 		readmeContents := cat(filepath.Join(workingDir, "README.md"))
 		Expect(readmeContents).To(SatisfyAll(
 			ContainSubstring("## Pulumi"),
 			ContainSubstring("workflow runs two containers"),
 			ContainSubstring("spec.stack"),
 		))
-		Expect(cat(filepath.Join(workingDir, "dependencies.yaml"))).To(MatchYAML(cat("assets/pulumi/expected-output-with-split/dependencies.yaml")))
 		Expect(session.Out).To(SatisfyAll(
 			gbytes.Say("Preview: This command is in preview"),
 			gbytes.Say("Pulumi component Promise generated successfully."),

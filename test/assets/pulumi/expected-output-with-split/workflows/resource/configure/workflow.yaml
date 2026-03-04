@@ -11,12 +11,12 @@
             value: ./schema.valid.json
         command:
           - /pulumi-program-generator
-        image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0
+        image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.1
         name: pulumi-program-generator
       - env:
           - name: PULUMI_COMPONENT_TOKEN
             value: pkg:index:Database
         command:
           - /pulumi-stack-generator
-        image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.0
+        image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.1
         name: pulumi-stack-generator
