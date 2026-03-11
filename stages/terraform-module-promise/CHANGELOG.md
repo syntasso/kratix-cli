@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.5.0...terraform-module-promise-v0.5.1) (2026-03-11)
+
+
+### Chores
+
+* use go 1.26 in CI and in stages ([#213](https://github.com/syntasso/kratix-cli/issues/213)) ([601c6be](https://github.com/syntasso/kratix-cli/commit/601c6be99458cb596ac12c84bb89622a2251c2ad))
+
 ## [0.5.0](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.4.0...terraform-module-promise-v0.5.0) (2026-01-26)
 
 
