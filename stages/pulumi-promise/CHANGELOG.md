@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.1...pulumi-promise-v0.1.2) (2026-03-11)
+
+
+### Chores
+
+* use go 1.26 in CI and in stages ([#213](https://github.com/syntasso/kratix-cli/issues/213)) ([601c6be](https://github.com/syntasso/kratix-cli/commit/601c6be99458cb596ac12c84bb89622a2251c2ad))
+
 ## [0.1.1](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.0...pulumi-promise-v0.1.1) (2026-03-04)
 
 
