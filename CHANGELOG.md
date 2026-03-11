@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.2](https://github.com/syntasso/kratix-cli/compare/v0.14.1...v0.14.2) (2026-03-11)
+
+
+### Chores
+
+* use go 1.26 in CI and in stages ([#213](https://github.com/syntasso/kratix-cli/issues/213)) ([601c6be](https://github.com/syntasso/kratix-cli/commit/601c6be99458cb596ac12c84bb89622a2251c2ad))
+
 ## [0.14.1](https://github.com/syntasso/kratix-cli/compare/v0.14.0...v0.14.1) (2026-03-04)
 
 
