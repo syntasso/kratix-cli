@@ -348,15 +348,6 @@ func getContainerIdx(pipeline v1alpha1.Pipeline, containerName string) int {
 	return -1
 }
 
-func supportedLanguage(language string) bool {
-	for _, sl := range supportedLanguages {
-		if sl == language {
-			return true
-		}
-	}
-	return false
-}
-
 func getTemplates(containerFileDirectory, containerScriptsDirectory, language string) map[string]string {
 	pipelineScriptFilename := pipelineScriptFilename(language)
 	pipelineScriptTemplateFilepath := fmt.Sprintf("templates/workflows/%s/%s.tpl", language, pipelineScriptFilename)

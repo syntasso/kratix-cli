@@ -47,8 +47,6 @@ var platformGetResourcesCmd = &cobra.Command{
 	},
 }
 
-var k8sQuerier Fetcher
-
 func init() {
 	platformGetCmd.AddCommand(platformGetResourcesCmd)
 }
@@ -98,7 +96,7 @@ func (q K8sQuerier) GetRequests(ctx context.Context, gvr *schema.GroupVersionRes
 	if selector != "" {
 		listOptions.LabelSelector = selector
 	}
-	promiseRequests, err := q.dynamicClient.Resource(*gvr).Namespace(v1.NamespaceAll).List(ctx, v1.ListOptions{})
+	promiseRequests, err := q.dynamicClient.Resource(*gvr).Namespace(v1.NamespaceAll).List(ctx, listOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error listing requests for %q: %w", promiseName, err)
 	}
@@ -171,37 +169,6 @@ func clientsFromFlags(cf *genericclioptions.ConfigFlags) (K8sQuerier, error) {
 		dynamicClient: dynamicClient,
 		mapper:        mapper,
 	}, nil
-}
-
-func listAllKratixGVRs(crdClient apiextensionsclient.Interface) ([]schema.GroupVersionResource, error) {
-	ctx := context.Background()
-	crds, err := crdClient.
-		ApiextensionsV1().
-		CustomResourceDefinitions().
-		List(ctx, v1.ListOptions{LabelSelector: v1alpha1.PromiseNameLabel})
-	if err != nil {
-		return nil, fmt.Errorf("error listing promise CRDs: %w", err)
-	}
-
-	var out []schema.GroupVersionResource
-	for _, crd := range crds.Items {
-		var storageVersion string
-		for _, v := range crd.Spec.Versions {
-			if v.Storage {
-				storageVersion = v.Name
-				break
-			}
-		}
-		if storageVersion == "" {
-			continue
-		}
-		out = append(out, schema.GroupVersionResource{
-			Group:    crd.Spec.Group,
-			Version:  storageVersion,
-			Resource: crd.Spec.Names.Plural,
-		})
-	}
-	return out, nil
 }
 
 func initialiseQuerier(args []Fetcher) (Fetcher, error) {
@@ -287,33 +254,6 @@ func RenderTree(promiseName string, fetcher ...Fetcher) error {
 
 	fmt.Print(b.String())
 	return nil
-}
-
-func gvrForPromise(ctx context.Context, k8sClient client.Client, mapper meta.RESTMapper, promiseName string) (*schema.GroupVersionResource, error) {
-	promise := &v1alpha1.Promise{}
-	err := k8sClient.Get(ctx, types.NamespacedName{Name: promiseName}, promise)
-
-	if errors.IsNotFound(err) {
-		return nil, fmt.Errorf("promise: %s not found", promiseName)
-	}
-	if client.IgnoreNotFound(err) != nil {
-		return nil, fmt.Errorf("error getting promise: %s with error %q", promiseName, err)
-	}
-
-	if !promise.ContainsAPI() {
-		return nil, fmt.Errorf("promise: %s contains no API", promiseName)
-	}
-
-	gvk, _, apiErr := promise.GetAPI()
-	if apiErr != nil {
-		return nil, fmt.Errorf("error generating GVK from promise: %s with error %q", promiseName, apiErr)
-	}
-
-	gvr, err := buildGVR(mapper, gvk.Group, gvk.Version, gvk.Kind)
-	if err != nil {
-		return nil, fmt.Errorf("error generating GroupVersionResource: %q", err)
-	}
-	return &gvr, nil
 }
 
 func buildGVR(mapper meta.RESTMapper, group, version, resource string) (schema.GroupVersionResource, error) {
