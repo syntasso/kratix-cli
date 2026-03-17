@@ -57,7 +57,13 @@ To pull modules from private registries, ensure your system is logged in to the 
   	--group syntasso.io \
 	--kind IAM \
 	--version v1alpha1`,
-		Run:  InitFromTerraformModule,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := InitFromTerraformModule(cmd, args); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				os.Exit(1)
+			}
+			return nil
+		},
 		Args: cobra.ExactArgs(1),
 	}
 
@@ -82,31 +88,27 @@ func init() {
 	terraformModuleCmd.MarkFlagRequired("module-source")
 }
 
-func InitFromTerraformModule(cmd *cobra.Command, args []string) {
+func InitFromTerraformModule(cmd *cobra.Command, args []string) error {
 	fmt.Println("Fetching terraform module variables, this might take up to a minute...")
 
 	if moduleRegistryVersion != "" && !internal.IsTerraformRegistrySource(moduleSource) {
-		fmt.Println("Error: --module-registry-version is only valid for Terraform registry sources like 'namespace/name/provider'. For git URLs (e.g., 'git::https://github.com/org/repo.git?ref=v1.0.0') or local paths, embed the ref directly in --module-source instead.")
-		return
+		return fmt.Errorf("--module-registry-version is only valid for Terraform registry sources like 'namespace/name/provider'. For git URLs (e.g., 'git::https://github.com/org/repo.git?ref=v1.0.0') or local paths, embed the ref directly in --module-source instead.")
 	}
 
 	moduleDir, err := internal.SetupModule(moduleSource, moduleRegistryVersion)
 	if err != nil {
-		fmt.Printf("Error: failed to setup module : %s\n", err)
-		return
+		return fmt.Errorf("failed to setup module: %w", err)
 	}
 	defer os.RemoveAll(moduleDir)
 
 	variables, err := internal.GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion)
 	if err != nil {
-		fmt.Printf("Error: failed to download and convert terraform module to CRD: %s\n", err)
-		return
+		return fmt.Errorf("failed to download and convert terraform module to CRD: %w", err)
 	}
 
 	versionProviderFilepaths, err := internal.GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion, moduleProviders)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		return fmt.Errorf("failed to get versions and providers from module: %w", err)
 	}
 
 	crdSpecSchema, warnings := internal.VariablesToCRDSpecSchema(variables)
@@ -116,31 +118,27 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) {
 
 	crdSchema, err := yaml.Marshal(crdSpecSchema)
 	if err != nil {
-		fmt.Printf("Error: failed to marshal CRD schema: %s\n", err)
-		return
+		return fmt.Errorf("failed to marshal CRD schema: %w", err)
 	}
 
 	var moduleOutputNames []string
 	if generateOutputs {
 		moduleOutputNames, err = internal.GetOutputsFromModule(moduleDir)
 		if err != nil {
-			fmt.Printf("Error: failed to extract module outputs: %s\n", err)
-			return
+			return fmt.Errorf("failed to extract module outputs: %w", err)
 		}
 	}
 
 	resourceConfigure, err := generateTerraformModuleResourceConfigurePipeline(moduleRegistryVersion, generateOutputs, moduleOutputNames)
 	if err != nil {
-		fmt.Printf("Error: failed to generate promise pipelines: %s\n", err)
-		return
+		return fmt.Errorf("failed to generate promise pipelines: %w", err)
 	}
 
 	var promiseConfigure string
 	if len(versionProviderFilepaths) > 1 {
 		promiseConfigure, err = generateTerraformModulePromiseConfigurePipeline()
 		if err != nil {
-			fmt.Printf("Error: failed to generate promise configure pipelines: %s\n", err)
-			return
+			return fmt.Errorf("failed to generate promise configure pipelines: %w", err)
 		}
 	}
 
@@ -154,8 +152,7 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) {
 	}
 	templateValues, err := generateTemplateValues(promiseName, "tf-module-promise", extraFlags, resourceConfigure, promiseConfigure, string(crdSchema))
 	if err != nil {
-		fmt.Printf("Error: failed to generate template values: %s\n", err)
-		return
+		return fmt.Errorf("failed to generate template values: %w", err)
 	}
 	templateValues.DestinationSelectors = "- matchLabels:\n    environment: terraform"
 
@@ -174,17 +171,16 @@ func InitFromTerraformModule(cmd *cobra.Command, args []string) {
 
 	err = templateFiles(promiseTemplates, outputDir, templates, templateValues)
 	if err != nil {
-		fmt.Printf("Error: failed to template files: %s\n", err)
-		return
+		return fmt.Errorf("failed to template files: %w", err)
 	}
 
 	err = writeDependencyFiles(versionProviderFilepaths)
 	if err != nil {
-		fmt.Printf("error writing promise dependencies: %s\n", err)
-		return
+		return fmt.Errorf("failed to write promise dependencies: %w", err)
 	}
 
 	fmt.Println("Promise generated successfully. It is set to schedule to Destinations with the label `environment: terraform` by default. To modify this behavior, update the `.spec.destinationSelectors` field in `promise.yaml`")
+	return nil
 }
 
 func generateTerraformModuleResourceConfigurePipeline(moduleRegistryVersion string, generateOutputs bool, moduleOutputNames []string) (string, error) {
