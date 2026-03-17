@@ -60,7 +60,7 @@ kratix init operator-promise PROMISENAME --group myorg.com --kind database [--ve
 ### init from pulumi component (Preview)
 
 ```bash
-kratix init pulumi-component-promise PROMISENAME --schema PATH_OR_URL --group myorg.com --kind database [--component TOKEN] [--schema-bearer-token-secret SECRET_NAME:KEY] [--version v1] [--plural postgreses] [--split]
+kratix init pulumi-component-promise PROMISENAME --schema PATH_OR_URL --group myorg.com --kind database [--component TOKEN] [--schema-bearer-token-secret SECRET_NAME:KEY] [--stack-access-token-secret SECRET_NAME:KEY] [--version v1] [--plural postgreses] [--split]
 ```
 
 Preview caveats:
@@ -68,6 +68,7 @@ Preview caveats:
 - The generated resource `configure` workflow runs in cluster and expects Pulumi Kubernetes Operator APIs to be available.
 - `PULUMI_SCHEMA_SOURCE` must be reachable by the workflow container at runtime.
 - Use `--schema-bearer-token-secret SECRET_NAME:KEY` when the schema URL needs a bearer token. This wires `PULUMI_ACCESS_TOKEN` from a Kubernetes Secret into the generated `pulumi-program-generator` container.
+- Use `--stack-access-token-secret SECRET_NAME:KEY` when the generated `Stack` must authenticate to Pulumi Cloud. The referenced Secret must exist in the scheduled destination cluster because that is where the Stack is reconciled.
 
 Examples:
 ```bash

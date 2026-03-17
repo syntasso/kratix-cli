@@ -12,8 +12,17 @@ const (
 	stackAPIVersion = "pulumi.com/v1"
 	stackKind       = "Stack"
 
-	pulumiComponentTokenEnvVar = "PULUMI_COMPONENT_TOKEN"
+	pulumiComponentTokenEnvVar        = "PULUMI_COMPONENT_TOKEN"
+	pulumiAccessTokenSecretNameEnvVar = "PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"
+	pulumiAccessTokenSecretKeyEnvVar  = "PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY"
+	pulumiAccessTokenEnvRefFieldName  = "PULUMI_ACCESS_TOKEN"
+	pulumiAccessTokenEnvRefSecretType = "Secret"
 )
+
+type secretKeyRef struct {
+	Name string
+	Key  string
+}
 
 func main() {
 	componentToken := getRequiredEnv(pulumiComponentTokenEnvVar)
@@ -68,6 +77,24 @@ func transformInputToStackOutput(componentToken string) error {
 		return fmt.Errorf("failed to set spec.stack: %w", err)
 	}
 
+	accessTokenSecretRef, err := getOptionalAccessTokenSecretRef()
+	if err != nil {
+		return err
+	}
+	if accessTokenSecretRef != nil {
+		if err := unstructured.SetNestedField(output.Object, map[string]any{
+			pulumiAccessTokenEnvRefFieldName: map[string]any{
+				"type": pulumiAccessTokenEnvRefSecretType,
+				"secret": map[string]any{
+					"name": accessTokenSecretRef.Name,
+					"key":  accessTokenSecretRef.Key,
+				},
+			},
+		}, "spec", "envRefs"); err != nil {
+			return fmt.Errorf("failed to set spec.envRefs: %w", err)
+		}
+	}
+
 	if err := stage.WriteOutputObject(outputFile, stackKind, output); err != nil {
 		log.Printf("failed to write Stack to %q: %v", outputFile, err)
 		return err
@@ -91,4 +118,21 @@ func getRequiredEnv(key string) string {
 		log.Fatalf("missing required environment variable %s", key)
 	}
 	return value
+}
+
+func getOptionalAccessTokenSecretRef() (*secretKeyRef, error) {
+	secretName := stage.GetEnvWithDefault(pulumiAccessTokenSecretNameEnvVar, "")
+	secretKey := stage.GetEnvWithDefault(pulumiAccessTokenSecretKeyEnvVar, "")
+
+	if secretName == "" && secretKey == "" {
+		return nil, nil
+	}
+	if secretName == "" || secretKey == "" {
+		return nil, fmt.Errorf("invalid Pulumi Stack access token secret configuration: set both %s and %s", pulumiAccessTokenSecretNameEnvVar, pulumiAccessTokenSecretKeyEnvVar)
+	}
+
+	return &secretKeyRef{
+		Name: secretName,
+		Key:  secretKey,
+	}, nil
 }

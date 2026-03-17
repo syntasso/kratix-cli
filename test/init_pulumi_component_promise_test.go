@@ -108,6 +108,17 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(session.Err).To(gbytes.Say(`Error: parse --schema-bearer-token-secret: expected SECRET_NAME:KEY`))
 	})
 
+	It("fails when --stack-access-token-secret is not in SECRET_NAME:KEY format", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", singleSchemaPath,
+			"--stack-access-token-secret", "pulumi-api-secret",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: parse --stack-access-token-secret: expected SECRET_NAME:KEY`))
+	})
+
 	It("prints preview warning on valid invocation", func() {
 		session := r.run(
 			"init", "pulumi-component-promise", "mypromise",
@@ -308,6 +319,8 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
 		Expect(resourceConfigureWorkflowContents).NotTo(ContainSubstring("name: PULUMI_ACCESS_TOKEN"))
+		Expect(resourceConfigureWorkflowContents).NotTo(ContainSubstring("name: PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"))
+		Expect(resourceConfigureWorkflowContents).NotTo(ContainSubstring("name: PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY"))
 		exampleResourceContents := cat(filepath.Join(workingDir, "example-resource.yaml"))
 		Expect(exampleResourceContents).To(SatisfyAll(
 			ContainSubstring("apiVersion: syntasso.io/v1alpha1"),
@@ -367,6 +380,34 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("Private schema authentication"),
 			ContainSubstring("--schema-bearer-token-secret pulumi-schema-auth:accessToken"),
 			ContainSubstring("kubectl create secret generic pulumi-schema-auth"),
+		))
+		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
+	It("adds stack access token secret selectors to the stack generator when requested", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "./schema.valid.json",
+			"--stack-access-token-secret", "pulumi-api-secret:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+			"--split",
+		)
+
+		workflowContents := cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))
+		Expect(workflowContents).To(SatisfyAll(
+			ContainSubstring("name: PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"),
+			ContainSubstring("value: pulumi-api-secret"),
+			ContainSubstring("name: PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY"),
+			ContainSubstring("value: accessToken"),
+		))
+
+		readmeContents := cat(filepath.Join(workingDir, "README.md"))
+		Expect(readmeContents).To(SatisfyAll(
+			ContainSubstring("Pulumi Cloud authentication for Stack"),
+			ContainSubstring("Workflow auth and Stack auth are separate concerns."),
+			ContainSubstring("--stack-access-token-secret pulumi-api-secret:accessToken"),
+			ContainSubstring("envRefs:"),
 		))
 		Expect(session.Err).NotTo(gbytes.Say("Error:"))
 	})

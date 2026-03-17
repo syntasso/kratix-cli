@@ -120,4 +120,71 @@ var _ = Describe("init pulumi-component-promise end-to-end preview flow", func()
 		Expect(componentResource).To(HaveKeyWithValue("type", "pkg:index:Database"))
 		Expect(componentResource).To(HaveKeyWithValue("properties", inputSpec))
 	})
+
+	It("wires stack access token config through to the generated Stack output", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "./schema.valid.json",
+			"--stack-access-token-secret", "pulumi-api-secret:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+			"--split",
+		)
+
+		Expect(session.Out).To(SatisfyAll(
+			gbytes.Say("Preview: This command is in preview"),
+			gbytes.Say("Pulumi component Promise generated successfully."),
+		))
+
+		workflowBytes, err := os.ReadFile(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+
+		var pipelines []v1alpha1.Pipeline
+		Expect(yaml.Unmarshal(workflowBytes, &pipelines)).To(Succeed())
+		Expect(pipelines).To(HaveLen(1))
+		Expect(pipelines[0].Spec.Containers).To(HaveLen(2))
+
+		stackContainer := pipelines[0].Spec.Containers[1]
+		Expect(stackContainer.Env).To(ContainElements(
+			corev1.EnvVar{Name: "PULUMI_COMPONENT_TOKEN", Value: "pkg:index:Database"},
+			corev1.EnvVar{Name: "PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME", Value: "pulumi-api-secret"},
+			corev1.EnvVar{Name: "PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY", Value: "accessToken"},
+		))
+
+		stageBinaryPath, err = gexec.Build("github.com/syntasso/kratix-cli/stages/pulumi-promise/stack")
+		Expect(err).NotTo(HaveOccurred())
+
+		outputPath := filepath.Join(workingDir, "stack-output.yaml")
+		stageCmd := exec.Command(stageBinaryPath)
+		stageCmd.Env = append(os.Environ(),
+			"KRATIX_INPUT_FILE="+filepath.Join(workingDir, "example-resource.yaml"),
+			"KRATIX_OUTPUT_FILE="+outputPath,
+			"PULUMI_COMPONENT_TOKEN=pkg:index:Database",
+			"PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME=pulumi-api-secret",
+			"PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY=accessToken",
+		)
+
+		stageSession, err := gexec.Start(stageCmd, GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(stageSession, "10s").Should(gexec.Exit(0))
+
+		outputBytes, err := os.ReadFile(outputPath)
+		Expect(err).NotTo(HaveOccurred())
+
+		stackObject := &unstructured.Unstructured{}
+		Expect(yaml.Unmarshal(outputBytes, stackObject)).To(Succeed())
+		Expect(stackObject.GetAPIVersion()).To(Equal("pulumi.com/v1"))
+		Expect(stackObject.GetKind()).To(Equal("Stack"))
+
+		envRefs, found, err := unstructured.NestedMap(stackObject.Object, "spec", "envRefs")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(found).To(BeTrue())
+		Expect(envRefs).To(HaveKeyWithValue("PULUMI_ACCESS_TOKEN", map[string]any{
+			"type": "Secret",
+			"secret": map[string]any{
+				"name": "pulumi-api-secret",
+				"key":  "accessToken",
+			},
+		}))
+	})
 })

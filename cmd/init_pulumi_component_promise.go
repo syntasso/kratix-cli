@@ -28,6 +28,7 @@ var (
 	pulumiSchemaPath              string
 	pulumiComponent               string
 	pulumiSchemaBearerTokenSecret string
+	pulumiStackAccessTokenSecret  string
 )
 
 type pulumiPromiseTemplateValues struct {
@@ -35,6 +36,7 @@ type pulumiPromiseTemplateValues struct {
 	PulumiGeneratorName      string
 	PulumiStackGeneratorName string
 	SchemaBearerTokenSecret  *secretKeyRef
+	StackAccessTokenSecret   *secretKeyRef
 }
 
 type secretKeyRef struct {
@@ -58,6 +60,7 @@ func init() {
 	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiSchemaPath, "schema", "", "Path or URL to Pulumi package schema")
 	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiComponent, "component", "", "Pulumi component token to use from the schema")
 	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiSchemaBearerTokenSecret, "schema-bearer-token-secret", "", "Secret reference in SECRET_NAME:KEY format to set PULUMI_ACCESS_TOKEN for private schema fetches")
+	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiStackAccessTokenSecret, "stack-access-token-secret", "", "Secret reference in SECRET_NAME:KEY format to set Stack spec.envRefs.PULUMI_ACCESS_TOKEN for Pulumi Cloud access")
 
 	pulumiComponentPromiseCmd.MarkFlagRequired("schema")
 }
@@ -91,6 +94,10 @@ func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 
 func initPulumiComponentPromiseFromSelection(promiseName string, component pulumi.SelectedComponent, specSchema map[string]any) error {
 	schemaBearerTokenSecret, err := parseSecretKeyRefFlag(pulumiSchemaBearerTokenSecret, "schema-bearer-token-secret")
+	if err != nil {
+		return err
+	}
+	stackAccessTokenSecret, err := parseSecretKeyRefFlag(pulumiStackAccessTokenSecret, "stack-access-token-secret")
 	if err != nil {
 		return err
 	}
@@ -148,12 +155,12 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 			Command: []string{
 				pulumiStackGeneratorCommand,
 			},
-			Env: []corev1.EnvVar{
+			Env: append([]corev1.EnvVar{
 				{
 					Name:  "PULUMI_COMPONENT_TOKEN",
 					Value: component.Token,
 				},
-			},
+			}, stackAccessTokenSecretEnvVars(stackAccessTokenSecret)...),
 		},
 	})
 
@@ -185,6 +192,7 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 			PulumiGeneratorName:      pulumiProgramGeneratorContainerName,
 			PulumiStackGeneratorName: pulumiStackGeneratorContainerName,
 			SchemaBearerTokenSecret:  schemaBearerTokenSecret,
+			StackAccessTokenSecret:   stackAccessTokenSecret,
 		},
 	)
 	if err != nil {
@@ -213,6 +221,9 @@ func buildPulumiPromiseExtraFlags() string {
 	}
 	if pulumiSchemaBearerTokenSecret != "" {
 		flags = append(flags, "--schema-bearer-token-secret", shellQuoteArg(pulumiSchemaBearerTokenSecret))
+	}
+	if pulumiStackAccessTokenSecret != "" {
+		flags = append(flags, "--stack-access-token-secret", shellQuoteArg(pulumiStackAccessTokenSecret))
 	}
 	if version != "" {
 		flags = append(flags, "--version", shellQuoteArg(version))
@@ -245,6 +256,23 @@ func parseSecretKeyRefFlag(value, flagName string) (*secretKeyRef, error) {
 		Name: strings.TrimSpace(parts[0]),
 		Key:  strings.TrimSpace(parts[1]),
 	}, nil
+}
+
+func stackAccessTokenSecretEnvVars(secretRef *secretKeyRef) []corev1.EnvVar {
+	if secretRef == nil {
+		return nil
+	}
+
+	return []corev1.EnvVar{
+		{
+			Name:  "PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME",
+			Value: secretRef.Name,
+		},
+		{
+			Name:  "PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY",
+			Value: secretRef.Key,
+		},
+	}
 }
 
 func buildPulumiCRD(specSchema map[string]any) (*apiextensionsv1.CustomResourceDefinition, error) {

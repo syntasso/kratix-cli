@@ -43,39 +43,43 @@ If you need additional Pulumi runtime intent, write and add a custom stage conta
 
 ### Private schema authentication
 
-To fetch a private remote schema, create a Secret in the namespace where this Workflow runs and set `PULUMI_ACCESS_TOKEN` on `{{ .PulumiGeneratorName }}`.
+There are two places where Pulumi code within a Promise may need access to a private registry.
+Workflow auth and Stack auth are separate concerns.
+The Workflow runs in the cluster where Kratix is running.
+The generated `Stack` is reconciled in the scheduled destination cluster, so the referenced Secret must exist in that destination cluster.
 
-Example:
 
-```bash
-kubectl create secret generic pulumi-schema-auth --from-literal=accessToken='<token>'
-```
+### Kratix Workflow runtime
 
-{{- if .SchemaBearerTokenSecret }}
-
-This Promise was generated with `--schema-bearer-token-secret {{ .SchemaBearerTokenSecret.Name }}:{{ .SchemaBearerTokenSecret.Key }}`.
-{{- else }}
-
-To scaffold that env var during init, add `--schema-bearer-token-secret pulumi-schema-auth:accessToken`.
-
-For example:
-
-```bash
-kratix init {{ .SubCommand }} {{ .Name }} --schema <schema-url> --schema-bearer-token-secret pulumi-schema-auth:accessToken --group {{ .Group }} --kind {{ .Kind }}
-```
-{{- end }}
-
-If you are updating an existing Promise manually, add this env var to the `{{ .PulumiGeneratorName }}` container:
-
+This secret is an environment variable in the Kratix Workflow and can be added or changed in the `{{ .PulumiGeneratorName }}` container:
 ```yaml
 - name: PULUMI_ACCESS_TOKEN
   valueFrom:
     secretKeyRef:
-      name: pulumi-schema-auth
-      key: accessToken
+      key: secretKey
+      name: secretName
+```
+
+To use this Promise, ensure the referenced Secret is present in the namespace where this Workflow runs.
+This secret can be populated manually or via the Promise `Dependenices` or `Workflow.Promise.Configure` fields.
+
+### PKO Stack on Destination
+
+When a request is made to this Promise, a PKO stack will be generated and scheduled to a destination.
+On that destination this Stack may need access to a private registry.
+
+This access is set by a separate environment variables in the `{{ .PulumiStackGeneratorName }}` container:
+
+```yaml
+- name: PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME
+  value: stack
+- name: PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY
+  value: token
 ```
 {{ end }}
 
+For this Stack to work as intended, ensure the referenced Secret is present in the namespace where this Workflow runs.
+This secret can be populated manually or via a new container in the `Workflow.Resource.Configure` field.
 
 ## Updating Dependencies
 
