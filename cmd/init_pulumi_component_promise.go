@@ -25,14 +25,21 @@ const (
 )
 
 var (
-	pulumiSchemaPath string
-	pulumiComponent  string
+	pulumiSchemaPath              string
+	pulumiComponent               string
+	pulumiSchemaBearerTokenSecret string
 )
 
 type pulumiPromiseTemplateValues struct {
 	promiseTemplateValues
 	PulumiGeneratorName      string
 	PulumiStackGeneratorName string
+	SchemaBearerTokenSecret  *secretKeyRef
+}
+
+type secretKeyRef struct {
+	Name string
+	Key  string
 }
 
 var pulumiComponentPromiseCmd = &cobra.Command{
@@ -50,6 +57,7 @@ func init() {
 
 	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiSchemaPath, "schema", "", "Path or URL to Pulumi package schema")
 	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiComponent, "component", "", "Pulumi component token to use from the schema")
+	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiSchemaBearerTokenSecret, "schema-bearer-token-secret", "", "Secret reference in SECRET_NAME:KEY format to set PULUMI_ACCESS_TOKEN for private schema fetches")
 
 	pulumiComponentPromiseCmd.MarkFlagRequired("schema")
 }
@@ -82,6 +90,11 @@ func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 }
 
 func initPulumiComponentPromiseFromSelection(promiseName string, component pulumi.SelectedComponent, specSchema map[string]any) error {
+	schemaBearerTokenSecret, err := parseSecretKeyRefFlag(pulumiSchemaBearerTokenSecret, "schema-bearer-token-secret")
+	if err != nil {
+		return err
+	}
+
 	extraFlags := buildPulumiPromiseExtraFlags()
 
 	if version == "" {
@@ -96,6 +109,30 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 		return err
 	}
 
+	programEnv := []corev1.EnvVar{
+		{
+			Name:  "PULUMI_COMPONENT_TOKEN",
+			Value: component.Token,
+		},
+		{
+			Name:  "PULUMI_SCHEMA_SOURCE",
+			Value: pulumiSchemaPath,
+		},
+	}
+	if schemaBearerTokenSecret != nil {
+		programEnv = append(programEnv, corev1.EnvVar{
+			Name: "PULUMI_ACCESS_TOKEN",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: schemaBearerTokenSecret.Name,
+					},
+					Key: schemaBearerTokenSecret.Key,
+				},
+			},
+		})
+	}
+
 	pipelines := generateResourceConfigurePipelinesWithContainers([]v1alpha1.Container{
 		{
 			Name:  pulumiProgramGeneratorContainerName,
@@ -103,16 +140,7 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 			Command: []string{
 				pulumiProgramGeneratorCommand,
 			},
-			Env: []corev1.EnvVar{
-				{
-					Name:  "PULUMI_COMPONENT_TOKEN",
-					Value: component.Token,
-				},
-				{
-					Name:  "PULUMI_SCHEMA_SOURCE",
-					Value: pulumiSchemaPath,
-				},
-			},
+			Env: programEnv,
 		},
 		{
 			Name:  pulumiStackGeneratorContainerName,
@@ -156,6 +184,7 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 			promiseTemplateValues:    baseReadmeTemplateValues(pulumiComponentPromiseCommandName, extraFlags, promiseName, crd),
 			PulumiGeneratorName:      pulumiProgramGeneratorContainerName,
 			PulumiStackGeneratorName: pulumiStackGeneratorContainerName,
+			SchemaBearerTokenSecret:  schemaBearerTokenSecret,
 		},
 	)
 	if err != nil {
@@ -182,6 +211,9 @@ func buildPulumiPromiseExtraFlags() string {
 	if pulumiComponent != "" {
 		flags = append(flags, "--component", shellQuoteArg(pulumiComponent))
 	}
+	if pulumiSchemaBearerTokenSecret != "" {
+		flags = append(flags, "--schema-bearer-token-secret", shellQuoteArg(pulumiSchemaBearerTokenSecret))
+	}
 	if version != "" {
 		flags = append(flags, "--version", shellQuoteArg(version))
 	}
@@ -197,6 +229,22 @@ func buildPulumiPromiseExtraFlags() string {
 
 func shellQuoteArg(arg string) string {
 	return "'" + strings.ReplaceAll(arg, "'", `'"'"'`) + "'"
+}
+
+func parseSecretKeyRefFlag(value, flagName string) (*secretKeyRef, error) {
+	if value == "" {
+		return nil, nil
+	}
+
+	parts := strings.SplitN(value, ":", 2)
+	if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
+		return nil, fmt.Errorf("parse --%s: expected SECRET_NAME:KEY", flagName)
+	}
+
+	return &secretKeyRef{
+		Name: strings.TrimSpace(parts[0]),
+		Key:  strings.TrimSpace(parts[1]),
+	}, nil
 }
 
 func buildPulumiCRD(specSchema map[string]any) (*apiextensionsv1.CustomResourceDefinition, error) {

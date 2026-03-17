@@ -40,6 +40,40 @@ The `Stack` container writes deterministic metadata passthrough, `spec.programRe
 
 This PKO object generation introduces no additional required environment variables for either the Program or Stack.
 If you need additional Pulumi runtime intent, write and add a custom stage container to the Workflow that updates the generated Program or Stack before it is written to stage output.
+
+### Private schema authentication
+
+To fetch a private remote schema, create a Secret in the namespace where this Workflow runs and set `PULUMI_ACCESS_TOKEN` on `{{ .PulumiGeneratorName }}`.
+
+Example:
+
+```bash
+kubectl create secret generic pulumi-schema-auth --from-literal=accessToken='<token>'
+```
+
+{{- if .SchemaBearerTokenSecret }}
+
+This Promise was generated with `--schema-bearer-token-secret {{ .SchemaBearerTokenSecret.Name }}:{{ .SchemaBearerTokenSecret.Key }}`.
+{{- else }}
+
+To scaffold that env var during init, add `--schema-bearer-token-secret pulumi-schema-auth:accessToken`.
+
+For example:
+
+```bash
+kratix init {{ .SubCommand }} {{ .Name }} --schema <schema-url> --schema-bearer-token-secret pulumi-schema-auth:accessToken --group {{ .Group }} --kind {{ .Kind }}
+```
+{{- end }}
+
+If you are updating an existing Promise manually, add this env var to the `{{ .PulumiGeneratorName }}` container:
+
+```yaml
+- name: PULUMI_ACCESS_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: pulumi-schema-auth
+      key: accessToken
+```
 {{ end }}
 
 
