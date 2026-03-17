@@ -477,8 +477,8 @@ func expectPipeline(pipeline v1alpha1.Pipeline,
 	name string,
 	containerCount int,
 ) {
-	ExpectWithOffset(1, pipeline.Name).To(Equal("pipeline0"))
-	ExpectWithOffset(1, pipeline.Spec.Containers).To(HaveLen(1))
+	ExpectWithOffset(1, pipeline.Name).To(Equal(name))
+	ExpectWithOffset(1, pipeline.Spec.Containers).To(HaveLen(containerCount))
 }
 
 func expectContainerProperties(container v1alpha1.Container, image string, name string) {

@@ -1,6 +1,7 @@
 package run_test
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -155,6 +156,26 @@ var _ = Describe("From TF module to Promise Stage", func() {
 			Eventually(session).Should(gexec.Exit())
 			Expect(session.ExitCode()).NotTo(Equal(0))
 			Expect(session.Err).To(gbytes.Say("MODULE_REGISTRY_VERSION is only valid for Terraform registry sources"))
+		})
+
+		It("adds output block when MODULE_OUTPUT_NAMES is set", func() {
+			envVars["MODULE_OUTPUT_NAMES"] = "s3_bucket_id,s3_bucket_bucket_regional_domain_name"
+			session := runWithEnv(envVars)
+			Eventually(session).Should(gexec.Exit())
+			Expect(session.Buffer()).To(gbytes.Say("Terraform JSON configuration written to %s/testobject_non-default_test-object.tf.json", tmpDir))
+			Expect(session).To(gexec.Exit(0))
+			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
+			Expect(err).NotTo(HaveOccurred())
+			var parsed map[string]any
+			Expect(json.Unmarshal(output, &parsed)).To(Succeed())
+			Expect(parsed).To(HaveKey("output"))
+			outputBlock := parsed["output"].(map[string]any)
+			// Output names are prefixed with the resource identifier to avoid collisions when multiple resources share a directory
+			uniquePrefix := "testobject_non-default_test-object"
+			Expect(outputBlock).To(HaveKey(uniquePrefix + "_s3_bucket_id"))
+			Expect(outputBlock[uniquePrefix+"_s3_bucket_id"].(map[string]any)["value"]).To(Equal("${module.testobject_non-default_test-object.s3_bucket_id}"))
+			Expect(outputBlock).To(HaveKey(uniquePrefix + "_s3_bucket_bucket_regional_domain_name"))
+			Expect(outputBlock[uniquePrefix+"_s3_bucket_bucket_regional_domain_name"].(map[string]any)["value"]).To(Equal("${module.testobject_non-default_test-object.s3_bucket_bucket_regional_domain_name}"))
 		})
 	})
 

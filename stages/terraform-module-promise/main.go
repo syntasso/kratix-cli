@@ -17,8 +17,22 @@ func main() {
 	workflowType := GetEnv("KRATIX_WORKFLOW_TYPE", "/kratix/input/object.yaml")
 
 	if workflowType == "resource" {
-		resource_workflow_configuration(outputDir)
+		runResourceworkflow(outputDir)
 	}
+}
+
+// parseOutputNames splits a comma-separated list of output names, trimming whitespace.
+func parseOutputNames(env string) []string {
+	if env == "" {
+		return nil
+	}
+	var names []string
+	for s := range strings.SplitSeq(env, ",") {
+		if trimmed := strings.TrimSpace(s); trimmed != "" {
+			names = append(names, trimmed)
+		}
+	}
+	return names
 }
 
 // GetEnv retrieves an environment variable or returns a default value if not set
@@ -36,8 +50,8 @@ func MustHaveEnv(key string) string {
 	panic(fmt.Sprintf("Error: %s environment variable is not set", key))
 }
 
-func resource_workflow_configuration(outputDir string) {
-	yamlFile := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
+func runResourceworkflow(outputDir string) {
+	inputObjectFilepath := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
 	moduleRegistryVersion := os.Getenv("MODULE_REGISTRY_VERSION")
 
@@ -45,25 +59,25 @@ func resource_workflow_configuration(outputDir string) {
 		log.Fatalf("MODULE_REGISTRY_VERSION is only valid for Terraform registry sources (e.g., \"namespace/name/provider\"). For git or local sources, embed the version ref directly in MODULE_SOURCE (e.g., \"git::https://github.com/org/repo.git?ref=v1.2.3\"). Provided module_source=%q", moduleSource)
 	}
 
-	yamlContent, err := os.ReadFile(yamlFile)
+	inputObject, err := os.ReadFile(inputObjectFilepath)
 	if err != nil {
-		log.Fatalf("Error reading YAML file %s: %v\n", yamlFile, err)
+		log.Fatalf("Error reading YAML file %s: %v\n", inputObjectFilepath, err)
 	}
 
-	var data map[string]any
-	err = yaml.Unmarshal(yamlContent, &data)
+	var inputObjectData map[string]any
+	err = yaml.Unmarshal(inputObject, &inputObjectData)
 	if err != nil {
 		log.Fatalf("Error parsing YAML file: %v\n", err)
 	}
 
-	metadata, ok := data["metadata"].(map[string]any)
+	metadata, ok := inputObjectData["metadata"].(map[string]any)
 	if !ok {
 		log.Fatalf("Error: metadata section not found in YAML file")
 	}
 
 	namespace, _ := metadata["namespace"].(string)
 	name, _ := metadata["name"].(string)
-	kind, _ := data["kind"].(string)
+	kind, _ := inputObjectData["kind"].(string)
 
 	if namespace == "" || name == "" || kind == "" {
 		log.Fatalf("Error: metadata.namespace, metadata.name, or kind is missing")
@@ -71,32 +85,45 @@ func resource_workflow_configuration(outputDir string) {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	module := map[string]map[string]map[string]any{
-		"module": {
-			uniqueFileName: {
+	config := map[string]any{
+		"module": map[string]any{
+			uniqueFileName: map[string]any{
 				"source": moduleSource,
 			},
 		},
 	}
+	moduleBlock := config["module"].(map[string]any)
+	moduleInstance := moduleBlock[uniqueFileName].(map[string]any)
 
 	if moduleRegistryVersion != "" {
-		module["module"][uniqueFileName]["version"] = moduleRegistryVersion
+		moduleInstance["version"] = moduleRegistryVersion
 	}
 
 	// Handle spec if it exists
-	if spec, ok := data["spec"].(map[string]any); ok {
+	if spec, ok := inputObjectData["spec"].(map[string]any); ok {
 		for key, value := range spec {
 			valSlice, ok := value.([]any)
 			// 1. if its not an array and its not nil, add it to the module
 			// 2. if its an array and its not empty, add it to the module
 			// this gets around adding a bunch of empty arrays to the module
 			if (!ok && value != nil) || (ok && len(valSlice) > 0) {
-				module["module"][uniqueFileName][key] = value
+				moduleInstance[key] = value
 			}
 		}
 	}
 
-	jsonData, err := json.MarshalIndent(module, "", "  ")
+	if outputNames := parseOutputNames(os.Getenv("MODULE_OUTPUT_NAMES")); len(outputNames) > 0 {
+		outputBlock := make(map[string]any)
+		for _, name := range outputNames {
+			uniqueOutputName := uniqueFileName + "_" + name
+			outputBlock[uniqueOutputName] = map[string]any{
+				"value": fmt.Sprintf("${module.%s.%s}", uniqueFileName, name),
+			}
+		}
+		config["output"] = outputBlock
+	}
+
+	jsonData, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		log.Fatalf("Error generating JSON: %v\n", err)
 	}

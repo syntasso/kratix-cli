@@ -9,6 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/syntasso/kratix/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("InitTerraformPromise", func() {
@@ -131,7 +133,7 @@ var _ = Describe("InitTerraformPromise", func() {
 			})
 		})
 
-		Describe("with module-path on Cloud Foundation Fabric", func() {
+		When("the --module-source includes a subdirectory path", func() {
 			var vpcCmd []string
 			BeforeEach(func() {
 				r.flags = map[string]string{
@@ -175,6 +177,46 @@ var _ = Describe("InitTerraformPromise", func() {
 				Expect(session.Out).To(SatisfyAll(
 					gbytes.Say(`Promise generated successfully.`),
 				))
+			})
+		})
+
+		Describe("the --generate-outputs flag", func() {
+			When("used with the S3 module which has outputs.tf", func() {
+				BeforeEach(func() {
+					r.flags = map[string]string{
+						"--group":            "example.syntasso.io",
+						"--kind":             "S3",
+						"--version":          "v1alpha1",
+						"--dir":              workingDir,
+						"--module-source":    "git::https://github.com/terraform-aws-modules/terraform-aws-s3-bucket.git?ref=v5.10.0",
+						"--generate-outputs": "",
+					}
+					initPromiseCmd = []string{"init", "tf-module-promise", "s3"}
+					r.timeout = time.Minute
+				})
+
+				It("sets MODULE_OUTPUT_NAMES in the workflow with all outputs from outputs.tf", func() {
+					session := r.run(initPromiseCmd...)
+					Expect(session.Out).To(SatisfyAll(
+						gbytes.Say(`Promise generated successfully.`),
+					))
+
+					Expect(filepath.Join(workingDir, "promise.yaml")).To(BeAnExistingFile())
+					workflows := getWorkflows(workingDir)
+					Expect(workflows[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure][0].Spec.Containers).To(HaveLen(1))
+					containerEnv := workflows[v1alpha1.WorkflowTypeResource][v1alpha1.WorkflowActionConfigure][0].Spec.Containers[0].Env
+					var outputNamesEnv *corev1.EnvVar
+					for i := range containerEnv {
+						if containerEnv[i].Name == "MODULE_OUTPUT_NAMES" {
+							outputNamesEnv = &containerEnv[i]
+							break
+						}
+					}
+					Expect(outputNamesEnv).NotTo(BeNil())
+					Expect(outputNamesEnv.Value).To(ContainSubstring("s3_bucket_id"))
+					Expect(outputNamesEnv.Value).To(ContainSubstring("s3_bucket_bucket_regional_domain_name"))
+					Expect(outputNamesEnv.Value).To(ContainSubstring("s3_bucket_tags"))
+				})
 			})
 		})
 	})
