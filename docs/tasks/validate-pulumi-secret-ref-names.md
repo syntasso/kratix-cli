@@ -35,7 +35,7 @@ Out of scope:
 Example error shape:
 
 ```text
-parse --schema-bearer-token-secret: secret name "Pulumi_Secret" is not a valid Kubernetes Secret name
+parse --schema-bearer-token-secret: secret name "Pulumi_Secret" is not a valid Kubernetes Secret name. SECRET_NAME must be a valid Kubernetes Secret name (DNS-1123 subdomain, for example pulumi-schema-auth).
 ```
 
 Implementation note:
