@@ -66,8 +66,11 @@ func GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion strin
 // returns an empty slice.
 func GetOutputsFromModule(moduleDir string) ([]string, error) {
 	outputsPath := filepath.Join(moduleDir, "outputs.tf")
-	if _, err := os.Stat(outputsPath); os.IsNotExist(err) {
-		return []string{}, nil
+	if _, err := os.Stat(outputsPath); err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return nil, fmt.Errorf("failed to stat outputs file: %w", err)
 	}
 	outputs, err := extractOutputsFromFile(outputsPath)
 	if err != nil {

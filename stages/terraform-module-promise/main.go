@@ -17,7 +17,7 @@ func main() {
 	workflowType := GetEnv("KRATIX_WORKFLOW_TYPE", "/kratix/input/object.yaml")
 
 	if workflowType == "resource" {
-		runResourceworkflow(outputDir)
+		runResourceWorkflow(outputDir)
 	}
 }
 
@@ -50,7 +50,7 @@ func MustHaveEnv(key string) string {
 	panic(fmt.Sprintf("Error: %s environment variable is not set", key))
 }
 
-func runResourceworkflow(outputDir string) {
+func runResourceWorkflow(outputDir string) {
 	inputObjectFilepath := GetEnv("KRATIX_INPUT_FILE", "/kratix/input/object.yaml")
 	moduleSource := MustHaveEnv("MODULE_SOURCE")
 	moduleRegistryVersion := os.Getenv("MODULE_REGISTRY_VERSION")

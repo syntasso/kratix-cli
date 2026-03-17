@@ -78,7 +78,7 @@ func init() {
 	terraformModuleCmd.Flags().StringSliceVarP(&moduleProviders, "module-providers", "", []string{}, "(Optional) the names of any files containing Terraform provider block; "+
 		"defaults to versions.tf and providers.tf",
 	)
-	terraformModuleCmd.Flags().BoolVarP(&generateOutputs, "generate-outputs", "", false, "(Optional) generate output files for the Terraform module")
+	terraformModuleCmd.Flags().BoolVarP(&generateOutputs, "generate-outputs", "", false, "(Optional) generate Terraform 'output' blocks for the module")
 	terraformModuleCmd.MarkFlagRequired("module-source")
 }
 
