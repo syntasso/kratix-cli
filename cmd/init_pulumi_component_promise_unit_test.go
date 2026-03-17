@@ -70,4 +70,11 @@ func TestParseSecretKeyRefFlag(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("returns a helpful error for an invalid Kubernetes Secret name", func(t *testing.T) {
+		_, err := parseSecretKeyRefFlag("Pulumi_Secret:accessToken", "schema-bearer-token-secret")
+		if err == nil || err.Error() != `parse --schema-bearer-token-secret: secret name "Pulumi_Secret" is not a valid Kubernetes Secret name. SECRET_NAME must be a valid Kubernetes Secret name (DNS-1123 subdomain, for example pulumi-schema-auth).` {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }

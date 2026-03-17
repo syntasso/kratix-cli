@@ -108,6 +108,18 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(session.Err).To(gbytes.Say(`Error: parse --schema-bearer-token-secret: expected SECRET_NAME:KEY`))
 	})
 
+	It("fails when --schema-bearer-token-secret uses an invalid Kubernetes Secret name", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", singleSchemaPath,
+			"--schema-bearer-token-secret", "PulumiSecret:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: parse --schema-bearer-token-secret: secret name "PulumiSecret" is not a valid Kubernetes Secret name. SECRET_NAME must be a valid Kubernetes Secret name \(DNS-1123 subdomain, for example pulumi-schema-auth\)\.`))
+		Expect(getFiles(workingDir)).NotTo(ContainElements("promise.yaml", "example-resource.yaml", "README.md", "api.yaml", "dependencies.yaml", "workflows"))
+	})
+
 	It("fails when --stack-access-token-secret is not in SECRET_NAME:KEY format", func() {
 		session := withExitCode(1).run(
 			"init", "pulumi-component-promise", "mypromise",
@@ -117,6 +129,18 @@ var _ = Describe("init pulumi-component-promise", func() {
 			"--kind", "Database",
 		)
 		Expect(session.Err).To(gbytes.Say(`Error: parse --stack-access-token-secret: expected SECRET_NAME:KEY`))
+	})
+
+	It("fails when --stack-access-token-secret uses an invalid Kubernetes Secret name", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", singleSchemaPath,
+			"--stack-access-token-secret", "pulumi.secret-:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: parse --stack-access-token-secret: secret name "pulumi.secret-" is not a valid Kubernetes Secret name. SECRET_NAME must be a valid Kubernetes Secret name \(DNS-1123 subdomain, for example pulumi-schema-auth\)\.`))
+		Expect(getFiles(workingDir)).NotTo(ContainElements("promise.yaml", "example-resource.yaml", "README.md", "api.yaml", "dependencies.yaml", "workflows"))
 	})
 
 	It("prints preview warning on valid invocation", func() {
@@ -378,8 +402,8 @@ var _ = Describe("init pulumi-component-promise", func() {
 		readmeContents := cat(filepath.Join(workingDir, "README.md"))
 		Expect(readmeContents).To(SatisfyAll(
 			ContainSubstring("Private schema authentication"),
-			ContainSubstring("--schema-bearer-token-secret pulumi-schema-auth:accessToken"),
-			ContainSubstring("kubectl create secret generic pulumi-schema-auth"),
+			ContainSubstring("--schema-bearer-token-secret 'pulumi-schema-auth:accessToken'"),
+			ContainSubstring("### Kratix Workflow runtime"),
 		))
 		Expect(session.Err).NotTo(gbytes.Say("Error:"))
 	})
@@ -404,10 +428,10 @@ var _ = Describe("init pulumi-component-promise", func() {
 
 		readmeContents := cat(filepath.Join(workingDir, "README.md"))
 		Expect(readmeContents).To(SatisfyAll(
-			ContainSubstring("Pulumi Cloud authentication for Stack"),
+			ContainSubstring("### PKO Stack on Destination"),
 			ContainSubstring("Workflow auth and Stack auth are separate concerns."),
-			ContainSubstring("--stack-access-token-secret pulumi-api-secret:accessToken"),
-			ContainSubstring("envRefs:"),
+			ContainSubstring("--stack-access-token-secret 'pulumi-api-secret:accessToken'"),
+			ContainSubstring("PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"),
 		))
 		Expect(session.Err).NotTo(gbytes.Say("Error:"))
 	})

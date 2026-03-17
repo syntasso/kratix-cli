@@ -12,6 +12,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
@@ -252,10 +253,23 @@ func parseSecretKeyRefFlag(value, flagName string) (*secretKeyRef, error) {
 		return nil, fmt.Errorf("parse --%s: expected SECRET_NAME:KEY", flagName)
 	}
 
+	secretName := strings.TrimSpace(parts[0])
+	if err := validateKubernetesSecretName(secretName, flagName); err != nil {
+		return nil, err
+	}
+
 	return &secretKeyRef{
-		Name: strings.TrimSpace(parts[0]),
+		Name: secretName,
 		Key:  strings.TrimSpace(parts[1]),
 	}, nil
+}
+
+func validateKubernetesSecretName(secretName, flagName string) error {
+	if len(validation.IsDNS1123Subdomain(secretName)) > 0 {
+		return fmt.Errorf("parse --%s: secret name %q is not a valid Kubernetes Secret name. SECRET_NAME must be a valid Kubernetes Secret name (DNS-1123 subdomain, for example pulumi-schema-auth).", flagName, secretName)
+	}
+
+	return nil
 }
 
 func stackAccessTokenSecretEnvVars(secretRef *secretKeyRef) []corev1.EnvVar {
