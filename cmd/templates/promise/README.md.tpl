@@ -61,7 +61,7 @@ This secret is an environment variable in the Kratix Workflow and can be added o
 ```
 
 To use this Promise, ensure the referenced Secret is present in the namespace where this Workflow runs.
-This secret can be populated manually or via the Promise `Dependenices` or `Workflow.Promise.Configure` fields.
+This secret can be populated manually or via the Promise `Dependencies` or `Workflow.Promise.Configure` fields.
 
 ### PKO Stack on Destination
 
@@ -79,7 +79,7 @@ This access is set by a separate environment variables in the `{{ .PulumiStackGe
 {{ end }}
 
 For this Stack to work as intended, ensure the referenced Secret is present in the namespace where this Workflow runs.
-This secret can be populated manually or via a new container in the `Workflow.Resource.Configure` field.
+This secret can be populated manually or via a new container in the `Workflow.Promise.Configure` field if it is common to all resources or the `Workflow.Resource.Configure` if it is unique per request.
 
 ## Updating Dependencies
 

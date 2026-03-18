@@ -22,6 +22,9 @@ const (
 
   # initialize a new promise from a remote Pulumi package schema
   kratix init pulumi-component-promise mypromise --schema https://www.pulumi.com/registry/packages/aws-iam/schema.json --component aws-iam:index:User --group syntasso.io --kind User
+
+  # initialize a new promise from a private Pulumi package schema
+  kratix init pulumi-component-promise mypromise --schema https://github.com/acme/k8s-cluster/schema.json --component k8s:index:Cluster --group acme.io --kind User --stack-access-token-secret acme-gh:token  --kind User --schema-bearer-token-secret acme-gh:token
 `
 )
 
@@ -46,7 +49,7 @@ type secretKeyRef struct {
 }
 
 var pulumiComponentPromiseCmd = &cobra.Command{
-	Use:   pulumiComponentPromiseCommandName + " PROMISE-NAME --schema PATH_OR_URL --group PROMISE-API-GROUP --kind PROMISE-API-KIND [--component TOKEN] [--version] [--plural] [--split] [--dir DIR]",
+	Use:   pulumiComponentPromiseCommandName + " PROMISE-NAME --schema PATH_OR_URL --group PROMISE-API-GROUP --kind PROMISE-API-KIND [--component TOKEN] [--schema-bearer-token-secret] [--stack-access-token-secret] [--version] [--plural] [--split] [--dir DIR]",
 	Short: "Preview: Initialize a new Promise from a Pulumi package schema",
 	Long: "Preview: Initialize a new Promise from a Pulumi package schema. " +
 		"This command is in preview, not supported under SLAs, and may change or break without notice.",
