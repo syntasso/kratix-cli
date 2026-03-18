@@ -75,6 +75,37 @@ var _ = Describe("From request to Pulumi Stack stage", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(found).To(BeTrue())
 		Expect(stackName).To(MatchRegexp("^test-object-[0-9a-f]{8}-stack$"))
+
+		_, found, err = unstructured.NestedMap(stackObject.Object, "spec", "envRefs")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(found).To(BeFalse())
+	})
+
+	It("adds Pulumi Cloud envRefs when the secret env vars are set", func() {
+		envVars["PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"] = "pulumi-api-secret"
+		envVars["PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY"] = "accessToken"
+
+		session := runStackWithEnv(envVars)
+		Expect(session).To(gexec.Exit(0))
+
+		outputBytes, err := os.ReadFile(envVars["KRATIX_OUTPUT_FILE"])
+		Expect(err).NotTo(HaveOccurred())
+
+		stackObject := &unstructured.Unstructured{}
+		Expect(yaml.Unmarshal(outputBytes, stackObject)).To(Succeed())
+
+		envRefs, found, err := unstructured.NestedMap(stackObject.Object, "spec", "envRefs")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(found).To(BeTrue())
+		Expect(envRefs).To(HaveKey("PULUMI_ACCESS_TOKEN"))
+
+		accessTokenRef, ok := envRefs["PULUMI_ACCESS_TOKEN"].(map[string]any)
+		Expect(ok).To(BeTrue())
+		Expect(accessTokenRef).To(HaveKeyWithValue("type", "Secret"))
+		Expect(accessTokenRef).To(HaveKeyWithValue("secret", map[string]any{
+			"name": "pulumi-api-secret",
+			"key":  "accessToken",
+		}))
 	})
 
 	It("tries to read from /kratix/input/object.yaml if KRATIX_INPUT_FILE is not set", func() {
@@ -99,6 +130,14 @@ var _ = Describe("From request to Pulumi Stack stage", func() {
 
 		Expect(session).To(gexec.Exit(1))
 		Expect(session.Err).To(gbytes.Say("missing required environment variable PULUMI_COMPONENT_TOKEN"))
+	})
+
+	It("fails when only one Stack access token secret env var is set", func() {
+		envVars["PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"] = "pulumi-api-secret"
+		session := runStackWithEnv(envVars)
+
+		Expect(session).To(gexec.Exit(1))
+		Expect(session.Err).To(gbytes.Say("invalid Pulumi Stack access token secret configuration"))
 	})
 
 })

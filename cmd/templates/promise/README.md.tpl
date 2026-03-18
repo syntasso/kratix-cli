@@ -40,8 +40,47 @@ The `Stack` container writes deterministic metadata passthrough, `spec.programRe
 
 This PKO object generation introduces no additional required environment variables for either the Program or Stack.
 If you need additional Pulumi runtime intent, write and add a custom stage container to the Workflow that updates the generated Program or Stack before it is written to stage output.
+
+### Private schema authentication
+
+There are two places where Pulumi code within a Promise may need access to a private registry.
+Workflow auth and Stack auth are separate concerns.
+The Workflow runs in the cluster where Kratix is running.
+The generated `Stack` is reconciled in the scheduled destination cluster, so the referenced Secret must exist in that destination cluster.
+
+
+### Kratix Workflow runtime
+
+This secret is an environment variable in the Kratix Workflow and can be added or changed in the `{{ .PulumiGeneratorName }}` container:
+```yaml
+- name: PULUMI_ACCESS_TOKEN
+  valueFrom:
+    secretKeyRef:
+      key: secretKey
+      name: secretName
+```
+
+To use this Promise, ensure the referenced Secret is present in the namespace where this Workflow runs.
+This secret can be populated manually or via the Promise `Dependencies` or `Workflow.Promise.Configure` fields.
+Bearer-token schema authentication is only supported for HTTPS schema URLs.
+
+### PKO Stack on Destination
+
+When a request is made to this Promise, a PKO stack will be generated and scheduled to a destination.
+On that destination this Stack may need access to a private registry.
+
+This access is set by a separate environment variables in the `{{ .PulumiStackGeneratorName }}` container:
+
+```yaml
+- name: PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME
+  value: stack
+- name: PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY
+  value: token
+```
 {{ end }}
 
+For this Stack to work as intended, ensure the referenced Secret is present in the namespace where this Workflow runs.
+This secret can be populated manually or via a new container in the `Workflow.Promise.Configure` field if it is common to all resources or the `Workflow.Resource.Configure` if it is unique per request.
 
 ## Updating Dependencies
 

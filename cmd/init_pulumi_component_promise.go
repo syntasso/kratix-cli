@@ -12,6 +12,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
@@ -21,22 +22,34 @@ const (
 
   # initialize a new promise from a remote Pulumi package schema
   kratix init pulumi-component-promise mypromise --schema https://www.pulumi.com/registry/packages/aws-iam/schema.json --component aws-iam:index:User --group syntasso.io --kind User
+
+  # initialize a new promise from a private Pulumi package schema
+  kratix init pulumi-component-promise mypromise --schema https://github.com/acme/k8s-cluster/schema.json --component k8s:index:Cluster --group acme.io --kind User --stack-access-token-secret acme-gh:token  --kind User --schema-bearer-token-secret acme-gh:token
 `
 )
 
 var (
-	pulumiSchemaPath string
-	pulumiComponent  string
+	pulumiSchemaPath              string
+	pulumiComponent               string
+	pulumiSchemaBearerTokenSecret string
+	pulumiStackAccessTokenSecret  string
 )
 
 type pulumiPromiseTemplateValues struct {
 	promiseTemplateValues
 	PulumiGeneratorName      string
 	PulumiStackGeneratorName string
+	SchemaBearerTokenSecret  *secretKeyRef
+	StackAccessTokenSecret   *secretKeyRef
+}
+
+type secretKeyRef struct {
+	Name string
+	Key  string
 }
 
 var pulumiComponentPromiseCmd = &cobra.Command{
-	Use:   pulumiComponentPromiseCommandName + " PROMISE-NAME --schema PATH_OR_URL --group PROMISE-API-GROUP --kind PROMISE-API-KIND [--component TOKEN] [--version] [--plural] [--split] [--dir DIR]",
+	Use:   pulumiComponentPromiseCommandName + " PROMISE-NAME --schema PATH_OR_URL --group PROMISE-API-GROUP --kind PROMISE-API-KIND [--component TOKEN] [--schema-bearer-token-secret] [--stack-access-token-secret] [--version] [--plural] [--split] [--dir DIR]",
 	Short: "Preview: Initialize a new Promise from a Pulumi package schema",
 	Long: "Preview: Initialize a new Promise from a Pulumi package schema. " +
 		"This command is in preview, not supported under SLAs, and may change or break without notice.",
@@ -50,6 +63,8 @@ func init() {
 
 	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiSchemaPath, "schema", "", "Path or URL to Pulumi package schema")
 	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiComponent, "component", "", "Pulumi component token to use from the schema")
+	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiSchemaBearerTokenSecret, "schema-bearer-token-secret", "", "Secret reference in SECRET_NAME:KEY format to set PULUMI_ACCESS_TOKEN for private schema fetches")
+	pulumiComponentPromiseCmd.Flags().StringVar(&pulumiStackAccessTokenSecret, "stack-access-token-secret", "", "Secret reference in SECRET_NAME:KEY format to set Stack spec.envRefs.PULUMI_ACCESS_TOKEN for Pulumi Cloud access")
 
 	pulumiComponentPromiseCmd.MarkFlagRequired("schema")
 }
@@ -58,6 +73,14 @@ func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 	printPreviewWarning()
 	if pulumi.IsLocalSchemaSource(pulumiSchemaPath) {
 		printPulumiLocalSchemaWarning(pulumiSchemaPath)
+	}
+
+	schemaBearerTokenSecret, err := parseSecretKeyRefFlag(pulumiSchemaBearerTokenSecret, "schema-bearer-token-secret")
+	if err != nil {
+		return err
+	}
+	if err := pulumi.ValidateSchemaSourceAuth(pulumiSchemaPath, schemaBearerTokenSecret != nil); err != nil {
+		return err
 	}
 
 	schemaDoc, err := pulumi.LoadSchema(pulumiSchemaPath)
@@ -78,10 +101,16 @@ func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 		fmt.Println(warning)
 	}
 
-	return initPulumiComponentPromiseFromSelection(args[0], selectedComponent, specSchema)
+	return initPulumiComponentPromiseFromSelection(args[0], selectedComponent, specSchema, schemaBearerTokenSecret)
 }
 
-func initPulumiComponentPromiseFromSelection(promiseName string, component pulumi.SelectedComponent, specSchema map[string]any) error {
+func initPulumiComponentPromiseFromSelection(promiseName string, component pulumi.SelectedComponent, specSchema map[string]any, schemaBearerTokenSecret *secretKeyRef) error {
+	var err error
+	stackAccessTokenSecret, err := parseSecretKeyRefFlag(pulumiStackAccessTokenSecret, "stack-access-token-secret")
+	if err != nil {
+		return err
+	}
+
 	extraFlags := buildPulumiPromiseExtraFlags()
 
 	if version == "" {
@@ -96,6 +125,30 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 		return err
 	}
 
+	programEnv := []corev1.EnvVar{
+		{
+			Name:  "PULUMI_COMPONENT_TOKEN",
+			Value: component.Token,
+		},
+		{
+			Name:  "PULUMI_SCHEMA_SOURCE",
+			Value: pulumiSchemaPath,
+		},
+	}
+	if schemaBearerTokenSecret != nil {
+		programEnv = append(programEnv, corev1.EnvVar{
+			Name: "PULUMI_ACCESS_TOKEN",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: schemaBearerTokenSecret.Name,
+					},
+					Key: schemaBearerTokenSecret.Key,
+				},
+			},
+		})
+	}
+
 	pipelines := generateResourceConfigurePipelinesWithContainers([]v1alpha1.Container{
 		{
 			Name:  pulumiProgramGeneratorContainerName,
@@ -103,16 +156,7 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 			Command: []string{
 				pulumiProgramGeneratorCommand,
 			},
-			Env: []corev1.EnvVar{
-				{
-					Name:  "PULUMI_COMPONENT_TOKEN",
-					Value: component.Token,
-				},
-				{
-					Name:  "PULUMI_SCHEMA_SOURCE",
-					Value: pulumiSchemaPath,
-				},
-			},
+			Env: programEnv,
 		},
 		{
 			Name:  pulumiStackGeneratorContainerName,
@@ -120,12 +164,12 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 			Command: []string{
 				pulumiStackGeneratorCommand,
 			},
-			Env: []corev1.EnvVar{
+			Env: append([]corev1.EnvVar{
 				{
 					Name:  "PULUMI_COMPONENT_TOKEN",
 					Value: component.Token,
 				},
-			},
+			}, stackAccessTokenSecretEnvVars(stackAccessTokenSecret)...),
 		},
 	})
 
@@ -156,6 +200,8 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 			promiseTemplateValues:    baseReadmeTemplateValues(pulumiComponentPromiseCommandName, extraFlags, promiseName, crd),
 			PulumiGeneratorName:      pulumiProgramGeneratorContainerName,
 			PulumiStackGeneratorName: pulumiStackGeneratorContainerName,
+			SchemaBearerTokenSecret:  schemaBearerTokenSecret,
+			StackAccessTokenSecret:   stackAccessTokenSecret,
 		},
 	)
 	if err != nil {
@@ -182,6 +228,12 @@ func buildPulumiPromiseExtraFlags() string {
 	if pulumiComponent != "" {
 		flags = append(flags, "--component", shellQuoteArg(pulumiComponent))
 	}
+	if pulumiSchemaBearerTokenSecret != "" {
+		flags = append(flags, "--schema-bearer-token-secret", shellQuoteArg(pulumiSchemaBearerTokenSecret))
+	}
+	if pulumiStackAccessTokenSecret != "" {
+		flags = append(flags, "--stack-access-token-secret", shellQuoteArg(pulumiStackAccessTokenSecret))
+	}
 	if version != "" {
 		flags = append(flags, "--version", shellQuoteArg(version))
 	}
@@ -197,6 +249,52 @@ func buildPulumiPromiseExtraFlags() string {
 
 func shellQuoteArg(arg string) string {
 	return "'" + strings.ReplaceAll(arg, "'", `'"'"'`) + "'"
+}
+
+func parseSecretKeyRefFlag(value, flagName string) (*secretKeyRef, error) {
+	if value == "" {
+		return nil, nil
+	}
+
+	parts := strings.SplitN(value, ":", 2)
+	if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
+		return nil, fmt.Errorf("parse --%s: expected SECRET_NAME:KEY", flagName)
+	}
+
+	secretName := strings.TrimSpace(parts[0])
+	if err := validateKubernetesSecretName(secretName, flagName); err != nil {
+		return nil, err
+	}
+
+	return &secretKeyRef{
+		Name: secretName,
+		Key:  strings.TrimSpace(parts[1]),
+	}, nil
+}
+
+func validateKubernetesSecretName(secretName, flagName string) error {
+	if len(validation.IsDNS1123Subdomain(secretName)) > 0 {
+		return fmt.Errorf("parse --%s: secret name %q is not a valid Kubernetes Secret name. SECRET_NAME must be a valid Kubernetes Secret name (DNS-1123 subdomain, for example pulumi-schema-auth).", flagName, secretName)
+	}
+
+	return nil
+}
+
+func stackAccessTokenSecretEnvVars(secretRef *secretKeyRef) []corev1.EnvVar {
+	if secretRef == nil {
+		return nil
+	}
+
+	return []corev1.EnvVar{
+		{
+			Name:  "PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME",
+			Value: secretRef.Name,
+		},
+		{
+			Name:  "PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY",
+			Value: secretRef.Key,
+		},
+	}
 }
 
 func buildPulumiCRD(specSchema map[string]any) (*apiextensionsv1.CustomResourceDefinition, error) {

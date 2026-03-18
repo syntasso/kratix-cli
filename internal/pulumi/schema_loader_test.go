@@ -12,8 +12,6 @@ import (
 )
 
 func TestLoadSchema(t *testing.T) {
-	t.Parallel()
-
 	t.Run("loads local file", func(t *testing.T) {
 		t.Parallel()
 
@@ -35,7 +33,10 @@ func TestLoadSchema(t *testing.T) {
 	t.Run("loads URL", func(t *testing.T) {
 		t.Parallel()
 
-		client := clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+		client := clientWithRoundTripper(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if got := req.Header.Get("Authorization"); got != "" {
+				t.Fatalf("expected no Authorization header by default, got %q", got)
+			}
 			return &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(strings.NewReader(`{"resources":{"pkg:index:Thing":{"isComponent":true}}}`)),
@@ -105,6 +106,80 @@ func TestLoadSchema(t *testing.T) {
 
 		_, err := LoadSchema("ftp://example.com/schema.json")
 		want := `load schema: unsupported URL scheme "ftp"`
+		if err == nil || err.Error() != want {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("sends bearer token from env var", func(t *testing.T) {
+		t.Setenv("PULUMI_ACCESS_TOKEN", "env-token")
+
+		client := clientWithRoundTripper(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if got := req.Header.Get("Authorization"); got != "Bearer env-token" {
+				t.Fatalf("expected Authorization header %q, got %q", "Bearer env-token", got)
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"resources":{"pkg:index:Thing":{"isComponent":true}}}`)),
+			}, nil
+		}))
+
+		if _, err := readSchemaURLWithClient("https://example.com/schema.json", client); err != nil {
+			t.Fatalf("readSchemaURLWithClient returned error: %v", err)
+		}
+	})
+
+	t.Run("rejects sending bearer token over HTTP", func(t *testing.T) {
+		t.Setenv("PULUMI_ACCESS_TOKEN", "env-token")
+
+		_, err := readSchemaURLWithClient("http://example.com/schema.json", clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			t.Fatal("unexpected HTTP request for insecure authenticated schema URL")
+			return nil, nil
+		})))
+		want := "load schema: refusing to send credentials to insecure HTTP schema URL http://example.com/schema.json; use HTTPS or remove schema authentication"
+		if err == nil || err.Error() != want {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("sends bearer token from token file when env var is empty", func(t *testing.T) {
+		tempDir := t.TempDir()
+		tokenPath := filepath.Join(tempDir, "pulumi-token")
+		if err := os.WriteFile(tokenPath, []byte("file-token\n"), 0o600); err != nil {
+			t.Fatalf("write token fixture: %v", err)
+		}
+
+		t.Setenv("PULUMI_ACCESS_TOKEN_FILE", tokenPath)
+
+		client := clientWithRoundTripper(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if got := req.Header.Get("Authorization"); got != "Bearer file-token" {
+				t.Fatalf("expected Authorization header %q, got %q", "Bearer file-token", got)
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"resources":{"pkg:index:Thing":{"isComponent":true}}}`)),
+			}, nil
+		}))
+
+		if _, err := readSchemaURLWithClient("https://example.com/schema.json", client); err != nil {
+			t.Fatalf("readSchemaURLWithClient returned error: %v", err)
+		}
+	})
+
+	t.Run("rejects sending token file credentials over HTTP", func(t *testing.T) {
+		tempDir := t.TempDir()
+		tokenPath := filepath.Join(tempDir, "pulumi-token")
+		if err := os.WriteFile(tokenPath, []byte("file-token\n"), 0o600); err != nil {
+			t.Fatalf("write token fixture: %v", err)
+		}
+
+		t.Setenv("PULUMI_ACCESS_TOKEN_FILE", tokenPath)
+
+		_, err := readSchemaURLWithClient("http://example.com/schema.json", clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			t.Fatal("unexpected HTTP request for insecure authenticated schema URL")
+			return nil, nil
+		})))
+		want := "load schema: refusing to send credentials to insecure HTTP schema URL http://example.com/schema.json; use HTTPS or remove schema authentication"
 		if err == nil || err.Error() != want {
 			t.Fatalf("unexpected error: %v", err)
 		}

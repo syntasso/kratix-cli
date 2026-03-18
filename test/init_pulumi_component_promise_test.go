@@ -97,6 +97,65 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(session.Err).To(gbytes.Say(`Error: accepts 1 arg\(s\), received 2`))
 	})
 
+	It("fails when --schema-bearer-token-secret is not in SECRET_NAME:KEY format", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", singleSchemaPath,
+			"--schema-bearer-token-secret", "pulumi-schema-auth",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: parse --schema-bearer-token-secret: expected SECRET_NAME:KEY`))
+	})
+
+	It("fails when --schema-bearer-token-secret uses an invalid Kubernetes Secret name", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", singleSchemaPath,
+			"--schema-bearer-token-secret", "PulumiSecret:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: parse --schema-bearer-token-secret: secret name "PulumiSecret" is not a valid Kubernetes Secret name. SECRET_NAME must be a valid Kubernetes Secret name \(DNS-1123 subdomain, for example pulumi-schema-auth\)\.`))
+		Expect(getFiles(workingDir)).NotTo(ContainElements("promise.yaml", "example-resource.yaml", "README.md", "api.yaml", "dependencies.yaml", "workflows"))
+	})
+
+	It("fails when --schema-bearer-token-secret is used with an insecure HTTP schema URL", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "http://schemas.example.test/schema.json",
+			"--schema-bearer-token-secret", "pulumi-schema-auth:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+
+		Expect(session.Err).To(gbytes.Say(`Error: load schema: refusing to send credentials to insecure HTTP schema URL http://schemas\.example\.test/schema\.json; use HTTPS or remove schema authentication`))
+		Expect(getFiles(workingDir)).NotTo(ContainElements("promise.yaml", "example-resource.yaml", "README.md", "api.yaml", "dependencies.yaml", "workflows"))
+	})
+
+	It("fails when --stack-access-token-secret is not in SECRET_NAME:KEY format", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", singleSchemaPath,
+			"--stack-access-token-secret", "pulumi-api-secret",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: parse --stack-access-token-secret: expected SECRET_NAME:KEY`))
+	})
+
+	It("fails when --stack-access-token-secret uses an invalid Kubernetes Secret name", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", singleSchemaPath,
+			"--stack-access-token-secret", "pulumi.secret-:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+		Expect(session.Err).To(gbytes.Say(`Error: parse --stack-access-token-secret: secret name "pulumi.secret-" is not a valid Kubernetes Secret name. SECRET_NAME must be a valid Kubernetes Secret name \(DNS-1123 subdomain, for example pulumi-schema-auth\)\.`))
+		Expect(getFiles(workingDir)).NotTo(ContainElements("promise.yaml", "example-resource.yaml", "README.md", "api.yaml", "dependencies.yaml", "workflows"))
+	})
+
 	It("prints preview warning on valid invocation", func() {
 		session := r.run(
 			"init", "pulumi-component-promise", "mypromise",
@@ -246,6 +305,7 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
+		Expect(promiseContents).NotTo(ContainSubstring("name: PULUMI_ACCESS_TOKEN"))
 		exampleResourceContents := cat(filepath.Join(workingDir, "example-resource.yaml"))
 		Expect(exampleResourceContents).To(SatisfyAll(
 			ContainSubstring("apiVersion: syntasso.io/v1alpha1"),
@@ -295,6 +355,9 @@ var _ = Describe("init pulumi-component-promise", func() {
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
 		))
+		Expect(resourceConfigureWorkflowContents).NotTo(ContainSubstring("name: PULUMI_ACCESS_TOKEN"))
+		Expect(resourceConfigureWorkflowContents).NotTo(ContainSubstring("name: PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"))
+		Expect(resourceConfigureWorkflowContents).NotTo(ContainSubstring("name: PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY"))
 		exampleResourceContents := cat(filepath.Join(workingDir, "example-resource.yaml"))
 		Expect(exampleResourceContents).To(SatisfyAll(
 			ContainSubstring("apiVersion: syntasso.io/v1alpha1"),
@@ -328,6 +391,61 @@ var _ = Describe("init pulumi-component-promise", func() {
 
 		readme := cat(filepath.Join(workingDir, "README.md"))
 		Expect(readme).To(ContainSubstring("kratix init pulumi-component-promise mypromise --schema './multi-component-schema.json' --component 'pkg:index:Alpha' --split --group syntasso.io --kind Database"))
+		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
+	It("adds a secret-backed schema bearer token to the generated workflow when requested", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "./schema.valid.json",
+			"--schema-bearer-token-secret", "pulumi-schema-auth:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+			"--split",
+		)
+
+		workflowContents := cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))
+		Expect(workflowContents).To(SatisfyAll(
+			ContainSubstring("name: PULUMI_ACCESS_TOKEN"),
+			ContainSubstring("secretKeyRef:"),
+			ContainSubstring("name: pulumi-schema-auth"),
+			ContainSubstring("key: accessToken"),
+		))
+
+		readmeContents := cat(filepath.Join(workingDir, "README.md"))
+		Expect(readmeContents).To(SatisfyAll(
+			ContainSubstring("Private schema authentication"),
+			ContainSubstring("--schema-bearer-token-secret 'pulumi-schema-auth:accessToken'"),
+			ContainSubstring("### Kratix Workflow runtime"),
+		))
+		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
+	It("adds stack access token secret selectors to the stack generator when requested", func() {
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "./schema.valid.json",
+			"--stack-access-token-secret", "pulumi-api-secret:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+			"--split",
+		)
+
+		workflowContents := cat(filepath.Join(workingDir, "workflows/resource/configure/workflow.yaml"))
+		Expect(workflowContents).To(SatisfyAll(
+			ContainSubstring("name: PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"),
+			ContainSubstring("value: pulumi-api-secret"),
+			ContainSubstring("name: PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY"),
+			ContainSubstring("value: accessToken"),
+		))
+
+		readmeContents := cat(filepath.Join(workingDir, "README.md"))
+		Expect(readmeContents).To(SatisfyAll(
+			ContainSubstring("### PKO Stack on Destination"),
+			ContainSubstring("Workflow auth and Stack auth are separate concerns."),
+			ContainSubstring("--stack-access-token-secret 'pulumi-api-secret:accessToken'"),
+			ContainSubstring("PULUMI_STACK_ACCESS_TOKEN_SECRET_NAME"),
+		))
 		Expect(session.Err).NotTo(gbytes.Say("Error:"))
 	})
 
