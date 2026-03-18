@@ -60,7 +60,7 @@ To pull modules from private registries, ensure your system is logged in to the 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := InitFromTerraformModule(cmd, args); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-				os.Exit(1)
+				return err
 			}
 			return nil
 		},
@@ -74,6 +74,8 @@ To pull modules from private registries, ensure your system is logged in to the 
 
 func init() {
 	initCmd.AddCommand(terraformModuleCmd)
+	terraformModuleCmd.SilenceUsage = true
+	terraformModuleCmd.SilenceErrors = true
 	terraformModuleCmd.Flags().StringVarP(&moduleSource, "module-source", "s", "", "Source of the terraform module. \n"+
 		"This can be a Git URL, Terraform registry path, or a local directory path. \n"+
 		"It follows the same format as the `source` argument in the Terraform module block.",
