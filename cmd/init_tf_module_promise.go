@@ -59,7 +59,7 @@ To pull modules from private registries, ensure your system is logged in to the 
 	--version v1alpha1`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := InitFromTerraformModule(cmd, args); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				fmt.Printf("Error: %s\n", err)
 				return err
 			}
 			return nil
