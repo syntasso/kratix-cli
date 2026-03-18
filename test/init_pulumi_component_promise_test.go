@@ -120,6 +120,19 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(getFiles(workingDir)).NotTo(ContainElements("promise.yaml", "example-resource.yaml", "README.md", "api.yaml", "dependencies.yaml", "workflows"))
 	})
 
+	It("fails when --schema-bearer-token-secret is used with an insecure HTTP schema URL", func() {
+		session := withExitCode(1).run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", "http://schemas.example.test/schema.json",
+			"--schema-bearer-token-secret", "pulumi-schema-auth:accessToken",
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+
+		Expect(session.Err).To(gbytes.Say(`Error: load schema: refusing to send credentials to insecure HTTP schema URL http://schemas\.example\.test/schema\.json; use HTTPS or remove schema authentication`))
+		Expect(getFiles(workingDir)).NotTo(ContainElements("promise.yaml", "example-resource.yaml", "README.md", "api.yaml", "dependencies.yaml", "workflows"))
+	})
+
 	It("fails when --stack-access-token-secret is not in SECRET_NAME:KEY format", func() {
 		session := withExitCode(1).run(
 			"init", "pulumi-component-promise", "mypromise",

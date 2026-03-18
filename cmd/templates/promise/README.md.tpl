@@ -62,6 +62,7 @@ This secret is an environment variable in the Kratix Workflow and can be added o
 
 To use this Promise, ensure the referenced Secret is present in the namespace where this Workflow runs.
 This secret can be populated manually or via the Promise `Dependencies` or `Workflow.Promise.Configure` fields.
+Bearer-token schema authentication is only supported for HTTPS schema URLs.
 
 ### PKO Stack on Destination
 

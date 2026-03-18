@@ -110,15 +110,19 @@ func readSchemaURLWithClient(rawURL string, client *http.Client) ([]byte, error)
 		return contents, err
 	}
 
+	token, err := readSchemaAccessToken()
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidateSchemaSourceAuth(rawURL, token != ""); err != nil {
+		return nil, err
+	}
+
 	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("load schema: fetch input schema URL: create request: %w", err)
 	}
 
-	token, err := readSchemaAccessToken()
-	if err != nil {
-		return nil, err
-	}
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -157,6 +161,27 @@ func readSchemaAccessToken() (string, error) {
 	}
 
 	return strings.TrimSpace(string(tokenBytes)), nil
+}
+
+// ValidateSchemaSourceAuth rejects insecure HTTP schema URLs when credentials are configured.
+func ValidateSchemaSourceAuth(rawURL string, hasCredentials bool) error {
+	if !hasCredentials {
+		return nil
+	}
+
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil
+	}
+
+	if strings.ToLower(parsedURL.Scheme) != "http" {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"load schema: refusing to send credentials to insecure HTTP schema URL %s; use HTTPS or remove schema authentication",
+		sanitizedURL(rawURL),
+	)
 }
 
 func readSchemaURLFromTestEnv(rawURL string) ([]byte, error, bool) {

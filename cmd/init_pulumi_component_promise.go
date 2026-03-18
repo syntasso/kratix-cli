@@ -75,6 +75,14 @@ func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 		printPulumiLocalSchemaWarning(pulumiSchemaPath)
 	}
 
+	schemaBearerTokenSecret, err := parseSecretKeyRefFlag(pulumiSchemaBearerTokenSecret, "schema-bearer-token-secret")
+	if err != nil {
+		return err
+	}
+	if err := pulumi.ValidateSchemaSourceAuth(pulumiSchemaPath, schemaBearerTokenSecret != nil); err != nil {
+		return err
+	}
+
 	schemaDoc, err := pulumi.LoadSchema(pulumiSchemaPath)
 	if err != nil {
 		return err
@@ -93,14 +101,11 @@ func InitPulumiComponentPromise(cmd *cobra.Command, args []string) error {
 		fmt.Println(warning)
 	}
 
-	return initPulumiComponentPromiseFromSelection(args[0], selectedComponent, specSchema)
+	return initPulumiComponentPromiseFromSelection(args[0], selectedComponent, specSchema, schemaBearerTokenSecret)
 }
 
-func initPulumiComponentPromiseFromSelection(promiseName string, component pulumi.SelectedComponent, specSchema map[string]any) error {
-	schemaBearerTokenSecret, err := parseSecretKeyRefFlag(pulumiSchemaBearerTokenSecret, "schema-bearer-token-secret")
-	if err != nil {
-		return err
-	}
+func initPulumiComponentPromiseFromSelection(promiseName string, component pulumi.SelectedComponent, specSchema map[string]any, schemaBearerTokenSecret *secretKeyRef) error {
+	var err error
 	stackAccessTokenSecret, err := parseSecretKeyRefFlag(pulumiStackAccessTokenSecret, "stack-access-token-secret")
 	if err != nil {
 		return err

@@ -129,6 +129,19 @@ func TestLoadSchema(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects sending bearer token over HTTP", func(t *testing.T) {
+		t.Setenv("PULUMI_ACCESS_TOKEN", "env-token")
+
+		_, err := readSchemaURLWithClient("http://example.com/schema.json", clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			t.Fatal("unexpected HTTP request for insecure authenticated schema URL")
+			return nil, nil
+		})))
+		want := "load schema: refusing to send credentials to insecure HTTP schema URL http://example.com/schema.json; use HTTPS or remove schema authentication"
+		if err == nil || err.Error() != want {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
 	t.Run("sends bearer token from token file when env var is empty", func(t *testing.T) {
 		tempDir := t.TempDir()
 		tokenPath := filepath.Join(tempDir, "pulumi-token")
@@ -150,6 +163,25 @@ func TestLoadSchema(t *testing.T) {
 
 		if _, err := readSchemaURLWithClient("https://example.com/schema.json", client); err != nil {
 			t.Fatalf("readSchemaURLWithClient returned error: %v", err)
+		}
+	})
+
+	t.Run("rejects sending token file credentials over HTTP", func(t *testing.T) {
+		tempDir := t.TempDir()
+		tokenPath := filepath.Join(tempDir, "pulumi-token")
+		if err := os.WriteFile(tokenPath, []byte("file-token\n"), 0o600); err != nil {
+			t.Fatalf("write token fixture: %v", err)
+		}
+
+		t.Setenv("PULUMI_ACCESS_TOKEN_FILE", tokenPath)
+
+		_, err := readSchemaURLWithClient("http://example.com/schema.json", clientWithRoundTripper(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			t.Fatal("unexpected HTTP request for insecure authenticated schema URL")
+			return nil, nil
+		})))
+		want := "load schema: refusing to send credentials to insecure HTTP schema URL http://example.com/schema.json; use HTTPS or remove schema authentication"
+		if err == nil || err.Error() != want {
+			t.Fatalf("unexpected error: %v", err)
 		}
 	})
 }
