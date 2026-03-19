@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.14.2](https://github.com/syntasso/kratix-cli/compare/v0.14.1...v0.14.2) (2026-03-19)
+
+
+### Features
+
+* Support private registries for Pulumi Components ([#219](https://github.com/syntasso/kratix-cli/issues/219)) ([fa4dd33](https://github.com/syntasso/kratix-cli/commit/fa4dd336e8f18d2f6f03fd99cd9f480115a02638))
+
+
+### Chores
+
+* bump pulumi-generator versions for release ([1d12e12](https://github.com/syntasso/kratix-cli/commit/1d12e1228fdac85d21e73552db7c247ef2a26791))
+* bump versions for release ([86e132a](https://github.com/syntasso/kratix-cli/commit/86e132a3772f9bfc73b082b803095d5febc19f95))
+* **main:** release pulumi-promise 0.1.2 ([#214](https://github.com/syntasso/kratix-cli/issues/214)) ([00b4f1d](https://github.com/syntasso/kratix-cli/commit/00b4f1df42ac9a2ac3e863f6dd87fe81e0d0d214))
+* use go 1.26 in CI and in stages ([#213](https://github.com/syntasso/kratix-cli/issues/213)) ([601c6be](https://github.com/syntasso/kratix-cli/commit/601c6be99458cb596ac12c84bb89622a2251c2ad))
+
 ## [0.14.1](https://github.com/syntasso/kratix-cli/compare/v0.14.0...v0.14.1) (2026-03-04)
 
 
