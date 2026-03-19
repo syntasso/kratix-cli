@@ -61,6 +61,24 @@ func GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion strin
 	return variables, nil
 }
 
+// GetOutputsFromModule extracts the names of the outputs from a Terraform
+// module's outputs.tf. If outputs.tf does not exist or has no outputs, it
+// returns an empty slice.
+func GetOutputsFromModule(moduleDir string) ([]string, error) {
+	outputsPath := filepath.Join(moduleDir, "outputs.tf")
+	if _, err := os.Stat(outputsPath); err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return nil, fmt.Errorf("failed to stat outputs file: %w", err)
+	}
+	outputs, err := extractOutputsFromFile(outputsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse outputs: %w", err)
+	}
+	return outputs, nil
+}
+
 func GetVersionsAndProvidersFromModule(moduleSource, moduleDir, moduleRegistryVersion string, moduleProviderFilenames []string) (filepaths []string, err error) {
 	var versionProviderFilepaths []string
 	for _, filename := range moduleProviderFilenames {
@@ -147,6 +165,31 @@ func IsTerraformRegistrySource(moduleSource string) bool {
 
 	// Otherwise assume it's a registry source if it has at least two slashes
 	return strings.Count(moduleSource, "/") >= 2
+}
+
+func extractOutputsFromFile(filePath string) ([]string, error) {
+	parser := hclparse.NewParser()
+	file, diags := parser.ParseHCLFile(filePath)
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("failed to parse HCL file: %s", diags.Error())
+	}
+
+	content, diags := file.Body.Content(&hcl.BodySchema{
+		Blocks: []hcl.BlockHeaderSchema{
+			{Type: "output", LabelNames: []string{"name"}},
+		},
+	})
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("failed to parse body content: %s", diags.Error())
+	}
+
+	var outputNames []string
+	for _, block := range content.Blocks {
+		if block.Type == "output" && len(block.Labels) > 0 {
+			outputNames = append(outputNames, block.Labels[0])
+		}
+	}
+	return outputNames, nil
 }
 
 func extractVariablesFromVarsFile(filePath string) ([]TerraformVariable, error) {

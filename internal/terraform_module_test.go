@@ -522,6 +522,65 @@ provider "random" {
 	})
 })
 
+var _ = Describe("#GetOutputsFromModule", func() {
+	var tempDir, moduleDir string
+
+	BeforeEach(func() {
+		var err error
+		tempDir, err = os.MkdirTemp("", "test-tf-outputs")
+		Expect(err).ToNot(HaveOccurred())
+		moduleDir = filepath.Join(tempDir, "module")
+		Expect(os.MkdirAll(moduleDir, 0o755)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		os.RemoveAll(tempDir)
+	})
+
+	When("outputs.tf exists with output blocks", func() {
+		BeforeEach(func() {
+			outputsContent := `
+output "s3_bucket_id" {
+  description = "The name of the bucket."
+  value       = aws_s3_bucket.this[0].id
+}
+
+output "s3_bucket_arn" {
+  description = "The ARN of the bucket."
+  value       = aws_s3_bucket.this[0].arn
+}
+`
+			Expect(os.WriteFile(filepath.Join(moduleDir, "outputs.tf"), []byte(outputsContent), 0o644)).To(Succeed())
+		})
+
+		It("returns the list of output names", func() {
+			outputs, err := internal.GetOutputsFromModule(moduleDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(outputs).To(Equal([]string{"s3_bucket_id", "s3_bucket_arn"}))
+		})
+	})
+
+	When("outputs.tf does not exist", func() {
+		It("returns an empty slice", func() {
+			outputs, err := internal.GetOutputsFromModule(moduleDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(outputs).To(BeEmpty())
+		})
+	})
+
+	When("outputs.tf exists but has no output blocks", func() {
+		BeforeEach(func() {
+			Expect(os.WriteFile(filepath.Join(moduleDir, "outputs.tf"), []byte("# no outputs\n"), 0o644)).To(Succeed())
+		})
+
+		It("returns an empty slice", func() {
+			outputs, err := internal.GetOutputsFromModule(moduleDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(outputs).To(BeEmpty())
+		})
+	})
+})
+
 var _ = Describe("IsTerraformRegistrySource", func() {
 	DescribeTable("registry source detection",
 		func(source string, expected bool) {
