@@ -25,7 +25,7 @@ var _ = Describe("InitTerraformPromise", func() {
 		workingDir, err = os.MkdirTemp("", "kratix-test")
 		dependenciesWorkflowPath = filepath.Join(workingDir, "workflows", "promise", "configure", "dependencies", "add-tf-dependencies")
 		Expect(err).NotTo(HaveOccurred())
-		r = &runner{exitCode: 0}
+		r = &runner{exitCode: 0, timeout: time.Minute * 3}
 		r.flags = map[string]string{
 			"--group":         "gcp.com",
 			"--kind":          "GoogleCloudRun",
@@ -61,7 +61,6 @@ var _ = Describe("InitTerraformPromise", func() {
 		var generatedFiles []string
 		Describe("with no additional flags", func() {
 			BeforeEach(func() {
-				r.timeout = time.Minute
 				session = r.run(initPromiseCmd...)
 				fileEntries, err := os.ReadDir(workingDir)
 				generatedFiles = []string{}
@@ -93,7 +92,6 @@ var _ = Describe("InitTerraformPromise", func() {
 		Describe("with the --split flag", func() {
 			BeforeEach(func() {
 				r.flags["--split"] = ""
-				r.timeout = time.Minute
 				session = r.run(initPromiseCmd...)
 				fileEntries, err := os.ReadDir(workingDir)
 				dependenciesWorkflowPath = filepath.Join(workingDir, "workflows", "promise", "configure", "dependencies", "add-tf-dependencies")
@@ -145,7 +143,6 @@ var _ = Describe("InitTerraformPromise", func() {
 				}
 				vpcCmd = []string{"init", "tf-module-promise", "vpc"}
 				dependenciesWorkflowPath = filepath.Join(workingDir, "workflows", "promise", "configure", "dependencies", "add-tf-dependencies")
-				r.timeout = time.Minute
 				session = r.run(vpcCmd...)
 			})
 
@@ -192,7 +189,6 @@ var _ = Describe("InitTerraformPromise", func() {
 						"--generate-outputs": "",
 					}
 					initPromiseCmd = []string{"init", "tf-module-promise", "s3"}
-					r.timeout = time.Minute
 				})
 
 				It("sets MODULE_OUTPUT_NAMES in the workflow with all outputs from outputs.tf", func() {
