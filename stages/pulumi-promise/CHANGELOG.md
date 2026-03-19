@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.2](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.1...pulumi-promise-v0.1.2) (2026-03-19)
+
+
+### Features
+
+* Support private registries for Pulumi Components ([#219](https://github.com/syntasso/kratix-cli/issues/219)) ([fa4dd33](https://github.com/syntasso/kratix-cli/commit/fa4dd336e8f18d2f6f03fd99cd9f480115a02638))
+
+
+### Chores
+
+* use go 1.26 in CI and in stages ([#213](https://github.com/syntasso/kratix-cli/issues/213)) ([601c6be](https://github.com/syntasso/kratix-cli/commit/601c6be99458cb596ac12c84bb89622a2251c2ad))
+
 ## [0.1.1](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.0...pulumi-promise-v0.1.1) (2026-03-04)
 
 
