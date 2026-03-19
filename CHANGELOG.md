@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0](https://github.com/syntasso/kratix-cli/compare/v0.14.2...v0.15.0) (2026-03-19)
+
+
+### Features
+
+* bump version ([919b943](https://github.com/syntasso/kratix-cli/commit/919b9434f0559aeaa19639a7e277bebee6d0e576))
+* optionally generate outputs for tf promise ([#220](https://github.com/syntasso/kratix-cli/issues/220)) ([79fb55d](https://github.com/syntasso/kratix-cli/commit/79fb55d2b8e00a9de15fa19b42c7c4ded581b5a5))
+
 ## [0.14.2](https://github.com/syntasso/kratix-cli/compare/v0.14.1...v0.14.2) (2026-03-19)
 
 
