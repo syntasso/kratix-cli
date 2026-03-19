@@ -164,18 +164,22 @@ var _ = Describe("From TF module to Promise Stage", func() {
 			Eventually(session).Should(gexec.Exit())
 			Expect(session.Buffer()).To(gbytes.Say("Terraform JSON configuration written to %s/testobject_non-default_test-object.tf.json", tmpDir))
 			Expect(session).To(gexec.Exit(0))
+
 			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
 			Expect(err).NotTo(HaveOccurred())
 			var parsed map[string]any
 			Expect(json.Unmarshal(output, &parsed)).To(Succeed())
-			Expect(parsed).To(HaveKey("output"))
+
 			outputBlock := parsed["output"].(map[string]any)
-			// Output names are prefixed with the resource identifier to avoid collisions when multiple resources share a directory
-			uniquePrefix := "testobject_non-default_test-object"
-			Expect(outputBlock).To(HaveKey(uniquePrefix + "_s3_bucket_id"))
-			Expect(outputBlock[uniquePrefix+"_s3_bucket_id"].(map[string]any)["value"]).To(Equal("${module.testobject_non-default_test-object.s3_bucket_id}"))
-			Expect(outputBlock).To(HaveKey(uniquePrefix + "_s3_bucket_bucket_regional_domain_name"))
-			Expect(outputBlock[uniquePrefix+"_s3_bucket_bucket_regional_domain_name"].(map[string]any)["value"]).To(Equal("${module.testobject_non-default_test-object.s3_bucket_bucket_regional_domain_name}"))
+			moduleName := "testobject_non-default_test-object"
+			expectedOutputs := map[string]string{
+				moduleName + "_s3_bucket_id":                      "${module." + moduleName + ".s3_bucket_id}",
+				moduleName + "_s3_bucket_bucket_regional_domain_name": "${module." + moduleName + ".s3_bucket_bucket_regional_domain_name}",
+			}
+			for outputName, expectedValue := range expectedOutputs {
+				Expect(outputBlock).To(HaveKey(outputName))
+				Expect(outputBlock[outputName].(map[string]any)["value"]).To(Equal(expectedValue))
+			}
 		})
 	})
 
