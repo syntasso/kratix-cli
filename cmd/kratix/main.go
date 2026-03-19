@@ -21,7 +21,7 @@ import (
 )
 
 // needs to be updated before cutting a new release to desired version and should match the next version in .release-please-manifest.json
-var version = "0.14.1"
+var version = "0.14.2"
 
 func main() {
 	cmd.Execute(version)
