@@ -103,3 +103,8 @@ is merged the following happens:
    contents of the PRs description (**NOT the contents of the file committed**).
 - Goreleaser gets triggered in Github actions, creating and uploading the binaries to the
    existing release.
+
+## Sub-command images
+
+The stages used within the `init_crossplane_promise`, `init_helm_promise`, `init_tf_module_promise` and `init-operator-promise` sub-commands and build and released by their own release PR. When a new release is
+cut, update the templated version of these image to ensure they are used by the cli.
