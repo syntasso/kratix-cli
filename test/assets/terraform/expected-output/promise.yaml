@@ -231,7 +231,7 @@ spec:
           - env:
             - name: MODULE_SOURCE
               value: git::https://github.com/syntasso/terraform-google-cloud-run?ref=v0.16.4
-            image: ghcr.io/syntasso/kratix-cli/terraform-generate:v0.4.0
+            image: ghcr.io/syntasso/kratix-cli/terraform-generate:v0.6.0
             name: terraform-generate
 status:
   workflows: 0
