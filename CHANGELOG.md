@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.16.0](https://github.com/syntasso/kratix-cli/compare/v0.15.0...v0.16.0) (2026-03-26)
+
+
+### Features
+
+* bump from-api-to-crossplane-claim image to v0.2.2 ([8e4fc7f](https://github.com/syntasso/kratix-cli/commit/8e4fc7f13499ca116eedeadf42e1be16979f6e15))
+* bump init-from-operator stage to 0.2.2 ([db55ae3](https://github.com/syntasso/kratix-cli/commit/db55ae30a82f3f71741fc3058575e3fc60108572))
+* bump terraform and crossplane stages ([5466205](https://github.com/syntasso/kratix-cli/commit/5466205f6e02f520baac8e9e8913b5d92a6a5a62))
+* bump terraform-generate image to v0.6.0 ([0e05543](https://github.com/syntasso/kratix-cli/commit/0e055436a10eb84714148a732ae2caf1b2f19ae4))
+
+
+### Chores
+
+* bump cli version ([8dc4ac4](https://github.com/syntasso/kratix-cli/commit/8dc4ac4003f4f4253528b832f98adffc90c3b456))
+* bump version ([acf5ecc](https://github.com/syntasso/kratix-cli/commit/acf5ecce152ae44e7279290013668715a06c3b14))
+* **main:** release crossplane-promise 0.2.2 ([#218](https://github.com/syntasso/kratix-cli/issues/218)) ([f5f82d2](https://github.com/syntasso/kratix-cli/commit/f5f82d24c5f5b2cd6c467164630a2e03bb1acb88))
+* **main:** release operator-promise 0.3.1 ([#216](https://github.com/syntasso/kratix-cli/issues/216)) ([d3609d9](https://github.com/syntasso/kratix-cli/commit/d3609d9443ed23d4c83d1f5565b57070b7892345))
+* **main:** release terraform-module-promise 0.6.0 ([#217](https://github.com/syntasso/kratix-cli/issues/217)) ([af1409c](https://github.com/syntasso/kratix-cli/commit/af1409c837e334047f1e600a9c1e8f6aa5647e80))
+* push images with the github.actor user ([8573826](https://github.com/syntasso/kratix-cli/commit/857382641a32dfa45204b540cb491e3d4718f243))
+* update readme ([14a48e5](https://github.com/syntasso/kratix-cli/commit/14a48e558a6e5a8e5a36251c30c873d80a324eda))
+
 ## [0.15.0](https://github.com/syntasso/kratix-cli/compare/v0.14.2...v0.15.0) (2026-03-19)
 
 
