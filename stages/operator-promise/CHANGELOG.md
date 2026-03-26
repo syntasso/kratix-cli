@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/syntasso/kratix-cli/compare/operator-promise-v0.3.0...operator-promise-v0.3.1) (2026-03-26)
+
+
+### Chores
+
+* use go 1.26 in CI and in stages ([#213](https://github.com/syntasso/kratix-cli/issues/213)) ([601c6be](https://github.com/syntasso/kratix-cli/commit/601c6be99458cb596ac12c84bb89622a2251c2ad))
+
 ## [0.3.0](https://github.com/syntasso/kratix-cli/compare/operator-promise-v0.2.0...operator-promise-v0.3.0) (2025-12-08)
 
 
