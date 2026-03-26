@@ -218,7 +218,7 @@ func generateTerraformModuleResourceConfigurePipeline(moduleRegistryVersion stri
 					"containers": []any{
 						v1alpha1.Container{
 							Name:  "terraform-generate",
-							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.4.0",
+							Image: "ghcr.io/syntasso/kratix-cli/terraform-generate:v0.6.0",
 							Env:   envs,
 						},
 					},
