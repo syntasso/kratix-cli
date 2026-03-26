@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/syntasso/kratix-cli/compare/crossplane-promise-v0.2.1...crossplane-promise-v0.2.2) (2026-03-26)
+
+
+### Chores
+
+* use go 1.26 in CI and in stages ([#213](https://github.com/syntasso/kratix-cli/issues/213)) ([601c6be](https://github.com/syntasso/kratix-cli/commit/601c6be99458cb596ac12c84bb89622a2251c2ad))
+
 ## [0.2.1](https://github.com/syntasso/kratix-cli/compare/crossplane-promise-v0.2.0...crossplane-promise-v0.2.1) (2025-12-15)
 
 
