@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"sigs.k8s.io/yaml"
 )
 
 const schemaURLTimeout = 15 * time.Second
@@ -48,9 +50,27 @@ func LoadSchema(source string) (SchemaDocument, error) {
 		return SchemaDocument{}, err
 	}
 
+	doc, err := parseSchemaDocument(rawSchema)
+	if err != nil {
+		return SchemaDocument{}, err
+	}
+
+	return doc, nil
+}
+
+func parseSchemaDocument(rawSchema []byte) (SchemaDocument, error) {
 	var doc SchemaDocument
 	if err := json.Unmarshal(rawSchema, &doc); err != nil {
-		return SchemaDocument{}, fmt.Errorf("load schema: parse input schema as JSON: %w", err)
+		jsonErr := err
+
+		jsonSchema, err := yaml.YAMLToJSON(rawSchema)
+		if err != nil {
+			return SchemaDocument{}, fmt.Errorf("load schema: parse input schema as JSON or YAML: %v", jsonErr)
+		}
+
+		if err := json.Unmarshal(jsonSchema, &doc); err != nil {
+			return SchemaDocument{}, fmt.Errorf("load schema: parse input schema as JSON or YAML: %v", jsonErr)
+		}
 	}
 
 	return doc, nil

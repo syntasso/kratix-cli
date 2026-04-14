@@ -30,6 +30,30 @@ func TestLoadSchema(t *testing.T) {
 		}
 	})
 
+	t.Run("loads local YAML file", func(t *testing.T) {
+		t.Parallel()
+
+		tempDir := t.TempDir()
+		schemaPath := filepath.Join(tempDir, "schema.yaml")
+		schemaBody := `
+name: pkg
+resources:
+  pkg:index:Thing:
+    isComponent: true
+`
+		if err := os.WriteFile(schemaPath, []byte(schemaBody), 0o600); err != nil {
+			t.Fatalf("write schema fixture: %v", err)
+		}
+
+		doc, err := LoadSchema(schemaPath)
+		if err != nil {
+			t.Fatalf("LoadSchema returned error: %v", err)
+		}
+		if !doc.Resources["pkg:index:Thing"].IsComponent {
+			t.Fatalf("expected pkg:index:Thing to be a component")
+		}
+	})
+
 	t.Run("loads URL", func(t *testing.T) {
 		t.Parallel()
 
@@ -67,7 +91,7 @@ func TestLoadSchema(t *testing.T) {
 		}
 
 		_, err := LoadSchema(schemaPath)
-		if err == nil || !strings.Contains(err.Error(), "load schema: parse input schema as JSON:") {
+		if err == nil || !strings.Contains(err.Error(), "load schema: parse input schema as JSON or YAML:") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
