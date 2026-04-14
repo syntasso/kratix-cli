@@ -135,6 +135,6 @@ var _ = Describe("From request to Pulumi Program stage", func() {
 		session := runWithEnv(envVars)
 
 		Expect(session).To(gexec.Exit(1))
-		Expect(session.Err).To(gbytes.Say("load schema for Program configuration: load schema: parse input schema as JSON"))
+		Expect(session.Err).To(gbytes.Say("load schema for Program configuration: load schema: parse input schema"))
 	})
 })

@@ -59,18 +59,14 @@ func LoadSchema(source string) (SchemaDocument, error) {
 }
 
 func parseSchemaDocument(rawSchema []byte) (SchemaDocument, error) {
+	jsonBytes, err := yaml.YAMLToJSON(rawSchema)
+	if err != nil {
+		return SchemaDocument{}, fmt.Errorf("load schema: parse input schema as JSON or YAML: %w", err)
+	}
+
 	var doc SchemaDocument
-	if err := json.Unmarshal(rawSchema, &doc); err != nil {
-		jsonErr := err
-
-		jsonSchema, err := yaml.YAMLToJSON(rawSchema)
-		if err != nil {
-			return SchemaDocument{}, fmt.Errorf("load schema: parse input schema as JSON or YAML: %v", jsonErr)
-		}
-
-		if err := json.Unmarshal(jsonSchema, &doc); err != nil {
-			return SchemaDocument{}, fmt.Errorf("load schema: parse input schema as JSON or YAML: %v", jsonErr)
-		}
+	if err := json.Unmarshal(jsonBytes, &doc); err != nil {
+		return SchemaDocument{}, fmt.Errorf("load schema: parse input schema as JSON or YAML: %w", err)
 	}
 
 	return doc, nil
