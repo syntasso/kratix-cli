@@ -212,6 +212,36 @@ var _ = Describe("init pulumi-component-promise", func() {
 		Expect(session.Err).NotTo(gbytes.Say("Error:"))
 	})
 
+	It("loads YAML schema from URL and generates Promise files", func() {
+		schemaURL := "https://schemas.example.test/schema.yaml"
+		schemaBody := `
+name: pkg
+resources:
+  pkg:index:Thing:
+    isComponent: true
+    inputProperties:
+      name:
+        type: string
+    requiredInputs:
+      - name
+`
+		r.env = []string{
+			"KRATIX_TEST_SCHEMA_URL=" + schemaURL,
+			"KRATIX_TEST_SCHEMA_URL_BODY=" + schemaBody,
+		}
+
+		session := r.run(
+			"init", "pulumi-component-promise", "mypromise",
+			"--schema", schemaURL,
+			"--group", "syntasso.io",
+			"--kind", "Database",
+		)
+
+		Expect(getFiles(workingDir)).To(ContainElements("promise.yaml", "example-resource.yaml", "README.md"))
+		Expect(session.Out).To(gbytes.Say("Pulumi component Promise generated successfully."))
+		Expect(session.Err).NotTo(gbytes.Say("Error:"))
+	})
+
 	It("fails for non-200 URL status while loading schema", func() {
 		schemaURL := "https://schemas.example.test/not-found.json"
 		failingRunner := withExitCode(1)
@@ -496,7 +526,7 @@ var _ = Describe("init pulumi-component-promise", func() {
 			"--group", "syntasso.io",
 			"--kind", "Database",
 		)
-		Expect(session.Err).To(gbytes.Say(`Error: load schema: parse input schema as JSON:`))
+		Expect(session.Err).To(gbytes.Say(`Error: load schema: parse input schema as JSON or YAML:`))
 	})
 
 	It("fails for unsupported schema URL scheme", func() {
