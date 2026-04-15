@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.1](https://github.com/syntasso/kratix-cli/compare/v0.16.0...v0.16.1) (2026-04-15)
+
+
+### Bug Fixes
+
+* accept YAML Pulumi schemas from URLs ([#223](https://github.com/syntasso/kratix-cli/issues/223)) ([186c3ad](https://github.com/syntasso/kratix-cli/commit/186c3ad3b8cdece9a5bf1e127643be88bd9ac1a9))
+
+
+### Chores
+
+* set patch upgrade version ([3c4c462](https://github.com/syntasso/kratix-cli/commit/3c4c4621c52ead05402323f67c4cbd9d9cc6ebc0))
+
 ## [0.16.0](https://github.com/syntasso/kratix-cli/compare/v0.15.0...v0.16.0) (2026-03-26)
 
 
