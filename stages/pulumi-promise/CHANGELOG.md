@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.2...pulumi-promise-v0.1.3) (2026-04-15)
+
+
+### Bug Fixes
+
+* accept YAML Pulumi schemas from URLs ([#223](https://github.com/syntasso/kratix-cli/issues/223)) ([186c3ad](https://github.com/syntasso/kratix-cli/commit/186c3ad3b8cdece9a5bf1e127643be88bd9ac1a9))
+
 ## [0.1.2](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.1...pulumi-promise-v0.1.2) (2026-03-19)
 
 
