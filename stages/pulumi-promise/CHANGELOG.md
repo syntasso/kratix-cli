@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.1.0](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.4...pulumi-promise-v0.1.0) (2026-04-16)
+
+
+### Features
+
+* PKO program and stack stage output for Pulumi Init workflow ([#210](https://github.com/syntasso/kratix-cli/issues/210)) ([4564971](https://github.com/syntasso/kratix-cli/commit/45649715587401aa3a47e937af4faaae245c7ff7))
+* **pulumi:** Add promise stage runtime and tests ([14233ca](https://github.com/syntasso/kratix-cli/commit/14233ca71cd6803a6ec97dda182d05433fa183ec))
+* Support private registries for Pulumi Components ([#219](https://github.com/syntasso/kratix-cli/issues/219)) ([fa4dd33](https://github.com/syntasso/kratix-cli/commit/fa4dd336e8f18d2f6f03fd99cd9f480115a02638))
+
+
+### Bug Fixes
+
+* accept YAML Pulumi schemas from URLs ([#223](https://github.com/syntasso/kratix-cli/issues/223)) ([186c3ad](https://github.com/syntasso/kratix-cli/commit/186c3ad3b8cdece9a5bf1e127643be88bd9ac1a9))
+* dont error when .spec isn't provided in terraform request ([88e030b](https://github.com/syntasso/kratix-cli/commit/88e030b71743c28955de7260c65dacea951f189f))
+
+
+### Chores
+
+* **main:** release pulumi-promise 0.1.0 ([87e0b5f](https://github.com/syntasso/kratix-cli/commit/87e0b5f8e06d1e3698735ef1fca923db80f247e0))
+* **main:** release pulumi-promise 0.1.0 ([901bce0](https://github.com/syntasso/kratix-cli/commit/901bce03e8cafc511d4ad028a453c75fa2f65ece))
+* **main:** release pulumi-promise 0.1.1 ([#212](https://github.com/syntasso/kratix-cli/issues/212)) ([97dbc94](https://github.com/syntasso/kratix-cli/commit/97dbc94053ea5cfe994940134dfe5379e9dca187))
+* **main:** release pulumi-promise 0.1.2 ([#214](https://github.com/syntasso/kratix-cli/issues/214)) ([00b4f1d](https://github.com/syntasso/kratix-cli/commit/00b4f1df42ac9a2ac3e863f6dd87fe81e0d0d214))
+* **main:** release pulumi-promise 0.1.3 ([#224](https://github.com/syntasso/kratix-cli/issues/224)) ([d07fafc](https://github.com/syntasso/kratix-cli/commit/d07fafcb594782f64da0f900715f11da681343e1))
+* **pulumi:** Apply suggestions from code review ([eb2795a](https://github.com/syntasso/kratix-cli/commit/eb2795afc0e9eab5a2f2f2c5ddef0b9939995856))
+* release 0.1.0 ([d2fbcb9](https://github.com/syntasso/kratix-cli/commit/d2fbcb9327b96919b33de37439debaa940cdd510))
+* use go 1.26 in CI and in stages ([#213](https://github.com/syntasso/kratix-cli/issues/213)) ([601c6be](https://github.com/syntasso/kratix-cli/commit/601c6be99458cb596ac12c84bb89622a2251c2ad))
+
 ## [0.1.3](https://github.com/syntasso/kratix-cli/compare/pulumi-promise-v0.1.2...pulumi-promise-v0.1.3) (2026-04-15)
 
 
