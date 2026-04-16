@@ -58,6 +58,9 @@ spec:
         plural: ""
       conditions: null
       storedVersions: null
+  destinationSelectors:
+    - matchLabels:
+        environment: pulumi
   workflows:
     config: {}
     promise: {}
@@ -76,14 +79,14 @@ spec:
                     value: ./schema.valid.json
                 command:
                   - /pulumi-program-generator
-                image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.3
+                image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.4
                 name: pulumi-program-generator
               - env:
                   - name: PULUMI_COMPONENT_TOKEN
                     value: pkg:index:Database
                 command:
                   - /pulumi-stack-generator
-                image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.3
+                image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.4
                 name: pulumi-stack-generator
 status:
   workflows: 0

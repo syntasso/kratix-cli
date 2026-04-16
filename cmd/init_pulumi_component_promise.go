@@ -33,6 +33,8 @@ var (
 	pulumiComponent               string
 	pulumiSchemaBearerTokenSecret string
 	pulumiStackAccessTokenSecret  string
+
+	pulumiDestinationSelectors = []v1alpha1.PromiseScheduling{{MatchLabels: map[string]string{"environment": "pulumi"}}}
 )
 
 type pulumiPromiseTemplateValues struct {
@@ -191,7 +193,7 @@ func initPulumiComponentPromiseFromSelection(promiseName string, component pulum
 		split,
 		workflowDirectory,
 		extraFlags,
-		nil,
+		pulumiDestinationSelectors,
 		[]v1alpha1.Dependency{},
 		crd,
 		pipelines,
