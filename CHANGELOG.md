@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.16.2](https://github.com/syntasso/kratix-cli/compare/v0.16.1...v0.16.2) (2026-04-16)
+
+
+### Chores
+
+* build destination selectors into pulumi init ([#227](https://github.com/syntasso/kratix-cli/issues/227)) ([63e9cc0](https://github.com/syntasso/kratix-cli/commit/63e9cc005334b0cb0b57fdbbbef687bfcc470941))
+* **main:** release pulumi-promise 0.1.3 ([#224](https://github.com/syntasso/kratix-cli/issues/224)) ([d07fafc](https://github.com/syntasso/kratix-cli/commit/d07fafcb594782f64da0f900715f11da681343e1))
+* undo manual change to release versions ([1bb0944](https://github.com/syntasso/kratix-cli/commit/1bb09448f0df5b3aba68dcce99139b6ef9acda02))
+
 ## [0.16.1](https://github.com/syntasso/kratix-cli/compare/v0.16.0...v0.16.1) (2026-04-15)
 
 
