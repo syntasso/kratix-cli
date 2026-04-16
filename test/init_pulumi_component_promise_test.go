@@ -334,6 +334,7 @@ resources:
 			ContainSubstring("- /pulumi-stack-generator"),
 			ContainSubstring("name: PULUMI_COMPONENT_TOKEN"),
 			ContainSubstring("name: PULUMI_SCHEMA_SOURCE"),
+			ContainSubstring("environment: pulumi"),
 		))
 		Expect(promiseContents).NotTo(ContainSubstring("name: PULUMI_ACCESS_TOKEN"))
 		exampleResourceContents := cat(filepath.Join(workingDir, "example-resource.yaml"))
