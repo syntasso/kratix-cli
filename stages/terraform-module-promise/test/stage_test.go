@@ -1,7 +1,6 @@
 package run_test
 
 import (
-	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,76 +11,55 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var expectedOutput = `{
-  "module": {
-    "testobject_non-default_test-object": {
-      "source": "git::example.com?ref=1.0.0",
-      "strArr": [
-        {
-          "field": "value"
-        }
-      ],
-      "intArr": [
-        1
-      ],
-      "listBool": [
-        true
-      ],
-      "field": "value",
-      "mapWithinMap": {
-        "entryMap": {
-          "entry": "value",
-          "entry2": 2,
-          "entry3": false
-        },
-        "entry": "value",
-        "entry2": 2,
-        "entry3": false
-      },
-      "number": 7
+var expectedOutput = `module "testobject_non-default_test-object" {
+  source   = "git::example.com?ref=1.0.0"
+  field    = "value"
+  intArr   = [1]
+  listBool = [true]
+  mapWithinMap = {
+    entry  = "value"
+    entry2 = 2
+    entry3 = false
+    entryMap = {
+      entry  = "value"
+      entry2 = 2
+      entry3 = false
     }
   }
-}`
+  number = 7
+  strArr = [{
+    field = "value"
+  }]
+}
+`
 
-var expectedOutputNoSpec = `{
-  "module": {
-    "testobject_non-default_test-object": {
-      "source": "git::example.com?ref=1.0.0"
-    }
-  }
-}`
+var expectedOutputNoSpec = `module "testobject_non-default_test-object" {
+  source = "git::example.com?ref=1.0.0"
+}
+`
 
-var expectedRegistryOutput = `{
-  "module": {
-    "testobject_non-default_test-object": {
-      "source": "terraform-aws-modules/iam/aws",
-      "version": "6.2.3",
-      "strArr": [
-        {
-          "field": "value"
-        }
-      ],
-      "intArr": [
-        1
-      ],
-      "listBool": [
-        true
-      ],
-      "field": "value",
-      "mapWithinMap": {
-        "entryMap": {
-          "entry": "value",
-          "entry2": 2,
-          "entry3": false
-        },
-        "entry": "value",
-        "entry2": 2,
-        "entry3": false
-      },
-      "number": 7
+var expectedRegistryOutput = `module "testobject_non-default_test-object" {
+  source   = "terraform-aws-modules/iam/aws"
+  version  = "6.2.3"
+  field    = "value"
+  intArr   = [1]
+  listBool = [true]
+  mapWithinMap = {
+    entry  = "value"
+    entry2 = 2
+    entry3 = false
+    entryMap = {
+      entry  = "value"
+      entry2 = 2
+      entry3 = false
     }
   }
-}`
+  number = 7
+  strArr = [{
+    field = "value"
+  }]
+}
+`
 
 func runWithEnv(envVars map[string]string) *gexec.Session {
 	cmd := exec.Command(binaryPath)
@@ -117,25 +95,25 @@ var _ = Describe("From TF module to Promise Stage", func() {
 			}
 		})
 
-		It("creates an object file in the output directory", func() {
+		It("creates an HCL file in the output directory", func() {
 			session := runWithEnv(envVars)
 			Eventually(session).Should(gexec.Exit())
-			Expect(session.Buffer()).To(gbytes.Say("Terraform JSON configuration written to %s/testobject_non-default_test-object.tf.json", tmpDir))
+			Expect(session.Buffer()).To(gbytes.Say("Terraform HCL configuration written to %s/testobject_non-default_test-object.tf", tmpDir))
 			Expect(session).To(gexec.Exit(0))
-			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
+			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(MatchJSON(expectedOutput))
+			Expect(string(output)).To(Equal(expectedOutput))
 		})
 
 		It("handles objects without a spec field", func() {
 			envVars["KRATIX_INPUT_FILE"] = "assets/test-object-no-spec.yaml"
 			session := runWithEnv(envVars)
 			Eventually(session).Should(gexec.Exit())
-			Expect(session.Buffer()).To(gbytes.Say("Terraform JSON configuration written to %s/testobject_non-default_test-object.tf.json", tmpDir))
+			Expect(session.Buffer()).To(gbytes.Say("Terraform HCL configuration written to %s/testobject_non-default_test-object.tf", tmpDir))
 			Expect(session).To(gexec.Exit(0))
-			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
+			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(MatchJSON(expectedOutputNoSpec))
+			Expect(string(output)).To(Equal(expectedOutputNoSpec))
 		})
 
 		It("adds a registry version when provided separately", func() {
@@ -143,11 +121,11 @@ var _ = Describe("From TF module to Promise Stage", func() {
 			envVars["MODULE_REGISTRY_VERSION"] = "6.2.3"
 			session := runWithEnv(envVars)
 			Eventually(session).Should(gexec.Exit())
-			Expect(session.Buffer()).To(gbytes.Say("Terraform JSON configuration written to %s/testobject_non-default_test-object.tf.json", tmpDir))
+			Expect(session.Buffer()).To(gbytes.Say("Terraform HCL configuration written to %s/testobject_non-default_test-object.tf", tmpDir))
 			Expect(session).To(gexec.Exit(0))
-			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
+			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(MatchJSON(expectedRegistryOutput))
+			Expect(string(output)).To(Equal(expectedRegistryOutput))
 		})
 
 		It("errors when registry version is used with a non-registry source", func() {
@@ -158,28 +136,24 @@ var _ = Describe("From TF module to Promise Stage", func() {
 			Expect(session.Err).To(gbytes.Say("MODULE_REGISTRY_VERSION is only valid for Terraform registry sources"))
 		})
 
-		It("adds output block when MODULE_OUTPUT_NAMES is set", func() {
+		It("adds output blocks when MODULE_OUTPUT_NAMES is set", func() {
 			envVars["MODULE_OUTPUT_NAMES"] = "s3_bucket_id,s3_bucket_bucket_regional_domain_name"
 			session := runWithEnv(envVars)
 			Eventually(session).Should(gexec.Exit())
-			Expect(session.Buffer()).To(gbytes.Say("Terraform JSON configuration written to %s/testobject_non-default_test-object.tf.json", tmpDir))
+			Expect(session.Buffer()).To(gbytes.Say("Terraform HCL configuration written to %s/testobject_non-default_test-object.tf", tmpDir))
 			Expect(session).To(gexec.Exit(0))
 
-			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf.json"))
+			output, err := os.ReadFile(filepath.Join(tmpDir, "testobject_non-default_test-object.tf"))
 			Expect(err).NotTo(HaveOccurred())
-			var parsed map[string]any
-			Expect(json.Unmarshal(output, &parsed)).To(Succeed())
 
-			outputBlock := parsed["output"].(map[string]any)
+			outputStr := string(output)
 			moduleName := "testobject_non-default_test-object"
-			expectedOutputs := map[string]string{
-				moduleName + "_s3_bucket_id":                      "${module." + moduleName + ".s3_bucket_id}",
-				moduleName + "_s3_bucket_bucket_regional_domain_name": "${module." + moduleName + ".s3_bucket_bucket_regional_domain_name}",
-			}
-			for outputName, expectedValue := range expectedOutputs {
-				Expect(outputBlock).To(HaveKey(outputName))
-				Expect(outputBlock[outputName].(map[string]any)["value"]).To(Equal(expectedValue))
-			}
+
+			Expect(outputStr).To(ContainSubstring(`output "` + moduleName + `_s3_bucket_id" {`))
+			Expect(outputStr).To(ContainSubstring("value = module." + moduleName + ".s3_bucket_id"))
+
+			Expect(outputStr).To(ContainSubstring(`output "` + moduleName + `_s3_bucket_bucket_regional_domain_name" {`))
+			Expect(outputStr).To(ContainSubstring("value = module." + moduleName + ".s3_bucket_bucket_regional_domain_name"))
 		})
 	})
 
