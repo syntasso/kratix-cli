@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -230,7 +231,9 @@ func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*api
 		schema.Properties = make(map[string]apiextensionsv1.JSONSchemaProps)
 	}
 	specProp := schema.Properties["spec"]
-	specProp.Default = &apiextensionsv1.JSON{Raw: []byte(`{}`)}
+	if d := buildSpecDefault(specProp); d != nil {
+		specProp.Default = d
+	}
 	schema.Properties["spec"] = specProp
 
 	crd.Spec.Versions = []apiextensionsv1.CustomResourceDefinitionVersion{
@@ -247,6 +250,29 @@ func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*api
 	crd.Kind = "CustomResourceDefinition"
 
 	return crd, nil
+}
+
+// buildSpecDefault returns a JSON default for the spec field that satisfies its required
+// constraints. Required fields are included using their own default values. If any required
+// field has no default, nil is returned and no spec-level default is set.
+func buildSpecDefault(specProp apiextensionsv1.JSONSchemaProps) *apiextensionsv1.JSON {
+	defaultMap := map[string]any{}
+	for _, field := range specProp.Required {
+		prop, ok := specProp.Properties[field]
+		if !ok || prop.Default == nil {
+			return nil
+		}
+		var val any
+		if err := json.Unmarshal(prop.Default.Raw, &val); err != nil {
+			return nil
+		}
+		defaultMap[field] = val
+	}
+	raw, err := json.Marshal(defaultMap)
+	if err != nil {
+		return nil
+	}
+	return &apiextensionsv1.JSON{Raw: raw}
 }
 
 func getXRD(path string) (*xrdv1.CompositeResourceDefinition, error) {
