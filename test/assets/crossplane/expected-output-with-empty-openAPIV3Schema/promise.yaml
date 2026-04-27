@@ -130,7 +130,6 @@ spec:
   - apiVersion: apiextensions.crossplane.io/v1
     kind: CompositeResourceDefinition
     metadata:
-      creationTimestamp: null
       name: xobjectstorages.awsblueprints.io
     spec:
       claimNames:
@@ -151,14 +150,6 @@ spec:
           openAPIV3Schema:
             type: object
         served: true
-    status:
-      controllers:
-        compositeResourceClaimType:
-          apiVersion: ""
-          kind: ""
-        compositeResourceType:
-          apiVersion: ""
-          kind: ""
   destinationSelectors:
   - matchLabels:
       crossplane: enabled

@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	xrdv1 "github.com/crossplane/crossplane/apis/apiextensions/v1"
@@ -81,11 +80,11 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("failed to generate dependencies from compositions: %w", err)
 			}
 		}
-		objMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(xrd)
+		xrdRaw, err := readFileAsUnstructured(xrdPath)
 		if err != nil {
-			return fmt.Errorf("Failed to parse xrd: %w", err)
+			return fmt.Errorf("failed to parse xrd: %w", err)
 		}
-		dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: objMap}})
+		dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: xrdRaw}})
 	}
 
 	xrdStoredVersion, err := getXRDStoredVersion(xrd)
@@ -96,6 +95,11 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 	crd, err := generateCRDFromXRD(xrdStoredVersion)
 	if err != nil {
 		return err
+	}
+
+	xrdKind := xrd.Spec.Names.Kind
+	if xrd.Spec.ClaimNames != nil {
+		xrdKind = xrd.Spec.ClaimNames.Kind
 	}
 
 	pipelines := generateResourceConfigurePipelines(crossplaneContainerName, crossplaneContainerImage, []corev1.EnvVar{
@@ -109,7 +113,7 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 		},
 		{
 			Name:  XRD_KIND_ENV_VAR,
-			Value: xrd.Spec.ClaimNames.Kind,
+			Value: xrdKind,
 		},
 	})
 
@@ -181,6 +185,9 @@ func generateDependenciesFromCompositions(compositionsFilepath string) ([]v1alph
 }
 
 func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*apiextensionsv1.CustomResourceDefinition, error) {
+	if version.Schema == nil {
+		return nil, fmt.Errorf("version %s has no schema", version.Name)
+	}
 	schemaRaw := version.Schema.OpenAPIV3Schema
 	schema := &apiextensionsv1.JSONSchemaProps{}
 	if err := yaml.Unmarshal(schemaRaw.Raw, schema); err != nil {
@@ -236,4 +243,16 @@ func getXRD(path string) (*xrdv1.CompositeResourceDefinition, error) {
 	}
 
 	return xrd, nil
+}
+
+func readFileAsUnstructured(path string) (map[string]any, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+	var obj map[string]any
+	if err := yaml.Unmarshal(contents, &obj); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal file %s: %w", path, err)
+	}
+	return obj, nil
 }
