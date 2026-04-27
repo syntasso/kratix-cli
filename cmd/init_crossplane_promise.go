@@ -128,6 +128,7 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 	})
 
 	exampleResource := generateExampleResource(crd)
+	warnFieldsWithoutDefaults(crd)
 	flags := fmt.Sprintf("--xrd %s", xrdPath)
 	if functions != "" {
 		flags = fmt.Sprintf("%s --functions %s", flags, functions)
@@ -172,6 +173,15 @@ func generateExampleResource(crd *apiextensionsv1.CustomResourceDefinition) *uns
 			},
 			"spec": topLevelRequiredFields(crd),
 		},
+	}
+}
+
+func warnFieldsWithoutDefaults(crd *apiextensionsv1.CustomResourceDefinition) {
+	crdSpec := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"]
+	for _, field := range crdSpec.Required {
+		if crdSpec.Properties[field].Default == nil {
+			fmt.Printf("warning: required field %q has no default value; a default is required for top level required fields in a CRD\nYou will need to add a default to make the Promise API valid.\n", field)
+		}
 	}
 }
 
