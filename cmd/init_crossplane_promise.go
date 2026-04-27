@@ -49,6 +49,7 @@ var (
 
 	xrdPath          string
 	compositions     string
+	functions        string
 	skipDependencies bool
 )
 
@@ -56,6 +57,7 @@ func init() {
 	initCmd.AddCommand(crossplanePromiseCmd)
 	crossplanePromiseCmd.Flags().StringVarP(&xrdPath, "xrd", "x", "", "Filepath to the XRD file")
 	crossplanePromiseCmd.Flags().StringVarP(&compositions, "compositions", "c", "", "Filepath to the Compositions file. Can contain a single Composition or multiple Compositions.")
+	crossplanePromiseCmd.Flags().StringVarP(&functions, "functions", "f", "", "Filepath to the Functions file. Can contain a single Function or multiple Functions.")
 	crossplanePromiseCmd.Flags().BoolVarP(&skipDependencies, "skip-dependencies", "s", false, "Skip generating dependencies. For when the XRD and Compositions are already deployed to Crossplane")
 	crossplanePromiseCmd.MarkFlagRequired("xrd")
 }
@@ -74,11 +76,19 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 
 	var dependencies []v1alpha1.Dependency
 	if !skipDependencies {
+		if functions != "" {
+			functionDeps, err := generateDependenciesFromFile(functions)
+			if err != nil {
+				return fmt.Errorf("failed to generate dependencies from functions: %w", err)
+			}
+			dependencies = append(dependencies, functionDeps...)
+		}
 		if compositions != "" {
-			dependencies, err = generateDependenciesFromCompositions(compositions)
+			compDeps, err := generateDependenciesFromFile(compositions)
 			if err != nil {
 				return fmt.Errorf("failed to generate dependencies from compositions: %w", err)
 			}
+			dependencies = append(dependencies, compDeps...)
 		}
 		xrdRaw, err := readFileAsUnstructured(xrdPath)
 		if err != nil {
@@ -119,6 +129,9 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 
 	exampleResource := generateExampleResource(crd)
 	flags := fmt.Sprintf("--xrd %s", xrdPath)
+	if functions != "" {
+		flags = fmt.Sprintf("%s --functions %s", flags, functions)
+	}
 	if compositions != "" {
 		flags = fmt.Sprintf("%s --compositions %s", flags, compositions)
 	}
@@ -162,26 +175,26 @@ func generateExampleResource(crd *apiextensionsv1.CustomResourceDefinition) *uns
 	}
 }
 
-func generateDependenciesFromCompositions(compositionsFilepath string) ([]v1alpha1.Dependency, error) {
-	contents, err := os.ReadFile(compositionsFilepath)
+func generateDependenciesFromFile(filepath string) ([]v1alpha1.Dependency, error) {
+	contents, err := os.ReadFile(filepath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", compositions, err)
+		return nil, fmt.Errorf("failed to read file %s: %w", filepath, err)
 	}
 
-	var compositions []v1alpha1.Dependency
+	var deps []v1alpha1.Dependency
 	docs := goyaml.NewDecoder(bytes.NewReader(contents))
 	for {
-		var comp map[string]any
-		if err := docs.Decode(&comp); err != nil {
+		var obj map[string]any
+		if err := docs.Decode(&obj); err != nil {
 			if err.Error() == "EOF" {
 				break
 			}
 			log.Fatalf("Failed to decode YAML: %v", err)
 		}
-		compositions = append(compositions, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: comp}})
+		deps = append(deps, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: obj}})
 	}
 
-	return compositions, nil
+	return deps, nil
 }
 
 func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*apiextensionsv1.CustomResourceDefinition, error) {
