@@ -54,10 +54,11 @@ var _ = Describe("plugin", func() {
 				sess := r.run("plugin", "list")
 				Expect(sess.Out).To(SatisfyAll(
 					gbytes.Say("The following compatible plugins are available:"),
-					gbytes.Say("kratix-cat"),
-					gbytes.Say("kratix-error"),
-					gbytes.Say("kratix-hi"),
+					gbytes.Say("kratix cat"),
+					gbytes.Say("kratix error"),
+					gbytes.Say("kratix hi"),
 				))
+				Expect(string(sess.Out.Contents())).To(ContainSubstring(workingDir))
 			})
 		})
 
@@ -76,8 +77,7 @@ var _ = Describe("plugin", func() {
 
 				Expect(sess.Err).NotTo(gbytes.Say("overshadowed by a similarly named plugin"))
 
-				pluginPath := filepath.Join(workingDir, "kratix-hi")
-				Expect(strings.Count(string(sess.Out.Contents()), pluginPath)).To(Equal(1))
+				Expect(strings.Count(string(sess.Out.Contents()), "kratix hi")).To(Equal(1))
 			})
 		})
 	})
