@@ -133,6 +133,29 @@ var _ = Describe("InitCrossplanePromise", func() {
 			})
 		})
 
+		Describe("with --functions", func() {
+			BeforeEach(func() {
+				r.flags["--functions"] = "assets/crossplane/function.yaml"
+				session = r.run(initPromiseCmd...)
+				generatedFiles = getFiles(workingDir)
+			})
+
+			It("generates the expected files", func() {
+				files := []string{"promise.yaml", "example-resource.yaml", "README.md"}
+				Expect(generatedFiles).To(ConsistOf(files))
+				expectFilesEqual(workingDir, "assets/crossplane/expected-output-with-functions", []string{"promise.yaml"})
+				expectFilesEqual(workingDir, "assets/crossplane/expected-output", []string{"example-resource.yaml"})
+				Expect(cat(filepath.Join(workingDir, "README.md"))).To(SatisfyAll(
+					ContainSubstring("kratix init crossplane-promise s3buckets"),
+					ContainSubstring("--functions assets/crossplane/function.yaml"),
+					ContainSubstring("--group syntasso.io --kind S3Bucket"),
+				))
+				Expect(session.Out).To(SatisfyAll(
+					gbytes.Say(`Promise generated successfully.`),
+				))
+			})
+		})
+
 		Describe("with --skip-dependencies", func() {
 			BeforeEach(func() {
 				r.flags["--skip-dependencies"] = ""

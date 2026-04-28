@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
-	"maps"
 	"os"
 	"strings"
 
@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	xrdv1 "github.com/crossplane/crossplane/apis/apiextensions/v1"
@@ -50,6 +49,7 @@ var (
 
 	xrdPath          string
 	compositions     string
+	functions        string
 	skipDependencies bool
 )
 
@@ -57,6 +57,7 @@ func init() {
 	initCmd.AddCommand(crossplanePromiseCmd)
 	crossplanePromiseCmd.Flags().StringVarP(&xrdPath, "xrd", "x", "", "Filepath to the XRD file")
 	crossplanePromiseCmd.Flags().StringVarP(&compositions, "compositions", "c", "", "Filepath to the Compositions file. Can contain a single Composition or multiple Compositions.")
+	crossplanePromiseCmd.Flags().StringVarP(&functions, "functions", "f", "", "Filepath to the Functions file. Can contain a single Function or multiple Functions.")
 	crossplanePromiseCmd.Flags().BoolVarP(&skipDependencies, "skip-dependencies", "s", false, "Skip generating dependencies. For when the XRD and Compositions are already deployed to Crossplane")
 	crossplanePromiseCmd.MarkFlagRequired("xrd")
 }
@@ -75,17 +76,25 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 
 	var dependencies []v1alpha1.Dependency
 	if !skipDependencies {
+		if functions != "" {
+			functionDeps, err := generateDependenciesFromFile(functions)
+			if err != nil {
+				return fmt.Errorf("failed to generate dependencies from functions: %w", err)
+			}
+			dependencies = append(dependencies, functionDeps...)
+		}
 		if compositions != "" {
-			dependencies, err = generateDependenciesFromCompositions(compositions)
+			compDeps, err := generateDependenciesFromFile(compositions)
 			if err != nil {
 				return fmt.Errorf("failed to generate dependencies from compositions: %w", err)
 			}
+			dependencies = append(dependencies, compDeps...)
 		}
-		objMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(xrd)
+		xrdRaw, err := readFileAsUnstructured(xrdPath)
 		if err != nil {
-			return fmt.Errorf("Failed to parse xrd: %w", err)
+			return fmt.Errorf("failed to parse xrd: %w", err)
 		}
-		dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: objMap}})
+		dependencies = append(dependencies, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: xrdRaw}})
 	}
 
 	xrdStoredVersion, err := getXRDStoredVersion(xrd)
@@ -96,6 +105,11 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 	crd, err := generateCRDFromXRD(xrdStoredVersion)
 	if err != nil {
 		return err
+	}
+
+	xrdKind := xrd.Spec.Names.Kind
+	if xrd.Spec.ClaimNames != nil {
+		xrdKind = xrd.Spec.ClaimNames.Kind
 	}
 
 	pipelines := generateResourceConfigurePipelines(crossplaneContainerName, crossplaneContainerImage, []corev1.EnvVar{
@@ -109,12 +123,16 @@ func InitCrossplanePromise(cmd *cobra.Command, args []string) error {
 		},
 		{
 			Name:  XRD_KIND_ENV_VAR,
-			Value: xrd.Spec.ClaimNames.Kind,
+			Value: xrdKind,
 		},
 	})
 
 	exampleResource := generateExampleResource(crd)
+	warnFieldsWithoutDefaults(crd)
 	flags := fmt.Sprintf("--xrd %s", xrdPath)
+	if functions != "" {
+		flags = fmt.Sprintf("%s --functions %s", flags, functions)
+	}
 	if compositions != "" {
 		flags = fmt.Sprintf("%s --compositions %s", flags, compositions)
 	}
@@ -158,29 +176,41 @@ func generateExampleResource(crd *apiextensionsv1.CustomResourceDefinition) *uns
 	}
 }
 
-func generateDependenciesFromCompositions(compositionsFilepath string) ([]v1alpha1.Dependency, error) {
-	contents, err := os.ReadFile(compositionsFilepath)
+func warnFieldsWithoutDefaults(crd *apiextensionsv1.CustomResourceDefinition) {
+	crdSpec := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"]
+	for _, field := range crdSpec.Required {
+		if crdSpec.Properties[field].Default == nil {
+			fmt.Printf("warning: required field %q has no default value; a default is required for top level required fields in a CRD\nYou will need to add a default to make the Promise API valid.\n", field)
+		}
+	}
+}
+
+func generateDependenciesFromFile(filepath string) ([]v1alpha1.Dependency, error) {
+	contents, err := os.ReadFile(filepath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", compositions, err)
+		return nil, fmt.Errorf("failed to read file %s: %w", filepath, err)
 	}
 
-	var compositions []v1alpha1.Dependency
+	var deps []v1alpha1.Dependency
 	docs := goyaml.NewDecoder(bytes.NewReader(contents))
 	for {
-		var comp map[string]any
-		if err := docs.Decode(&comp); err != nil {
+		var obj map[string]any
+		if err := docs.Decode(&obj); err != nil {
 			if err.Error() == "EOF" {
 				break
 			}
 			log.Fatalf("Failed to decode YAML: %v", err)
 		}
-		compositions = append(compositions, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: comp}})
+		deps = append(deps, v1alpha1.Dependency{Unstructured: unstructured.Unstructured{Object: obj}})
 	}
 
-	return compositions, nil
+	return deps, nil
 }
 
 func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*apiextensionsv1.CustomResourceDefinition, error) {
+	if version.Schema == nil {
+		return nil, fmt.Errorf("version %s has no schema", version.Name)
+	}
 	schemaRaw := version.Schema.OpenAPIV3Schema
 	schema := &apiextensionsv1.JSONSchemaProps{}
 	if err := yaml.Unmarshal(schemaRaw.Raw, schema); err != nil {
@@ -201,12 +231,10 @@ func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*api
 		schema.Properties = make(map[string]apiextensionsv1.JSONSchemaProps)
 	}
 	specProp := schema.Properties["spec"]
-	specProp.Default = &apiextensionsv1.JSON{Raw: []byte(`{}`)}
-	if specProp.Properties == nil {
-		specProp.Properties = make(map[string]apiextensionsv1.JSONSchemaProps)
+	if d := buildSpecDefault(specProp); d != nil {
+		specProp.Default = d
 	}
 	schema.Properties["spec"] = specProp
-	maps.Copy(schema.Properties["spec"].Properties, mandatoryAdditionalClaimFields)
 
 	crd.Spec.Versions = []apiextensionsv1.CustomResourceDefinitionVersion{
 		{
@@ -224,6 +252,29 @@ func generateCRDFromXRD(version *xrdv1.CompositeResourceDefinitionVersion) (*api
 	return crd, nil
 }
 
+// buildSpecDefault returns a JSON default for the spec field that satisfies its required
+// constraints. Required fields are included using their own default values. If any required
+// field has no default, nil is returned and no spec-level default is set.
+func buildSpecDefault(specProp apiextensionsv1.JSONSchemaProps) *apiextensionsv1.JSON {
+	defaultMap := map[string]any{}
+	for _, field := range specProp.Required {
+		prop, ok := specProp.Properties[field]
+		if !ok || prop.Default == nil {
+			return nil
+		}
+		var val any
+		if err := json.Unmarshal(prop.Default.Raw, &val); err != nil {
+			return nil
+		}
+		defaultMap[field] = val
+	}
+	raw, err := json.Marshal(defaultMap)
+	if err != nil {
+		return nil
+	}
+	return &apiextensionsv1.JSON{Raw: raw}
+}
+
 func getXRD(path string) (*xrdv1.CompositeResourceDefinition, error) {
 	xrd := &xrdv1.CompositeResourceDefinition{}
 	contents, err := os.ReadFile(path)
@@ -236,4 +287,16 @@ func getXRD(path string) (*xrdv1.CompositeResourceDefinition, error) {
 	}
 
 	return xrd, nil
+}
+
+func readFileAsUnstructured(path string) (map[string]any, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+	var obj map[string]any
+	if err := yaml.Unmarshal(contents, &obj); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal file %s: %w", path, err)
+	}
+	return obj, nil
 }
