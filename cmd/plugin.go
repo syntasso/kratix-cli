@@ -79,7 +79,7 @@ func (o *PluginListOptions) Run() error {
 
 	pluginWarnings := 0
 	for _, pluginPath := range plugins {
-		fmt.Fprintf(o.Out, "%s\n", pluginPath)
+		fmt.Fprintf(o.Out, "%-40s (%s)\n", pluginToCommand(pluginPath), filepath.Dir(pluginPath))
 		if errs := o.Verifier.Verify(pluginPath); len(errs) != 0 {
 			for _, err := range errs {
 				fmt.Fprintf(o.ErrOut, "  - %s\n", err)
@@ -120,7 +120,6 @@ func (o *PluginListOptions) ListPlugins() ([]string, []error) {
 		if err != nil {
 			var pathErr *os.PathError
 			if errors.As(err, &pathErr) {
-				fmt.Fprintf(o.ErrOut, "Unable to read directory %q from your PATH: %v. Skipping...\n", dir, err)
 				continue
 			}
 
@@ -235,3 +234,14 @@ func hasValidPrefix(filename string) bool {
 	}
 	return false
 }
+
+func pluginToCommand(pluginPath string) string {
+	name := filepath.Base(pluginPath)
+	name = strings.TrimPrefix(name, PluginPrefix+"-")
+	parts := strings.Split(name, "-")
+	for i, p := range parts {
+		parts[i] = strings.ReplaceAll(p, "_", "-")
+	}
+	return PluginPrefix + " " + strings.Join(parts, " ")
+}
+
