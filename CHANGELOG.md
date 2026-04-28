@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/syntasso/kratix-cli/compare/v0.16.2...v0.17.0) (2026-04-28)
+
+
+### Features
+
+* upgrade crossplane init command to use v2 ([#230](https://github.com/syntasso/kratix-cli/issues/230)) ([92ce86b](https://github.com/syntasso/kratix-cli/commit/92ce86bfc07c9fcb1e8c97e07e266095bd21bb05))
+
+
+### Chores
+
+* bump versions for release ([8b82f7d](https://github.com/syntasso/kratix-cli/commit/8b82f7de71e765b7b61c5e55e668bc5fb38602a8))
+* improve output for plugin subcommand ([#231](https://github.com/syntasso/kratix-cli/issues/231)) ([37fbf2a](https://github.com/syntasso/kratix-cli/commit/37fbf2a787976786d3290e622a5bf2ae1ea1ded5))
+
 ## [0.16.2](https://github.com/syntasso/kratix-cli/compare/v0.16.1...v0.16.2) (2026-04-16)
 
 
