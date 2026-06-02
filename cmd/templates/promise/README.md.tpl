@@ -2,7 +2,7 @@
 
 This Promise was generated with:
 
-```
+```bash
 kratix init {{ .SubCommand }} {{ .Name }} {{ .ExtraFlags }} --group {{ .Group }} --kind {{ .Kind }}
 ```
 
@@ -10,7 +10,7 @@ kratix init {{ .SubCommand }} {{ .Name }} {{ .ExtraFlags }} --group {{ .Group }}
 
 To update the Promise API, you can use the `kratix update api` command:
 
-```
+```bash
 kratix update api --property name:string --property region- --kind {{ .Kind }}
 ```
 
@@ -18,8 +18,20 @@ kratix update api --property name:string --property region- --kind {{ .Kind }}
 
 To add workflow containers, you can use the `kratix add container` command:
 
-```
+```bash
 kratix add container resource/configure/pipeline0 --image syntasso/postgres-resource:v1.0.0
+```
+
+### Building containers
+
+After editing a container's scripts, build and push the image with `kratix build container`:
+
+```bash
+# build a specific container
+kratix build container resource/configure/pipeline0 --name syntasso-postgres-resource
+
+# build all containers across all workflows
+kratix build container --all
 ```
 
 {{- if eq .SubCommand "pulumi-component-promise" }}
@@ -77,11 +89,24 @@ This access is set by a separate environment variables in the `{{ .PulumiStackGe
 - name: PULUMI_STACK_ACCESS_TOKEN_SECRET_KEY
   value: token
 ```
-{{ end }}
 
 For this Stack to work as intended, ensure the referenced Secret is present in the namespace where this Workflow runs.
 This secret can be populated manually or via a new container in the `Workflow.Promise.Configure` field if it is common to all resources or the `Workflow.Resource.Configure` if it is unique per request.
+{{ end }}
+
 
 ## Updating Dependencies
 
-TBD
+To add dependencies to the Promise, via a `promise.configure` workflows or the `spec.dependencies` key, you can use the `kratix update dependencies` command:
+
+```bash
+kratix update dependencies /dependencies-path
+```
+
+## Updating Destination Selectors
+
+To update the Destination Selectors in the Promise Spec, can use the `kratix update destination-selector` flag:
+
+```bash
+kratix update destination-selector env=dev
+```
