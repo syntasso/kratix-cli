@@ -1,11 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/syntasso/kratix-cli/internal"
@@ -85,59 +86,147 @@ func runResourceWorkflow(outputDir string) {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	config := map[string]any{
-		"module": map[string]any{
-			uniqueFileName: map[string]any{
-				"source": moduleSource,
-			},
-		},
-	}
-	moduleBlock := config["module"].(map[string]any)
-	moduleInstance := moduleBlock[uniqueFileName].(map[string]any)
-
-	if moduleRegistryVersion != "" {
-		moduleInstance["version"] = moduleRegistryVersion
-	}
-
-	// Handle spec if it exists
-	if spec, ok := inputObjectData["spec"].(map[string]any); ok {
-		for key, value := range spec {
+	spec := make(map[string]any)
+	if specMap, ok := inputObjectData["spec"].(map[string]any); ok {
+		for key, value := range specMap {
 			valSlice, ok := value.([]any)
 			// 1. if its not an array and its not nil, add it to the module
 			// 2. if its an array and its not empty, add it to the module
 			// this gets around adding a bunch of empty arrays to the module
 			if (!ok && value != nil) || (ok && len(valSlice) > 0) {
-				moduleInstance[key] = value
+				spec[key] = value
 			}
 		}
 	}
 
-	if outputNames := parseOutputNames(os.Getenv("MODULE_OUTPUT_NAMES")); len(outputNames) > 0 {
-		outputBlock := make(map[string]any)
-		for _, name := range outputNames {
-			uniqueOutputName := uniqueFileName + "_" + name
-			outputBlock[uniqueOutputName] = map[string]any{
-				"value": fmt.Sprintf("${module.%s.%s}", uniqueFileName, name),
-			}
-		}
-		config["output"] = outputBlock
-	}
+	outputNames := parseOutputNames(os.Getenv("MODULE_OUTPUT_NAMES"))
 
-	jsonData, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		log.Fatalf("Error generating JSON: %v\n", err)
-	}
+	hclData := generateHCL(uniqueFileName, moduleSource, moduleRegistryVersion, spec, outputNames)
 
 	err = os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
 		log.Fatalf("Error creating output directory: %v\n", err)
 	}
 
-	path := filepath.Join(outputDir, uniqueFileName+".tf.json")
-	err = os.WriteFile(path, jsonData, 0644)
+	path := filepath.Join(outputDir, uniqueFileName+".tf")
+	err = os.WriteFile(path, hclData, 0644)
 	if err != nil {
-		log.Fatalf("Error writing Terraform JSON file: %v\n", err)
+		log.Fatalf("Error writing Terraform file: %v\n", err)
 	}
 
-	fmt.Printf("Terraform JSON configuration written to %s\n", path)
+	fmt.Printf("Terraform configuration written to %s\n", path)
+}
+
+// generateHCL produces a native HCL module block (and optional output blocks) from a
+// map[string]any spec. Keys are sorted alphabetically for deterministic output.
+func generateHCL(moduleName, source, version string, spec map[string]any, outputNames []string) []byte {
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "module %q {\n", moduleName)
+
+	// Align "source" and "version" when both are present (terraform fmt convention).
+	if version != "" {
+		fmt.Fprintf(&sb, "  source  = %q\n", source)
+		fmt.Fprintf(&sb, "  version = %q\n", version)
+	} else {
+		fmt.Fprintf(&sb, "  source = %q\n", source)
+	}
+
+	if len(spec) > 0 {
+		sb.WriteString("\n")
+		for _, k := range sortedKeys(spec) {
+			sb.WriteString("  ")
+			sb.WriteString(k)
+			sb.WriteString(" = ")
+			writeHCLValue(&sb, spec[k], 1)
+			sb.WriteString("\n")
+		}
+	}
+
+	sb.WriteString("}")
+
+	for _, name := range outputNames {
+		fmt.Fprintf(&sb, "\n\noutput %q {\n", moduleName+"_"+name)
+		fmt.Fprintf(&sb, "  value = \"${module.%s.%s}\"\n", moduleName, name)
+		sb.WriteString("}")
+	}
+
+	return []byte(sb.String())
+}
+
+// writeHCLValue writes a single HCL attribute value at the given indent depth.
+// Primitives are written inline; maps and object-bearing lists use multi-line format.
+func writeHCLValue(sb *strings.Builder, v any, depth int) {
+	indent := strings.Repeat("  ", depth)
+	innerIndent := strings.Repeat("  ", depth+1)
+
+	switch val := v.(type) {
+	case string:
+		sb.WriteString(strconv.Quote(val))
+	case int:
+		fmt.Fprintf(sb, "%d", val)
+	case float64:
+		if val == float64(int64(val)) {
+			fmt.Fprintf(sb, "%d", int64(val))
+		} else {
+			fmt.Fprintf(sb, "%g", val)
+		}
+	case bool:
+		if val {
+			sb.WriteString("true")
+		} else {
+			sb.WriteString("false")
+		}
+	case []any:
+		if len(val) == 0 {
+			sb.WriteString("[]")
+			return
+		}
+		hasObjects := false
+		for _, elem := range val {
+			if _, ok := elem.(map[string]any); ok {
+				hasObjects = true
+				break
+			}
+		}
+		if !hasObjects {
+			sb.WriteString("[")
+			for i, elem := range val {
+				if i > 0 {
+					sb.WriteString(", ")
+				}
+				writeHCLValue(sb, elem, depth)
+			}
+			sb.WriteString("]")
+		} else {
+			sb.WriteString("[\n")
+			for _, elem := range val {
+				sb.WriteString(innerIndent)
+				writeHCLValue(sb, elem, depth+1)
+				sb.WriteString(",\n")
+			}
+			sb.WriteString(indent)
+			sb.WriteString("]")
+		}
+	case map[string]any:
+		sb.WriteString("{\n")
+		for _, k := range sortedKeys(val) {
+			sb.WriteString(innerIndent)
+			sb.WriteString(k)
+			sb.WriteString(" = ")
+			writeHCLValue(sb, val[k], depth+1)
+			sb.WriteString("\n")
+		}
+		sb.WriteString(indent)
+		sb.WriteString("}")
+	}
+}
+
+func sortedKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
