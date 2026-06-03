@@ -6,10 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/syntasso/kratix-cli/internal"
+	"github.com/zclconf/go-cty/cty"
 	"gopkg.in/yaml.v3"
 )
 
@@ -117,108 +119,67 @@ func runResourceWorkflow(outputDir string) {
 	fmt.Printf("Terraform configuration written to %s\n", path)
 }
 
-// generateHCL produces a native HCL module block (and optional output blocks) from a
-// map[string]any spec. Keys are sorted alphabetically for deterministic output.
 func generateHCL(moduleName, source, version string, spec map[string]any, outputNames []string) []byte {
-	var sb strings.Builder
+	f := hclwrite.NewEmptyFile()
+	rootBody := f.Body()
 
-	fmt.Fprintf(&sb, "module %q {\n", moduleName)
+	moduleBlock := rootBody.AppendNewBlock("module", []string{moduleName})
+	body := moduleBlock.Body()
 
-	// Align "source" and "version" when both are present (terraform fmt convention).
+	body.SetAttributeValue("source", cty.StringVal(source))
 	if version != "" {
-		fmt.Fprintf(&sb, "  source  = %q\n", source)
-		fmt.Fprintf(&sb, "  version = %q\n", version)
-	} else {
-		fmt.Fprintf(&sb, "  source = %q\n", source)
+		body.SetAttributeValue("version", cty.StringVal(version))
 	}
 
 	if len(spec) > 0 {
-		sb.WriteString("\n")
+		body.AppendNewline()
 		for _, k := range sortedKeys(spec) {
-			sb.WriteString("  ")
-			sb.WriteString(k)
-			sb.WriteString(" = ")
-			writeHCLValue(&sb, spec[k], 1)
-			sb.WriteString("\n")
+			body.SetAttributeValue(k, goToCty(spec[k]))
 		}
 	}
-
-	sb.WriteString("}")
 
 	for _, name := range outputNames {
-		fmt.Fprintf(&sb, "\n\noutput %q {\n", moduleName+"_"+name)
-		fmt.Fprintf(&sb, "  value = \"${module.%s.%s}\"\n", moduleName, name)
-		sb.WriteString("}")
+		rootBody.AppendNewline()
+		outputBlock := rootBody.AppendNewBlock("output", []string{moduleName + "_" + name})
+		traversal := hcl.Traversal{
+			hcl.TraverseRoot{Name: "module"},
+			hcl.TraverseAttr{Name: moduleName},
+			hcl.TraverseAttr{Name: name},
+		}
+		outputBlock.Body().SetAttributeRaw("value", hclwrite.TokensForTraversal(traversal))
 	}
 
-	return []byte(sb.String())
+	return f.Bytes()
 }
 
-// writeHCLValue writes a single HCL attribute value at the given indent depth.
-// Primitives are written inline; maps and object-bearing lists use multi-line format.
-func writeHCLValue(sb *strings.Builder, v any, depth int) {
-	indent := strings.Repeat("  ", depth)
-	innerIndent := strings.Repeat("  ", depth+1)
-
+func goToCty(v any) cty.Value {
 	switch val := v.(type) {
 	case string:
-		sb.WriteString(strconv.Quote(val))
+		return cty.StringVal(val)
 	case int:
-		fmt.Fprintf(sb, "%d", val)
+		return cty.NumberIntVal(int64(val))
 	case float64:
-		if val == float64(int64(val)) {
-			fmt.Fprintf(sb, "%d", int64(val))
-		} else {
-			fmt.Fprintf(sb, "%g", val)
-		}
+		return cty.NumberFloatVal(val)
 	case bool:
-		if val {
-			sb.WriteString("true")
-		} else {
-			sb.WriteString("false")
-		}
+		return cty.BoolVal(val)
 	case []any:
-		if len(val) == 0 {
-			sb.WriteString("[]")
-			return
+		vals := make([]cty.Value, len(val))
+		for i, elem := range val {
+			vals[i] = goToCty(elem)
 		}
-		hasObjects := false
-		for _, elem := range val {
-			if _, ok := elem.(map[string]any); ok {
-				hasObjects = true
-				break
-			}
-		}
-		if !hasObjects {
-			sb.WriteString("[")
-			for i, elem := range val {
-				if i > 0 {
-					sb.WriteString(", ")
-				}
-				writeHCLValue(sb, elem, depth)
-			}
-			sb.WriteString("]")
-		} else {
-			sb.WriteString("[\n")
-			for _, elem := range val {
-				sb.WriteString(innerIndent)
-				writeHCLValue(sb, elem, depth+1)
-				sb.WriteString(",\n")
-			}
-			sb.WriteString(indent)
-			sb.WriteString("]")
-		}
+		return cty.TupleVal(vals)
 	case map[string]any:
-		sb.WriteString("{\n")
-		for _, k := range sortedKeys(val) {
-			sb.WriteString(innerIndent)
-			sb.WriteString(k)
-			sb.WriteString(" = ")
-			writeHCLValue(sb, val[k], depth+1)
-			sb.WriteString("\n")
+		if len(val) == 0 {
+			return cty.EmptyObjectVal
 		}
-		sb.WriteString(indent)
-		sb.WriteString("}")
+		attrs := make(map[string]cty.Value, len(val))
+		for k, v := range val {
+			attrs[k] = goToCty(v)
+		}
+		return cty.ObjectVal(attrs)
+	default:
+		log.Fatalf("unsupported value type %T", v)
+		return cty.NilVal
 	}
 }
 

@@ -14,55 +14,54 @@ import (
 var expectedOutput = `module "testobject_non-default_test-object" {
   source = "git::example.com?ref=1.0.0"
 
-  field = "value"
-  intArr = [1]
+  field    = "value"
+  intArr   = [1]
   listBool = [true]
   mapWithinMap = {
-    entry = "value"
+    entry  = "value"
     entry2 = 2
     entry3 = false
     entryMap = {
-      entry = "value"
+      entry  = "value"
       entry2 = 2
       entry3 = false
     }
   }
   number = 7
-  strArr = [
-    {
-      field = "value"
-    },
-  ]
-}`
+  strArr = [{
+    field = "value"
+  }]
+}
+`
 
 var expectedOutputNoSpec = `module "testobject_non-default_test-object" {
   source = "git::example.com?ref=1.0.0"
-}`
+}
+`
 
 var expectedRegistryOutput = `module "testobject_non-default_test-object" {
   source  = "terraform-aws-modules/iam/aws"
   version = "6.2.3"
 
-  field = "value"
-  intArr = [1]
+  field    = "value"
+  intArr   = [1]
   listBool = [true]
   mapWithinMap = {
-    entry = "value"
+    entry  = "value"
     entry2 = 2
     entry3 = false
     entryMap = {
-      entry = "value"
+      entry  = "value"
       entry2 = 2
       entry3 = false
     }
   }
   number = 7
-  strArr = [
-    {
-      field = "value"
-    },
-  ]
-}`
+  strArr = [{
+    field = "value"
+  }]
+}
+`
 
 func runWithEnv(envVars map[string]string) *gexec.Session {
 	cmd := exec.Command(binaryPath)
@@ -152,9 +151,9 @@ var _ = Describe("From TF module to Promise Stage", func() {
 
 			moduleName := "testobject_non-default_test-object"
 			Expect(outputContent).To(ContainSubstring(`output "` + moduleName + `_s3_bucket_id"`))
-			Expect(outputContent).To(ContainSubstring(`value = "${module.` + moduleName + `.s3_bucket_id}"`))
+			Expect(outputContent).To(ContainSubstring(`value = module.` + moduleName + `.s3_bucket_id`))
 			Expect(outputContent).To(ContainSubstring(`output "` + moduleName + `_s3_bucket_bucket_regional_domain_name"`))
-			Expect(outputContent).To(ContainSubstring(`value = "${module.` + moduleName + `.s3_bucket_bucket_regional_domain_name}"`))
+			Expect(outputContent).To(ContainSubstring(`value = module.` + moduleName + `.s3_bucket_bucket_regional_domain_name`))
 		})
 	})
 })
