@@ -124,8 +124,8 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 				internal.SetTerraformInitFunc(func(dir string) error {
 					initCallCount++
 					if initCallCount == 1 {
+						// Simulate Terraform 1.15+: module files downloaded but modules.json NOT written
 						Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
-						expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
 						Expect(os.WriteFile(variablesPath, []byte(`
 variable "required_string" {
   type = string
@@ -149,9 +149,11 @@ variable "optional_var" {
 `), 0o644)).To(Succeed())
 						return errors.New("missing required variables")
 					}
+					// Second call: capture main.tf and write modules.json for resolveModuleDir
 					mainTFBytes, err := os.ReadFile(filepath.Join(dir, "main.tf"))
 					Expect(err).ToNot(HaveOccurred())
 					capturedMainTF = string(mainTFBytes)
+					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
 					return nil
 				})
 			})
@@ -173,8 +175,8 @@ variable "optional_var" {
 		Context("when terraform init fails and the module has no required variables", func() {
 			BeforeEach(func() {
 				internal.SetTerraformInitFunc(func(dir string) error {
+					// Simulate downloaded module dir but no required vars
 					Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
-					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
 					Expect(os.WriteFile(variablesPath, []byte(`
 variable "optional_var" {
   type    = string
@@ -200,8 +202,8 @@ variable "optional_var" {
 				initCallCount = 0
 				internal.SetTerraformInitFunc(func(dir string) error {
 					initCallCount++
+					// Both calls create the module dir and variables.tf but not modules.json
 					Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
-					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
 					Expect(os.WriteFile(variablesPath, []byte(`
 variable "required_var" {
   type = string
@@ -218,6 +220,68 @@ variable "required_var" {
 				Expect(initCallCount).To(Equal(2))
 			})
 		})
+
+		Context("when the source has a subdirectory path and init fails with required variables", func() {
+			var initCallCount int
+			var capturedMainTF string
+			subdir := "modules/api-gateway"
+			subdirVariablesPath := ""
+
+			BeforeEach(func() {
+				subdirVariablesPath = filepath.Join(tempDir, ".terraform", "modules", "kratix_target", subdir, "variables.tf")
+				initCallCount = 0
+				internal.SetTerraformInitFunc(func(dir string) error {
+					initCallCount++
+					if initCallCount == 1 {
+						// Module files land under the subdirectory, not at the base dir
+						Expect(os.MkdirAll(filepath.Dir(subdirVariablesPath), 0o755)).To(Succeed())
+						Expect(os.WriteFile(subdirVariablesPath, []byte(`
+variable "api_id" {
+  type = string
+}
+`), 0o644)).To(Succeed())
+						return errors.New("missing required variables")
+					}
+					mainTFBytes, err := os.ReadFile(filepath.Join(dir, "main.tf"))
+					Expect(err).ToNot(HaveOccurred())
+					capturedMainTF = string(mainTFBytes)
+					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target/"+subdir)
+					return nil
+				})
+			})
+
+			It("retries init using variables.tf from the subdirectory", func() {
+				moduleDir, err := internal.SetupModule(
+					"git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric.git//"+subdir+"?ref=v49.1.0", "")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(moduleDir).To(ContainSubstring(subdir))
+				Expect(initCallCount).To(Equal(2))
+				Expect(capturedMainTF).To(ContainSubstring(`api_id = ""`))
+			})
+		})
+	})
+
+	Describe("#extractSubdirFromSource", func() {
+		DescribeTable("extracts the subdirectory path",
+			func(source, expected string) {
+				Expect(internal.ExtractSubdirFromSource(source)).To(Equal(expected))
+			},
+			Entry("git source with subdirectory",
+				"git::https://github.com/org/repo.git//modules/api-gateway?ref=v1.0",
+				"modules/api-gateway"),
+			Entry("git source without subdirectory",
+				"git::https://github.com/org/repo.git?ref=v1.0",
+				""),
+			Entry("registry source with submodule path",
+				"terraform-aws-modules/iam/aws//modules/iam-account",
+				"modules/iam-account"),
+			Entry("registry source without submodule path",
+				"terraform-aws-modules/s3-bucket/aws",
+				""),
+			Entry("local path",
+				"./my-module",
+				""),
+		)
 	})
 
 	Describe("#GetVariablesFromModule", func() {

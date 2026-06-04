@@ -11,3 +11,7 @@ func SetTerraformInitFunc(f func(dir string) error) {
 func RunTerraformInit(dir string) error {
 	return runTerraformInit(dir)
 }
+
+func ExtractSubdirFromSource(moduleSource string) string {
+	return extractSubdirFromSource(moduleSource)
+}
