@@ -130,7 +130,7 @@ func retryWithRequiredVarPlaceholders(tempDir, moduleSource, moduleRegistryVersi
 
 	variables, err := extractVariablesFromVarsFile(filepath.Join(moduleDir, "variables.tf"))
 	if err != nil {
-		return fmt.Errorf("failed to initialize terraform: %w", initErr)
+		return fmt.Errorf("failed to initialize terraform, could not extract variables: %w", initErr)
 	}
 
 	requiredVars := requiredVariables(variables)
