@@ -39,6 +39,8 @@ func SetupModule(moduleSource, moduleRegistryVersion string) (string, error) {
 		return "", err
 	}
 
+	// If the terraform init fails, this may be because the module has required variables that must be set before the module can be downloaded
+	// As a result, we retry the init with placeholder values for the required variables.
 	if err := terraformInit(tempDir); err == nil {
 		return resolveModuleDir(tempDir)
 	} else if retryErr := retryWithRequiredVarPlaceholders(tempDir, moduleSource, moduleRegistryVersion, err); retryErr != nil {
