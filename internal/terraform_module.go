@@ -39,16 +39,15 @@ func SetupModule(moduleSource, moduleRegistryVersion string) (string, error) {
 		return "", err
 	}
 
-	if err := terraformInit(tempDir); err != nil {
-		return "", fmt.Errorf("failed to initialize terraform: %w", err)
+	// If the terraform init fails, this may be because the module has required variables that must be set before the module can be downloaded
+	// As a result, we retry the init with placeholder values for the required variables.
+	if err := terraformInit(tempDir); err == nil {
+		return resolveModuleDir(tempDir)
+	} else if retryErr := retryWithRequiredVarPlaceholders(tempDir, moduleSource, moduleRegistryVersion, err); retryErr != nil {
+		return "", retryErr
 	}
 
-	moduleDir, err := resolveModuleDir(tempDir)
-	if err != nil {
-		return "", err
-	}
-
-	return moduleDir, nil
+	return resolveModuleDir(tempDir)
 }
 
 func GetVariablesFromModule(moduleSource, moduleDir, moduleRegistryVersion string) ([]TerraformVariable, error) {
@@ -111,6 +110,103 @@ func writeTerraformModuleConfig(workDir, moduleSource, moduleRegistryVersion str
 	}
 
 	return nil
+}
+
+// If the module directory was downloaded, retryWithRequiredVarPlaceholders rewrites main.tf with
+// placeholder values for required variables and retries the init.
+func retryWithRequiredVarPlaceholders(tempDir, moduleSource, moduleRegistryVersion string, initErr error) error {
+	downloadedBaseDir := filepath.Join(tempDir, ".terraform", "modules", kratixModuleName)
+	if _, err := os.Stat(downloadedBaseDir); err != nil {
+		return fmt.Errorf("failed to initialize terraform: %w", initErr)
+	}
+
+	// For sources with a subdirectory path (e.g. git::https://...//subdir?ref=...),
+	// Terraform downloads the whole repo to the base dir; the actual module files
+	// are nested inside it at the subdirectory path.
+	moduleDir := downloadedBaseDir
+	if subdir := extractSubdirFromSource(moduleSource); subdir != "" {
+		moduleDir = filepath.Join(downloadedBaseDir, subdir)
+	}
+
+	variables, err := extractVariablesFromVarsFile(filepath.Join(moduleDir, "variables.tf"))
+	if err != nil {
+		return fmt.Errorf("failed to initialize terraform, could not extract variables: %w", initErr)
+	}
+
+	requiredVars := requiredVariables(variables)
+	if len(requiredVars) == 0 {
+		return fmt.Errorf("failed to initialize terraform: %w", initErr)
+	}
+
+	if err := writeTerraformModuleConfigWithRequiredVars(tempDir, moduleSource, moduleRegistryVersion, requiredVars); err != nil {
+		return err
+	}
+
+	if err := terraformInit(tempDir); err != nil {
+		return fmt.Errorf("failed to initialize terraform: %w", err)
+	}
+
+	return nil
+}
+
+func writeTerraformModuleConfigWithRequiredVars(workDir, moduleSource, moduleRegistryVersion string, requiredVars []TerraformVariable) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "module \"%s\" {\n  source = \"%s\"\n", kratixModuleName, moduleSource)
+	if moduleRegistryVersion != "" && IsTerraformRegistrySource(moduleSource) {
+		fmt.Fprintf(&b, "  version = \"%s\"\n", moduleRegistryVersion)
+	}
+	for _, v := range requiredVars {
+		fmt.Fprintf(&b, "  %s = %s\n", v.Name, placeholderForType(v.Type))
+	}
+	b.WriteString("}\n")
+	if err := os.WriteFile(filepath.Join(workDir, "main.tf"), []byte(b.String()), 0o644); err != nil {
+		return fmt.Errorf("failed to write terraform config: %w", err)
+	}
+	return nil
+}
+
+func requiredVariables(variables []TerraformVariable) []TerraformVariable {
+	var required []TerraformVariable
+	for _, v := range variables {
+		if v.Default == nil {
+			required = append(required, v)
+		}
+	}
+	return required
+}
+
+// extractSubdirFromSource returns the subdirectory portion of a module source that
+// uses the // convention (e.g. "modules/api-gateway" from
+// "git::https://github.com/org/repo.git//modules/api-gateway?ref=v1.0").
+// Returns "" if no subdirectory is present.
+func extractSubdirFromSource(moduleSource string) string {
+	s := strings.TrimPrefix(moduleSource, "git::")
+	// Skip past the protocol scheme (e.g. "https://") so that its // is not
+	// mistaken for the subdirectory separator.
+	if _, after, ok := strings.Cut(s, "://"); ok {
+		s = after
+	}
+	_, subdir, ok := strings.Cut(s, "//")
+	if !ok {
+		return ""
+	}
+	subdir, _, _ = strings.Cut(subdir, "?")
+	return subdir
+}
+
+func placeholderForType(tfType string) string {
+	switch {
+	case tfType == "number":
+		return "0"
+	case tfType == "bool":
+		return "false"
+	case strings.HasPrefix(tfType, "list(") || strings.HasPrefix(tfType, "set(") || strings.HasPrefix(tfType, "tuple("):
+		return "[]"
+	case strings.HasPrefix(tfType, "map(") || strings.HasPrefix(tfType, "object("):
+		return "{}"
+	default:
+		return `""`
+	}
 }
 
 func runTerraformInit(dir string) error {
