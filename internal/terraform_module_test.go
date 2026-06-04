@@ -114,6 +114,110 @@ var _ = Describe("DownloadAndConvertTerraformToCRD", func() {
 				Expect(err.Error()).To(ContainSubstring("failed to initialize terraform"))
 			})
 		})
+
+		Context("when terraform init fails but the module was downloaded with required variables", func() {
+			var initCallCount int
+			var capturedMainTF string
+
+			BeforeEach(func() {
+				initCallCount = 0
+				internal.SetTerraformInitFunc(func(dir string) error {
+					initCallCount++
+					if initCallCount == 1 {
+						Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+						expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+						Expect(os.WriteFile(variablesPath, []byte(`
+variable "required_string" {
+  type = string
+}
+variable "required_number" {
+  type = number
+}
+variable "required_bool" {
+  type = bool
+}
+variable "required_list" {
+  type = list(string)
+}
+variable "required_map" {
+  type = map(string)
+}
+variable "optional_var" {
+  type    = string
+  default = "optional"
+}
+`), 0o644)).To(Succeed())
+						return errors.New("missing required variables")
+					}
+					mainTFBytes, err := os.ReadFile(filepath.Join(dir, "main.tf"))
+					Expect(err).ToNot(HaveOccurred())
+					capturedMainTF = string(mainTFBytes)
+					return nil
+				})
+			})
+
+			It("retries init with placeholder values for required variables only", func() {
+				moduleDir, err := internal.SetupModule("mock-source", "")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(moduleDir).To(ContainSubstring(".terraform/modules/kratix_target"))
+				Expect(initCallCount).To(Equal(2))
+				Expect(capturedMainTF).To(ContainSubstring(`required_string = ""`))
+				Expect(capturedMainTF).To(ContainSubstring(`required_number = 0`))
+				Expect(capturedMainTF).To(ContainSubstring(`required_bool = false`))
+				Expect(capturedMainTF).To(ContainSubstring(`required_list = []`))
+				Expect(capturedMainTF).To(ContainSubstring(`required_map = {}`))
+				Expect(capturedMainTF).NotTo(ContainSubstring("optional_var"))
+			})
+		})
+
+		Context("when terraform init fails and the module has no required variables", func() {
+			BeforeEach(func() {
+				internal.SetTerraformInitFunc(func(dir string) error {
+					Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+					Expect(os.WriteFile(variablesPath, []byte(`
+variable "optional_var" {
+  type    = string
+  default = "optional"
+}
+`), 0o644)).To(Succeed())
+					return errors.New("some other init failure")
+				})
+			})
+
+			It("returns the original init error", func() {
+				_, err := internal.SetupModule("mock-source", "")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to initialize terraform"))
+				Expect(err.Error()).To(ContainSubstring("some other init failure"))
+			})
+		})
+
+		Context("when terraform init fails and the second attempt also fails", func() {
+			var initCallCount int
+
+			BeforeEach(func() {
+				initCallCount = 0
+				internal.SetTerraformInitFunc(func(dir string) error {
+					initCallCount++
+					Expect(os.MkdirAll(filepath.Dir(variablesPath), 0o755)).To(Succeed())
+					expectManifest(filepath.Join(tempDir, ".terraform", "modules", "modules.json"), ".terraform/modules/kratix_target")
+					Expect(os.WriteFile(variablesPath, []byte(`
+variable "required_var" {
+  type = string
+}
+`), 0o644)).To(Succeed())
+					return fmt.Errorf("init failure attempt %d", initCallCount)
+				})
+			})
+
+			It("returns the second init error", func() {
+				_, err := internal.SetupModule("mock-source", "")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("init failure attempt 2"))
+				Expect(initCallCount).To(Equal(2))
+			})
+		})
 	})
 
 	Describe("#GetVariablesFromModule", func() {

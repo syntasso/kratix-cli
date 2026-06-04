@@ -39,13 +39,38 @@ func SetupModule(moduleSource, moduleRegistryVersion string) (string, error) {
 		return "", err
 	}
 
-	if err := terraformInit(tempDir); err != nil {
-		return "", fmt.Errorf("failed to initialize terraform: %w", err)
+	initErr := terraformInit(tempDir)
+
+	moduleDir, resolveErr := resolveModuleDir(tempDir)
+	if resolveErr != nil {
+		if initErr != nil {
+			return "", fmt.Errorf("failed to initialize terraform: %w", initErr)
+		}
+		return "", resolveErr
 	}
 
-	moduleDir, err := resolveModuleDir(tempDir)
+	if initErr == nil {
+		return moduleDir, nil
+	}
+
+	// if init failed but the module was downloaded attempt to init again with placeholder
+	// values set for any required variables
+	variables, err := extractVariablesFromVarsFile(filepath.Join(moduleDir, "variables.tf"))
 	if err != nil {
+		return "", fmt.Errorf("failed to initialize terraform: %w", initErr)
+	}
+
+	requiredVars := requiredVariables(variables)
+	if len(requiredVars) == 0 {
+		return "", fmt.Errorf("failed to initialize terraform: %w", initErr)
+	}
+
+	if err := writeTerraformModuleConfigWithRequiredVars(tempDir, moduleSource, moduleRegistryVersion, requiredVars); err != nil {
 		return "", err
+	}
+
+	if err := terraformInit(tempDir); err != nil {
+		return "", fmt.Errorf("failed to initialize terraform: %w", err)
 	}
 
 	return moduleDir, nil
@@ -111,6 +136,47 @@ func writeTerraformModuleConfig(workDir, moduleSource, moduleRegistryVersion str
 	}
 
 	return nil
+}
+
+func writeTerraformModuleConfigWithRequiredVars(workDir, moduleSource, moduleRegistryVersion string, requiredVars []TerraformVariable) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "module \"%s\" {\n  source = \"%s\"\n", kratixModuleName, moduleSource)
+	if moduleRegistryVersion != "" && IsTerraformRegistrySource(moduleSource) {
+		fmt.Fprintf(&b, "  version = \"%s\"\n", moduleRegistryVersion)
+	}
+	for _, v := range requiredVars {
+		fmt.Fprintf(&b, "  %s = %s\n", v.Name, placeholderForType(v.Type))
+	}
+	b.WriteString("}\n")
+	if err := os.WriteFile(filepath.Join(workDir, "main.tf"), []byte(b.String()), 0o644); err != nil {
+		return fmt.Errorf("failed to write terraform config: %w", err)
+	}
+	return nil
+}
+
+func requiredVariables(variables []TerraformVariable) []TerraformVariable {
+	var required []TerraformVariable
+	for _, v := range variables {
+		if v.Default == nil {
+			required = append(required, v)
+		}
+	}
+	return required
+}
+
+func placeholderForType(tfType string) string {
+	switch {
+	case tfType == "number":
+		return "0"
+	case tfType == "bool":
+		return "false"
+	case strings.HasPrefix(tfType, "list(") || strings.HasPrefix(tfType, "set(") || strings.HasPrefix(tfType, "tuple("):
+		return "[]"
+	case strings.HasPrefix(tfType, "map(") || strings.HasPrefix(tfType, "object("):
+		return "{}"
+	default:
+		return `""`
+	}
 }
 
 func runTerraformInit(dir string) error {
