@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.6.0...terraform-module-promise-v0.7.0) (2026-06-09)
+
+
+### Features
+
+* **229:** terraform-generate image outputs hcl not json ([#233](https://github.com/syntasso/kratix-cli/issues/233)) ([96d25aa](https://github.com/syntasso/kratix-cli/commit/96d25aa8163368cf6f88e7ffb15cf7f30077e095))
+
 ## [0.6.0](https://github.com/syntasso/kratix-cli/compare/terraform-module-promise-v0.5.0...terraform-module-promise-v0.6.0) (2026-03-20)
 
 
