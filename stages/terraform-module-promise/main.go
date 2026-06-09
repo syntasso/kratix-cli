@@ -1,14 +1,18 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/syntasso/kratix-cli/internal"
+	"github.com/zclconf/go-cty/cty"
 	"gopkg.in/yaml.v3"
 )
 
@@ -85,59 +89,97 @@ func runResourceWorkflow(outputDir string) {
 
 	uniqueFileName := strings.ToLower(fmt.Sprintf("%s_%s_%s", kind, namespace, name))
 
-	config := map[string]any{
-		"module": map[string]any{
-			uniqueFileName: map[string]any{
-				"source": moduleSource,
-			},
-		},
-	}
-	moduleBlock := config["module"].(map[string]any)
-	moduleInstance := moduleBlock[uniqueFileName].(map[string]any)
-
-	if moduleRegistryVersion != "" {
-		moduleInstance["version"] = moduleRegistryVersion
-	}
-
-	// Handle spec if it exists
-	if spec, ok := inputObjectData["spec"].(map[string]any); ok {
-		for key, value := range spec {
+	spec := make(map[string]any)
+	if specMap, ok := inputObjectData["spec"].(map[string]any); ok {
+		for key, value := range specMap {
 			valSlice, ok := value.([]any)
 			// 1. if its not an array and its not nil, add it to the module
 			// 2. if its an array and its not empty, add it to the module
 			// this gets around adding a bunch of empty arrays to the module
 			if (!ok && value != nil) || (ok && len(valSlice) > 0) {
-				moduleInstance[key] = value
+				spec[key] = value
 			}
 		}
 	}
 
-	if outputNames := parseOutputNames(os.Getenv("MODULE_OUTPUT_NAMES")); len(outputNames) > 0 {
-		outputBlock := make(map[string]any)
-		for _, name := range outputNames {
-			uniqueOutputName := uniqueFileName + "_" + name
-			outputBlock[uniqueOutputName] = map[string]any{
-				"value": fmt.Sprintf("${module.%s.%s}", uniqueFileName, name),
-			}
-		}
-		config["output"] = outputBlock
-	}
+	outputNames := parseOutputNames(os.Getenv("MODULE_OUTPUT_NAMES"))
 
-	jsonData, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		log.Fatalf("Error generating JSON: %v\n", err)
-	}
+	hclData := generateHCL(uniqueFileName, moduleSource, moduleRegistryVersion, spec, outputNames)
 
 	err = os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
 		log.Fatalf("Error creating output directory: %v\n", err)
 	}
 
-	path := filepath.Join(outputDir, uniqueFileName+".tf.json")
-	err = os.WriteFile(path, jsonData, 0644)
+	path := filepath.Join(outputDir, uniqueFileName+".tf")
+	err = os.WriteFile(path, hclData, 0644)
 	if err != nil {
-		log.Fatalf("Error writing Terraform JSON file: %v\n", err)
+		log.Fatalf("Error writing Terraform file: %v\n", err)
 	}
 
-	fmt.Printf("Terraform JSON configuration written to %s\n", path)
+	fmt.Printf("Terraform configuration written to %s\n", path)
+}
+
+func generateHCL(moduleName, source, version string, spec map[string]any, outputNames []string) []byte {
+	f := hclwrite.NewEmptyFile()
+	rootBody := f.Body()
+
+	moduleBlock := rootBody.AppendNewBlock("module", []string{moduleName})
+	body := moduleBlock.Body()
+
+	body.SetAttributeValue("source", cty.StringVal(source))
+	if version != "" {
+		body.SetAttributeValue("version", cty.StringVal(version))
+	}
+
+	if len(spec) > 0 {
+		body.AppendNewline()
+		for _, key := range slices.Sorted(maps.Keys(spec)) {
+			body.SetAttributeValue(key, goToCty(spec[key]))
+		}
+	}
+
+	for _, name := range outputNames {
+		rootBody.AppendNewline()
+		outputBlock := rootBody.AppendNewBlock("output", []string{moduleName + "_" + name})
+		traversal := hcl.Traversal{
+			hcl.TraverseRoot{Name: "module"},
+			hcl.TraverseAttr{Name: moduleName},
+			hcl.TraverseAttr{Name: name},
+		}
+		outputBlock.Body().SetAttributeRaw("value", hclwrite.TokensForTraversal(traversal))
+	}
+
+	return f.Bytes()
+}
+
+func goToCty(v any) cty.Value {
+	switch val := v.(type) {
+	case string:
+		return cty.StringVal(val)
+	case int:
+		return cty.NumberIntVal(int64(val))
+	case float64:
+		return cty.NumberFloatVal(val)
+	case bool:
+		return cty.BoolVal(val)
+	case []any:
+		vals := make([]cty.Value, len(val))
+		for i, elem := range val {
+			vals[i] = goToCty(elem)
+		}
+		return cty.TupleVal(vals)
+	case map[string]any:
+		if len(val) == 0 {
+			return cty.EmptyObjectVal
+		}
+		attrs := make(map[string]cty.Value, len(val))
+		for k, v := range val {
+			attrs[k] = goToCty(v)
+		}
+		return cty.ObjectVal(attrs)
+	default:
+		log.Fatalf("unsupported value type %T", v)
+		return cty.NilVal
+	}
 }
