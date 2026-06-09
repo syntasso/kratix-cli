@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -133,8 +134,8 @@ func generateHCL(moduleName, source, version string, spec map[string]any, output
 
 	if len(spec) > 0 {
 		body.AppendNewline()
-		for _, k := range sortedKeys(spec) {
-			body.SetAttributeValue(k, goToCty(spec[k]))
+		for _, key := range slices.Sorted(maps.Keys(spec)) {
+			body.SetAttributeValue(key, goToCty(spec[key]))
 		}
 	}
 
@@ -181,13 +182,4 @@ func goToCty(v any) cty.Value {
 		log.Fatalf("unsupported value type %T", v)
 		return cty.NilVal
 	}
-}
-
-func sortedKeys(m map[string]any) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
