@@ -1,7 +1,6 @@
 apiVersion: platform.kratix.io/v1alpha1
 kind: Promise
 metadata:
-  creationTimestamp: null
   labels:
     kratix.io/promise-version: v0.0.1
   name: googlecloudrun
@@ -212,7 +211,6 @@ spec:
       - apiVersion: platform.kratix.io/v1alpha1
         kind: Pipeline
         metadata:
-          creationTimestamp: null
           name: dependencies
         spec:
           containers:
