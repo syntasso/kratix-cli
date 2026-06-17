@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.18.0](https://github.com/syntasso/kratix-cli/compare/v0.17.0...v0.18.0) (2026-06-17)
+
+
+### Features
+
+* **229:** terraform-generate image outputs hcl not json ([#233](https://github.com/syntasso/kratix-cli/issues/233)) ([96d25aa](https://github.com/syntasso/kratix-cli/commit/96d25aa8163368cf6f88e7ffb15cf7f30077e095))
+
+
+### Bug Fixes
+
+* terraform init no longer fails if a module has required values ([#235](https://github.com/syntasso/kratix-cli/issues/235)) ([3383942](https://github.com/syntasso/kratix-cli/commit/33839424affcd5769cb19f72fccea6e800873b85))
+
+
+### Chores
+
+* auto-merge all minor dependabot bumps ([3610d7b](https://github.com/syntasso/kratix-cli/commit/3610d7b283cff6ef181f3bcb72d8fd20e61c90bd))
+* auto-merge all minor dependabot bumps ([17fbf78](https://github.com/syntasso/kratix-cli/commit/17fbf7877a3412fdbffbe0641814c23aad66a083))
+* ensure PR titles follow conventional commit format ([2535754](https://github.com/syntasso/kratix-cli/commit/253575470bbb81ac2c2aafe3326a52f4004f8016))
+* **main:** release terraform-module-promise 0.7.0 ([#241](https://github.com/syntasso/kratix-cli/issues/241)) ([d78d1c0](https://github.com/syntasso/kratix-cli/commit/d78d1c0b9b3bf3c5d460c88d14d14e1992f583f8))
+
+
+### Build System
+
+* **deps:** bump github.com/containerd/containerd from 1.7.29 to 1.7.32 ([#240](https://github.com/syntasso/kratix-cli/issues/240)) ([2b8f166](https://github.com/syntasso/kratix-cli/commit/2b8f166d07230b7194dad46b566fb6bc826eadb9))
+* **deps:** bump github.com/moby/spdystream from 0.5.0 to 0.5.1 ([#238](https://github.com/syntasso/kratix-cli/issues/238)) ([788d34a](https://github.com/syntasso/kratix-cli/commit/788d34a955e0fc1320b64bc6f224630754ef2356))
+* **deps:** bump google.golang.org/grpc from 1.72.2 to 1.79.3 ([#237](https://github.com/syntasso/kratix-cli/issues/237)) ([0138b8d](https://github.com/syntasso/kratix-cli/commit/0138b8dc02212cc9ad026d0cae74ef6739a2dcc6))
+* **deps:** bump helm.sh/helm/v3 from 3.18.5 to 3.20.2 ([#239](https://github.com/syntasso/kratix-cli/issues/239)) ([ba6bb9d](https://github.com/syntasso/kratix-cli/commit/ba6bb9d382d4f635179a23ba03ed6b3daabcea0f))
+
 ## [0.17.0](https://github.com/syntasso/kratix-cli/compare/v0.16.2...v0.17.0) (2026-04-28)
 
 
