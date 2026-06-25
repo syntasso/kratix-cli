@@ -64,13 +64,3 @@ jobs:
             --token=$TOKEN \
             --repo-url=syntasso/kratix-cli \
             release-pr
-      - name: Re-pin latest to most recent CLI release
-        if: github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          LATEST_CLI=$(gh release list --repo syntasso/kratix-cli --limit 50 \
-            --json tagName,publishedAt \
-            --jq '[.[] | select(.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | sort_by(.publishedAt) | last | .tagName')
-          echo "Re-pinning latest to $LATEST_CLI"
-          gh release edit "$LATEST_CLI" --repo syntasso/kratix-cli --latest
