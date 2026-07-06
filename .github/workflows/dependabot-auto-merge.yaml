@@ -82,7 +82,7 @@ jobs:
           sleep 20
           PR="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
-          for i in $(seq 1 60); do
+          for i in $(seq 1 120); do
             STATUS=$(gh pr checks "$PR" --repo "$REPO" --json name,state 2>/dev/null || echo "[]")
             TOTAL=$(echo "$STATUS" | jq 'length')
             if [ "$TOTAL" -eq 0 ]; then
@@ -105,13 +105,14 @@ jobs:
           done
           echo "Timed out waiting for CI checks"
           exit 1
-        timeout-minutes: 35
+        timeout-minutes: 65
 
       - name: Merge
         if: steps.eligible.outputs.result == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "Auto-merging: ${{ steps.eligible.outputs.reason }}"
           gh pr merge ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} \
             --squash \
