@@ -35,7 +35,16 @@ jobs:
         if: github.actor != 'dependabot[bot]'
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
+          govulncheck \
+            -ignore-vulns GO-2026-5932 \
+            -ignore-vulns GO-2026-5064 \
+            -ignore-vulns GO-2026-5622 \
+            -ignore-vulns GO-2026-5338 \
+            -ignore-vulns GO-2026-5709 \
+            ./...
+          # GO-2026-5932: golang.org/x/crypto/openpgp marked unmaintained — no fix; indirect dep via crossplane
+          # GO-2026-5064/5622/5338: containerd v1 CRI vulns — no fix in v1 branch; indirect dep via helm
+          # GO-2026-5709: crossplane signature TOCTOU — no fix in v1.x; tracked upstream
 
   update-release-pr:
     runs-on: ubuntu-latest
