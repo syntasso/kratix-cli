@@ -15,26 +15,6 @@
           "type": "fix",
           "section": "Bug Fixes",
           "hidden": false
-        },
-        {
-          "type": "perf",
-          "section": "Performance Improvements",
-          "hidden": false
-        },
-        {
-          "type": "revert",
-          "section": "Reverts",
-          "hidden": false
-        },
-        {
-          "type": "chore",
-          "section": "Chores",
-          "hidden": false
-        },
-        {
-          "type": "build",
-          "section": "Build System",
-          "hidden": false
         }
       ]
     },
@@ -47,7 +27,7 @@
       "draft": false,
       "prerelease": false,
       "release-type": "go",
-            "changelog-sections": [
+      "changelog-sections": [
         {
           "type": "feat",
           "section": "Features",
@@ -56,26 +36,6 @@
         {
           "type": "fix",
           "section": "Bug Fixes",
-          "hidden": false
-        },
-        {
-          "type": "perf",
-          "section": "Performance Improvements",
-          "hidden": false
-        },
-        {
-          "type": "revert",
-          "section": "Reverts",
-          "hidden": false
-        },
-        {
-          "type": "chore",
-          "section": "Chores",
-          "hidden": false
-        },
-        {
-          "type": "build",
-          "section": "Build System",
           "hidden": false
         }
       ]
@@ -99,26 +59,6 @@
           "type": "fix",
           "section": "Bug Fixes",
           "hidden": false
-        },
-        {
-          "type": "perf",
-          "section": "Performance Improvements",
-          "hidden": false
-        },
-        {
-          "type": "revert",
-          "section": "Reverts",
-          "hidden": false
-        },
-        {
-          "type": "chore",
-          "section": "Chores",
-          "hidden": false
-        },
-        {
-          "type": "build",
-          "section": "Build System",
-          "hidden": false
         }
       ]
     },
@@ -140,26 +80,6 @@
         {
           "type": "fix",
           "section": "Bug Fixes",
-          "hidden": false
-        },
-        {
-          "type": "perf",
-          "section": "Performance Improvements",
-          "hidden": false
-        },
-        {
-          "type": "revert",
-          "section": "Reverts",
-          "hidden": false
-        },
-        {
-          "type": "chore",
-          "section": "Chores",
-          "hidden": false
-        },
-        {
-          "type": "build",
-          "section": "Build System",
           "hidden": false
         }
       ]
@@ -183,26 +103,6 @@
           "type": "fix",
           "section": "Bug Fixes",
           "hidden": false
-        },
-        {
-          "type": "perf",
-          "section": "Performance Improvements",
-          "hidden": false
-        },
-        {
-          "type": "revert",
-          "section": "Reverts",
-          "hidden": false
-        },
-        {
-          "type": "chore",
-          "section": "Chores",
-          "hidden": false
-        },
-        {
-          "type": "build",
-          "section": "Build System",
-          "hidden": false
         }
       ]
     },
@@ -224,26 +124,6 @@
         {
           "type": "fix",
           "section": "Bug Fixes",
-          "hidden": false
-        },
-        {
-          "type": "perf",
-          "section": "Performance Improvements",
-          "hidden": false
-        },
-        {
-          "type": "revert",
-          "section": "Reverts",
-          "hidden": false
-        },
-        {
-          "type": "chore",
-          "section": "Chores",
-          "hidden": false
-        },
-        {
-          "type": "build",
-          "section": "Build System",
           "hidden": false
         }
       ]
