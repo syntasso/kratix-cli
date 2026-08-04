@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.18.0](https://github.com/syntasso/kratix-cli/compare/v0.17.0...v0.18.0) (2026-08-04)
+
+
+### Features
+
+* **229:** terraform-generate image outputs hcl not json ([#233](https://github.com/syntasso/kratix-cli/issues/233)) ([96d25aa](https://github.com/syntasso/kratix-cli/commit/96d25aa8163368cf6f88e7ffb15cf7f30077e095))
+
+
+### Bug Fixes
+
+* re-pin latest to most recent CLI release after every main push ([#248](https://github.com/syntasso/kratix-cli/issues/248)) ([2da260c](https://github.com/syntasso/kratix-cli/commit/2da260ce434106406279969a2f46fcbab93b0c4d))
+* terraform init no longer fails if a module has required values ([#235](https://github.com/syntasso/kratix-cli/issues/235)) ([3383942](https://github.com/syntasso/kratix-cli/commit/33839424affcd5769cb19f72fccea6e800873b85))
+* use commit check-runs API and add circuit breaker for empty checks ([#252](https://github.com/syntasso/kratix-cli/issues/252)) ([e23a766](https://github.com/syntasso/kratix-cli/commit/e23a766760fa2201304de3b57ad98147bae69554))
+
 ## [0.17.0](https://github.com/syntasso/kratix-cli/compare/v0.16.2...v0.17.0) (2026-04-28)
 
 
