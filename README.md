@@ -3,7 +3,24 @@
 The best tool you'll ever find to build your Promises!
 
 ## Installation
-To install the CLI, run:
+
+### Homebrew
+
+```bash
+brew install syntasso/tap/kratix
+```
+
+### Krew
+
+The CLI is also distributed as a [krew](https://krew.sigs.k8s.io/) plugin, which
+makes it available as `kubectl kratix`:
+
+```bash
+kubectl krew index add syntasso https://github.com/syntasso/krew-index
+kubectl krew install syntasso/kratix
+```
+
+### Go
 
 ```bash
 go install github.com/syntasso/kratix-cli/cmd/kratix@latest
@@ -103,6 +120,17 @@ is merged the following happens:
    contents of the PRs description (**NOT the contents of the file committed**).
 - Goreleaser gets triggered in Github actions, creating and uploading the binaries to the
    existing release.
+- Goreleaser then runs its publish phase (`make publish`), which commits an
+   updated `kratix` formula to
+   [syntasso/homebrew-tap](https://github.com/syntasso/homebrew-tap) and an
+   updated plugin manifest to
+   [syntasso/krew-index](https://github.com/syntasso/krew-index). Both are
+   pushed over SSH, which requires the `HOMEBREW_TAP_DEPLOY_KEY` and
+   `KREW_INDEX_DEPLOY_KEY` repository secrets. Each holds the private half of a
+   write-enabled deploy key on the respective repo, and must not be
+   passphrase-protected. Deploy keys are used rather than a PAT so the
+   credential belongs to the target repo rather than to a person (the default
+   `GITHUB_TOKEN` is scoped to this repo only).
 
 ## Sub-command images
 

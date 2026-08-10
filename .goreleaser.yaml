@@ -29,6 +29,71 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
+release:
+  # The GitHub release is created by release-please, and the archives are
+  # attached to it by `gh release upload` in .github/workflows/release.yaml.
+  # goreleaser only needs the publish phase for the Homebrew tap, so keep it
+  # out of the artifact upload entirely.
+  skip_upload: true
+
+brews:
+  # Publishes a formula to github.com/syntasso/homebrew-tap, so users can
+  # `brew install syntasso/tap/kratix`. A formula (rather than a cask) is used
+  # because it also covers Linux via linuxbrew.
+  - name: kratix
+    repository:
+      owner: syntasso
+      name: homebrew-tap
+      branch: main
+      # Pushed over SSH with a per-repo deploy key rather than a PAT, so the
+      # credential is owned by the tap repo instead of a person. Setting
+      # git.url makes goreleaser use the git client and ignore `token`.
+      #
+      # private_key accepts either the key itself or a path to it. It MUST be a
+      # path here: unlike `token`, it is resolved while the formula is generated
+      # and the resolved value is written to dist/artifacts.json, which
+      # .github/workflows/release.yaml uploads to the public release. Passing
+      # the key inline would publish its private half. The workflow writes the
+      # secret to this path first. The key must not be passphrase-protected.
+      git:
+        url: "git@github.com:syntasso/homebrew-tap.git"
+        private_key: "{{ .Env.HOMEBREW_TAP_DEPLOY_KEY_FILE }}"
+    directory: Formula
+    # Set explicitly because release.skip_upload means goreleaser never sees
+    # the uploaded assets it would otherwise derive these URLs from.
+    url_template: "https://github.com/syntasso/kratix-cli/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    homepage: "https://docs.kratix.io/main/kratix-cli/intro"
+    description: "CLI-based tool to build Promises"
+    license: "Apache-2.0"
+    install: |
+      bin.install "kratix"
+    test: |
+      assert_match version.to_s, shell_output("#{bin}/kratix --version")
+
+krews:
+  # Publishes a plugin manifest to github.com/syntasso/krew-index, so users can
+  # `kubectl krew index add syntasso https://github.com/syntasso/krew-index`
+  # and then `kubectl krew install syntasso/kratix`, invoking the CLI as
+  # `kubectl kratix`. krew symlinks kubectl-kratix to the `kratix` binary.
+  - name: kratix
+    repository:
+      owner: syntasso
+      name: krew-index
+      branch: main
+      # Deploy key over SSH, same as the brews repository above, and a path for
+      # the same artifacts.json reason.
+      git:
+        url: "git@github.com:syntasso/krew-index.git"
+        private_key: "{{ .Env.KREW_INDEX_DEPLOY_KEY_FILE }}"
+    # Set explicitly for the same reason as the brews url_template above.
+    url_template: "https://github.com/syntasso/kratix-cli/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    homepage: "https://docs.kratix.io/main/kratix-cli/intro"
+    short_description: "CLI-based tool to build Promises"
+    description: |
+      The Kratix CLI scaffolds, builds, and inspects Kratix Promises, letting
+      platform teams turn Helm charts, Terraform modules, Crossplane XRDs,
+      Kubernetes operators, and Pulumi packages into on-demand services.
+
 changelog:
   sort: asc
   filters:
