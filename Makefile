@@ -79,3 +79,11 @@ build-and-push-terraform-module-promise-stage:
 
 release: check-version-alignment
 	goreleaser release --prepare --clean --config .goreleaser.yaml
+
+# `release` runs with --prepare, which implies --skip=publish, so publishers
+# (Homebrew, krew) never run. This runs the publish phase against the prepared
+# dist.
+# NOTE: `publish` takes no --config; it reads the config from the prepared dist.
+.PHONY: publish
+publish:
+	goreleaser publish

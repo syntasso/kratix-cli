@@ -26,6 +26,18 @@ jobs:
           sudo mv goreleaser /usr/local/bin/goreleaser
           chmod +x /usr/local/bin/goreleaser
           rm goreleaser.tar.gz
+      # goreleaser is given the paths to these files rather than the keys
+      # themselves, so the keys stay out of dist/artifacts.json, which is
+      # uploaded to the public release below. See .goreleaser.yaml.
+      - name: Write publish deploy keys
+        env:
+          HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          KREW_INDEX_DEPLOY_KEY: ${{ secrets.KREW_INDEX_DEPLOY_KEY }}
+        run: |
+          set -eu
+          umask 077
+          printf '%s\n' "$HOMEBREW_TAP_DEPLOY_KEY" > "${RUNNER_TEMP}/homebrew-tap-deploy-key"
+          printf '%s\n' "$KREW_INDEX_DEPLOY_KEY" > "${RUNNER_TEMP}/krew-index-deploy-key"
       - name: Run make release
         run: |
           set -ex
@@ -40,8 +52,13 @@ jobs:
           gh config set prompt disabled
           make release
           gh release upload ${VERSION} dist/*.{json,gz}
+          echo "publishing the homebrew formula and krew plugin manifest"
+          make publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_DEPLOY_KEY_FILE: ${{ runner.temp }}/homebrew-tap-deploy-key
+          KREW_INDEX_DEPLOY_KEY_FILE: ${{ runner.temp }}/krew-index-deploy-key
           VERSION: ${{ github.ref_name }}
           MANUAL_VERSION: ${{ github.event.inputs.manual_version }}
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
