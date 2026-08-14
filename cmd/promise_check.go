@@ -20,7 +20,11 @@ type reviewFinding struct {
 	Resolved    *bool  `json:"resolved" yaml:"resolved"`
 }
 
-var reviewFile string
+var (
+	reviewFile string
+	promiseDir string
+	exampleDir string
+)
 
 var promiseCmd = &cobra.Command{
 	Use:   "promise",
@@ -30,10 +34,13 @@ var promiseCmd = &cobra.Command{
 var promiseCheckCmd = &cobra.Command{
 	Use:   "check",
 	Args:  cobra.NoArgs,
-	Short: "Check promise review findings",
-	Long:  "Validate a review-findings artifact and fail if unresolved critical or high findings remain.",
+	Short: "Check promise review findings and Level-1 structural gates",
+	Long: "Validate a review-findings artifact and fail if unresolved critical or high findings remain. " +
+		"If --promise-dir and/or --example-dir exist, also runs Level-1 deterministic gates against the " +
+		"generated Promise/example files: valid CRD, namespaced scope, example validates against the CRD " +
+		"schema, pipeline images set, delete workflow well-formed.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return checkReviewFindings(reviewFile, cmd.ErrOrStderr())
+		return runPromiseCheck(reviewFile, promiseDir, exampleDir, cmd.ErrOrStderr())
 	},
 }
 
@@ -41,6 +48,31 @@ func init() {
 	rootCmd.AddCommand(promiseCmd)
 	promiseCmd.AddCommand(promiseCheckCmd)
 	promiseCheckCmd.Flags().StringVar(&reviewFile, "review-file", "review-findings.yaml", "review findings YAML or JSON file")
+	promiseCheckCmd.Flags().StringVar(&promiseDir, "promise-dir", "promises", "directory of generated Promise YAML files (Level-1 gate, skipped if absent)")
+	promiseCheckCmd.Flags().StringVar(&exampleDir, "example-dir", "resource-requests", "directory of example/Resource Request YAML files to validate against the Promise CRDs (Level-1 gate, skipped if absent)")
+}
+
+func runPromiseCheck(reviewFile, promiseDir, exampleDir string, out io.Writer) error {
+	reviewErr := checkReviewFindings(reviewFile, out)
+
+	level1Errs := runLevel1Gates(promiseDir, exampleDir, out)
+	if len(level1Errs) > 0 {
+		fmt.Fprintln(out, "Level-1 gate failures:")
+		for _, e := range level1Errs {
+			fmt.Fprintf(out, "- %s\n", e)
+		}
+	}
+
+	switch {
+	case reviewErr != nil && len(level1Errs) > 0:
+		return fmt.Errorf("%w; and %d Level-1 gate failure(s)", reviewErr, len(level1Errs))
+	case reviewErr != nil:
+		return reviewErr
+	case len(level1Errs) > 0:
+		return fmt.Errorf("%d Level-1 gate failure(s)", len(level1Errs))
+	default:
+		return nil
+	}
 }
 
 func checkReviewFindings(path string, out io.Writer) error {
