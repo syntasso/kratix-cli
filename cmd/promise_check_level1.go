@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -16,6 +15,8 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
+	crdvalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
@@ -30,15 +31,6 @@ import (
 // type (k8s.io/apiextensions-apiserver), and validate the CRD with the same
 // validator the Kubernetes API server itself uses, rather than hand-rolled
 // structs that only understand a handful of fields.
-
-// exampleDoc is the one type here with no existing Kubernetes/Kratix
-// equivalent: an example/Resource Request's shape is whatever the matching
-// Promise's CRD schema says it should be, so it's decoded generically.
-type exampleDoc struct {
-	APIVersion string                 `yaml:"apiVersion"`
-	Kind       string                 `yaml:"kind"`
-	Spec       map[string]interface{} `yaml:"spec"`
-}
 
 // checkPromiseFile parses one Promise file and returns every Level-1
 // structural gate failure found in it. An empty slice means it passed.
@@ -145,12 +137,18 @@ func checkWorkflowPipelines(promiseName string, promise *v1alpha1.Promise) []str
 
 // checkExampleFile validates one example/Resource Request file against
 // whichever loaded Promise's CRD its apiVersion+kind matches. A file that
-// matches no Promise is reported as such, not silently skipped.
+// matches no Promise, or matches only a version that isn't served, is
+// reported as such, not silently skipped. The whole decoded document is
+// validated against the whole CRD schema (not just spec.spec extracted in
+// isolation) so root-level schema rules aren't missed either.
 func checkExampleFile(name string, data []byte, promises map[string]*v1alpha1.Promise) []string {
-	var ex exampleDoc
-	if err := sigsyaml.Unmarshal(data, &ex); err != nil {
+	var example map[string]interface{}
+	if err := sigsyaml.Unmarshal(data, &example); err != nil {
 		return []string{fmt.Sprintf("%s: does not parse as YAML: %v", name, err)}
 	}
+
+	apiVersion, _ := example["apiVersion"].(string)
+	kind, _ := example["kind"].(string)
 
 	for promiseName, promise := range promises {
 		if promise == nil || promise.Spec.API == nil {
@@ -163,55 +161,43 @@ func checkExampleFile(name string, data []byte, promises map[string]*v1alpha1.Pr
 		group := crd.Spec.Group
 		for _, v := range crd.Spec.Versions {
 			expectedAPIVersion := group + "/" + v.Name
-			if ex.APIVersion != expectedAPIVersion || ex.Kind != crd.Spec.Names.Kind {
+			if apiVersion != expectedAPIVersion || kind != crd.Spec.Names.Kind {
 				continue
+			}
+			if !v.Served {
+				return []string{fmt.Sprintf("%s: apiVersion=%q kind=%q matches version %q which is not served", name, apiVersion, kind, v.Name)}
 			}
 			if v.Schema == nil || v.Schema.OpenAPIV3Schema == nil {
 				return nil
 			}
-			specSchema, ok := v.Schema.OpenAPIV3Schema.Properties["spec"]
-			if !ok {
-				return nil
-			}
-			return validateAgainstSchema(name, ex.Spec, specSchema)
+			return validateAgainstSchema(name, example, v.Schema.OpenAPIV3Schema)
 		}
 		_ = promiseName
 	}
 
-	return []string{fmt.Sprintf("%s: apiVersion=%q kind=%q matches no loaded Promise's CRD", name, ex.APIVersion, ex.Kind)}
+	return []string{fmt.Sprintf("%s: apiVersion=%q kind=%q matches no loaded Promise's CRD", name, apiVersion, kind)}
 }
 
-func validateAgainstSchema(name string, spec map[string]interface{}, schema apiextensionsv1.JSONSchemaProps) []string {
+// validateAgainstSchema validates the whole example document against a
+// real, complete Kubernetes OpenAPI v3 schema - recursive and type-aware,
+// honouring every declared type/pattern/required at every depth, including
+// root-level rules - using the same validator the Kubernetes API server
+// uses, instead of a hand-rolled top-level presence-and-regex check.
+func validateAgainstSchema(name string, example map[string]interface{}, schema *apiextensionsv1.JSONSchemaProps) []string {
+	var internalSchema apiextensions.JSONSchemaProps
+	if err := apiextensionsv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(schema, &internalSchema, nil); err != nil {
+		return []string{fmt.Sprintf("%s: failed to convert schema for validation: %v", name, err)}
+	}
+
+	validator, _, err := crdvalidation.NewSchemaValidator(&internalSchema)
+	if err != nil {
+		return []string{fmt.Sprintf("%s: failed to build schema validator: %v", name, err)}
+	}
+
 	var errs []string
-
-	required := make(map[string]bool, len(schema.Required))
-	for _, r := range schema.Required {
-		required[r] = true
+	for _, fe := range crdvalidation.ValidateCustomResource(field.NewPath("example"), example, validator) {
+		errs = append(errs, fmt.Sprintf("%s: %s", name, fe.Error()))
 	}
-	for field := range required {
-		if _, ok := spec[field]; !ok {
-			errs = append(errs, fmt.Sprintf("%s: missing required field %q", name, field))
-		}
-	}
-
-	for field, value := range spec {
-		fieldSchema, known := schema.Properties[field]
-		if !known {
-			errs = append(errs, fmt.Sprintf("%s: unknown field %q", name, field))
-			continue
-		}
-		if fieldSchema.Pattern != "" {
-			str, isString := value.(string)
-			if !isString {
-				continue
-			}
-			matched, err := regexp.MatchString(fieldSchema.Pattern, str)
-			if err == nil && !matched {
-				errs = append(errs, fmt.Sprintf("%s: field %q value %q does not match pattern %q", name, field, str, fieldSchema.Pattern))
-			}
-		}
-	}
-
 	return errs
 }
 

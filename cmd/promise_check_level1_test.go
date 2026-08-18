@@ -250,10 +250,16 @@ kind: InventorySyncService
 spec: {}
 `
 	errs = checkExampleFile("missing-required.yaml", []byte(missingRequired), promises)
-	if !containsSubstring(errs, "missing required field") {
+	if !containsSubstring(errs, "environment") {
 		t.Fatalf("expected a missing-required-field error, got %v", errs)
 	}
 
+	// Kubernetes structural schemas forbid combining "properties" with
+	// "additionalProperties" on the same object (they'd contradict the API
+	// convention of pruning unknown fields rather than rejecting them), so
+	// a real CRD can never reject an unrecognised field the way the old
+	// hand-rolled validator did. An extra field is allowed here, matching
+	// real Kubernetes CRD validation behaviour.
 	unknownField := `
 apiVersion: shopco.platform.syntasso.io/v1alpha1
 kind: InventorySyncService
@@ -262,8 +268,8 @@ spec:
   bogusField: true
 `
 	errs = checkExampleFile("unknown-field.yaml", []byte(unknownField), promises)
-	if !containsSubstring(errs, "unknown field") {
-		t.Fatalf("expected an unknown-field error, got %v", errs)
+	if len(errs) != 0 {
+		t.Fatalf("expected an unrecognised field to be allowed (pruned), got %v", errs)
 	}
 
 	badPattern := `
@@ -273,8 +279,156 @@ spec:
   environment: production
 `
 	errs = checkExampleFile("bad-pattern.yaml", []byte(badPattern), promises)
-	if !containsSubstring(errs, "does not match pattern") {
+	if !containsSubstring(errs, "environment") {
 		t.Fatalf("expected a pattern-mismatch error, got %v", errs)
+	}
+}
+
+// Regression test for review feedback: a property with no pattern accepted
+// any value regardless of its declared type, so a YAML string could satisfy
+// a schema that declares `type: integer`. Kubernetes would reject this.
+func TestCheckExampleFileFlagsNonStringValueForIntegerType(t *testing.T) {
+	withReplicas := strings.Replace(validPromiseYAML,
+		"                    environment:\n                      type: string\n                      pattern: \"^(prod|staging)$\"\n",
+		"                    environment:\n                      type: string\n                      pattern: \"^(prod|staging)$\"\n                    replicas:\n                      type: integer\n", 1)
+	_, promise, err := checkPromiseFile("inventory-sync-service.yaml", []byte(withReplicas))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
+
+	stringForInteger := `
+apiVersion: shopco.platform.syntasso.io/v1alpha1
+kind: InventorySyncService
+spec:
+  environment: prod
+  replicas: "3"
+`
+	errs := checkExampleFile("bad-type.yaml", []byte(stringForInteger), promises)
+	if !containsSubstring(errs, "replicas") {
+		t.Fatalf("expected a type-mismatch error for replicas, got %v", errs)
+	}
+}
+
+// Regression test for review feedback: required fields nested below the top
+// level of spec were never recursed into, so a missing nested required
+// field silently passed.
+func TestCheckExampleFileFlagsMissingNestedRequiredField(t *testing.T) {
+	withConfig := strings.Replace(validPromiseYAML,
+		"                    environment:\n                      type: string\n                      pattern: \"^(prod|staging)$\"\n",
+		"                    environment:\n                      type: string\n                      pattern: \"^(prod|staging)$\"\n                    config:\n                      type: object\n                      required: [\"region\"]\n                      properties:\n                        region:\n                          type: string\n", 1)
+	_, promise, err := checkPromiseFile("inventory-sync-service.yaml", []byte(withConfig))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
+
+	missingNestedRequired := `
+apiVersion: shopco.platform.syntasso.io/v1alpha1
+kind: InventorySyncService
+spec:
+  environment: prod
+  config: {}
+`
+	errs := checkExampleFile("missing-nested-required.yaml", []byte(missingNestedRequired), promises)
+	if !containsSubstring(errs, "region") {
+		t.Fatalf("expected a missing-nested-required-field error for config.region, got %v", errs)
+	}
+}
+
+// Regression test for review feedback: an example whose apiVersion names a
+// CRD version that exists but has served: false cannot actually be
+// submitted to that API (Kubernetes would 404 it), so it must not be
+// treated as a valid match.
+func TestCheckExampleFileFlagsUnservedVersion(t *testing.T) {
+	twoVersions := strings.Replace(validPromiseYAML, `      versions:
+        - name: v1alpha1
+          served: true
+          storage: true`, `      versions:
+        - name: v1alpha1
+          served: true
+          storage: true
+        - name: v1beta1
+          served: false
+          storage: false`, 1)
+
+	_, promise, err := checkPromiseFile("inventory-sync-service.yaml", []byte(twoVersions))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
+
+	unservedExample := `
+apiVersion: shopco.platform.syntasso.io/v1beta1
+kind: InventorySyncService
+spec:
+  environment: prod
+`
+	errs := checkExampleFile("unserved-version.yaml", []byte(unservedExample), promises)
+	if !containsSubstring(errs, "not served") {
+		t.Fatalf("expected a not-served error, got %v", errs)
+	}
+}
+
+// Regression test: validating only the extracted spec sub-schema missed
+// root-level schema rules such as a top-level `required: ["spec"]` - an
+// example with no spec at all would pass. Validating the whole document
+// against the whole schema catches this.
+func TestCheckExampleFileFlagsMissingRootRequiredSpec(t *testing.T) {
+	promiseYAML := `
+apiVersion: platform.kratix.io/v1alpha1
+kind: Promise
+metadata:
+  name: widget-service
+spec:
+  api:
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: widgets.shopco.platform.syntasso.io
+    spec:
+      group: shopco.platform.syntasso.io
+      scope: Namespaced
+      names:
+        kind: Widget
+        plural: widgets
+        singular: widget
+      versions:
+        - name: v1alpha1
+          served: true
+          storage: true
+          schema:
+            openAPIV3Schema:
+              type: object
+              required: ["spec"]
+              properties:
+                spec:
+                  type: object
+  workflows:
+    resource:
+      configure:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: configure-pipeline
+          spec:
+            containers:
+              - name: configure
+                image: busybox
+`
+	_, promise, err := checkPromiseFile("widget-service.yaml", []byte(promiseYAML))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	promises := map[string]*v1alpha1.Promise{"widget-service.yaml": promise}
+
+	missingSpec := `
+apiVersion: shopco.platform.syntasso.io/v1alpha1
+kind: Widget
+`
+	errs := checkExampleFile("missing-spec.yaml", []byte(missingSpec), promises)
+	if !containsSubstring(errs, "spec") {
+		t.Fatalf("expected a missing-root-required-spec error, got %v", errs)
 	}
 }
 
