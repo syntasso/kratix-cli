@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/syntasso/kratix/api/v1alpha1"
 )
 
 const validPromiseYAML = `
@@ -16,13 +18,19 @@ spec:
   api:
     apiVersion: apiextensions.k8s.io/v1
     kind: CustomResourceDefinition
+    metadata:
+      name: inventorysyncservices.shopco.platform.syntasso.io
     spec:
       group: shopco.platform.syntasso.io
       scope: Namespaced
       names:
         kind: InventorySyncService
+        plural: inventorysyncservices
+        singular: inventorysyncservice
       versions:
         - name: v1alpha1
+          served: true
+          storage: true
           schema:
             openAPIV3Schema:
               type: object
@@ -37,12 +45,20 @@ spec:
   workflows:
     resource:
       configure:
-        - spec:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: configure-pipeline
+          spec:
             containers:
               - name: configure
                 image: busybox
       delete:
-        - spec:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: delete-pipeline
+          spec:
             containers:
               - name: delete
                 image: busybox
@@ -58,15 +74,15 @@ func writeTemp(t *testing.T, dir, name, content string) string {
 }
 
 func TestCheckPromiseFilePassesOnWellFormedPromise(t *testing.T) {
-	errs, doc, err := checkPromiseFile("inventory-sync-service.yaml", []byte(validPromiseYAML))
+	errs, promise, err := checkPromiseFile("inventory-sync-service.yaml", []byte(validPromiseYAML))
 	if err != nil {
 		t.Fatalf("unexpected parse error: %v", err)
 	}
 	if len(errs) != 0 {
 		t.Fatalf("expected no errors, got %v", errs)
 	}
-	if doc.Metadata.Name != "inventory-sync-service" {
-		t.Fatalf("expected doc to be parsed, got name %q", doc.Metadata.Name)
+	if promise.Name != "inventory-sync-service" {
+		t.Fatalf("expected promise to be parsed, got name %q", promise.Name)
 	}
 }
 
@@ -94,15 +110,27 @@ func TestCheckPromiseFileFlagsMissingConfigureImage(t *testing.T) {
 
 func TestCheckPromiseFileFlagsMultipleDeletePipelines(t *testing.T) {
 	bad := strings.Replace(validPromiseYAML, `      delete:
-        - spec:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: delete-pipeline
+          spec:
             containers:
               - name: delete
                 image: busybox`, `      delete:
-        - spec:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: delete-pipeline-one
+          spec:
             containers:
               - name: delete-one
                 image: busybox
-        - spec:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: delete-pipeline-two
+          spec:
             containers:
               - name: delete-two
                 image: busybox`, 1)
@@ -126,12 +154,41 @@ func TestCheckPromiseFileFlagsNotAPromise(t *testing.T) {
 	}
 }
 
-func TestCheckExampleFileValidatesRequiredAndPattern(t *testing.T) {
-	_, doc, err := checkPromiseFile("inventory-sync-service.yaml", []byte(validPromiseYAML))
+// Regression test for review feedback: the CRD gate accepted a Promise as
+// long as apiVersion/kind/scope/a versions-entry were present, even when
+// required CRD fields like names.plural were missing - a Promise that
+// cannot actually be installed. Decoding into the real CRD type and running
+// it through the real Kubernetes CRD validator must catch this.
+func TestCheckPromiseFileFlagsCRDMissingRequiredNamesPlural(t *testing.T) {
+	bad := strings.Replace(validPromiseYAML, "        plural: inventorysyncservices\n", "", 1)
+	errs, _, err := checkPromiseFile("bad-crd-names.yaml", []byte(bad))
 	if err != nil {
 		t.Fatalf("unexpected parse error: %v", err)
 	}
-	promises := map[string]promiseDoc{"inventory-sync-service.yaml": doc}
+	if !containsSubstring(errs, "plural") {
+		t.Fatalf("expected a missing-names.plural error, got %v", errs)
+	}
+}
+
+// Regression test: a CRD version with neither served nor storage set to
+// true cannot be installed (there must be exactly one storage version).
+func TestCheckPromiseFileFlagsCRDMissingStorageVersion(t *testing.T) {
+	bad := strings.Replace(validPromiseYAML, "          storage: true\n", "          storage: false\n", 1)
+	errs, _, err := checkPromiseFile("bad-crd-storage.yaml", []byte(bad))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	if len(errs) == 0 {
+		t.Fatalf("expected an error for a CRD with no storage version, got none")
+	}
+}
+
+func TestCheckExampleFileValidatesRequiredAndPattern(t *testing.T) {
+	_, promise, err := checkPromiseFile("inventory-sync-service.yaml", []byte(validPromiseYAML))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
 
 	goodExample := `
 apiVersion: shopco.platform.syntasso.io/v1alpha1
@@ -183,7 +240,7 @@ func TestCheckExampleFileFlagsNoMatchingPromise(t *testing.T) {
 apiVersion: some.other.group/v1
 kind: SomethingElse
 spec: {}
-`), map[string]promiseDoc{})
+`), map[string]*v1alpha1.Promise{})
 	if !containsSubstring(errs, "matches no loaded Promise") {
 		t.Fatalf("expected a no-matching-Promise error, got %v", errs)
 	}
