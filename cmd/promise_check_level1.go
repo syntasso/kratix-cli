@@ -26,13 +26,13 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
-// Level-1 deterministic gates, checked from the generated files themselves
-// with no model involved: does the Promise parse, is its CRD valid and
-// namespaced, does every example/Resource Request validate against that
-// CRD's schema, do the workflow pipelines declare an image, and is the
-// delete workflow well-formed (Kratix only supports one delete pipeline).
+// Structural checks against the generated Promise/example files themselves:
+// does the Promise parse, is its CRD valid and namespaced, does every
+// example/Resource Request validate against that CRD's schema, do the
+// workflow pipelines declare an image, and is the delete workflow
+// well-formed (Kratix only supports one delete pipeline).
 //
-// These gates decode into the real Kratix Promise type
+// These checks decode into the real Kratix Promise type
 // (github.com/syntasso/kratix/api/v1alpha1) and the real Kubernetes CRD
 // type (k8s.io/apiextensions-apiserver), and validate the CRD with the same
 // validator the Kubernetes API server itself uses, rather than hand-rolled
@@ -46,8 +46,8 @@ type gvkPromise struct {
 	crd         apiextensionsv1.CustomResourceDefinition
 }
 
-// checkPromiseFile parses one Promise file and returns every Level-1
-// structural gate failure found in it. An empty slice means it passed.
+// checkPromiseFile parses one Promise file and returns every structural
+// check failure found in it. An empty slice means it passed.
 func checkPromiseFile(name string, data []byte) ([]string, *v1alpha1.Promise, error) {
 	var promise v1alpha1.Promise
 	if err := sigsyaml.Unmarshal(data, &promise); err != nil {
@@ -86,7 +86,7 @@ func decodeAndValidateCRD(promiseName string, raw []byte) (apiextensionsv1.Custo
 
 	// The real Kubernetes API server defaults fields such as names.listKind,
 	// names.singular and status.storedVersions before validating a newly
-	// created CRD; apply the same defaulting here so this gate only reports
+	// created CRD; apply the same defaulting here so this check only reports
 	// fields a Promise author actually has to set themselves.
 	apiextensionsv1.SetDefaults_CustomResourceDefinition(&crd)
 
@@ -271,7 +271,7 @@ func validateAgainstSchema(name string, example map[string]interface{}, schema *
 	// OpenAPI schema validation alone does not execute a CRD's CEL rules
 	// (x-kubernetes-validations); the real API server does, so an example
 	// that violates a CEL rule must be rejected here too, not just pass
-	// this gate and fail for real once applied.
+	// this check and fail for real once applied.
 	if celValidator := celvalidation.NewValidator(structural, true, apiservercel.PerCallLimit); celValidator != nil {
 		celErrs, _ := celValidator.Validate(context.Background(), field.NewPath("example"), structural, example, nil, apiservercel.RuntimeCELCostBudget)
 		for _, fe := range celErrs {
@@ -285,7 +285,7 @@ func validateAgainstSchema(name string, example map[string]interface{}, schema *
 // buildGVKIndex builds a deterministic, unique group/version/kind index
 // across every loaded Promise, walking promiseNames (expected to already be
 // sorted) in order. A group/version/kind declared by more than one Promise
-// is reported as a gate failure rather than resolved by map iteration order,
+// is reported as a failure rather than resolved by map iteration order,
 // which could otherwise make an example's pass/fail nondeterministic.
 func buildGVKIndex(promiseNames []string, promises map[string]*v1alpha1.Promise) (map[string]gvkPromise, []string) {
 	index := map[string]gvkPromise{}
@@ -315,11 +315,10 @@ func buildGVKIndex(promiseNames []string, promises map[string]*v1alpha1.Promise)
 	return index, errs
 }
 
-// runLevelOneGates loads every Promise in promiseDir and every example in
-// exampleDir and runs all Level-1 checks. Either directory may be absent
-// (returns no errors, gate is skipped) so this stays backward compatible
-// with a review-file-only check.
-func runLevelOneGates(promiseDir, exampleDir string, out io.Writer) []string {
+// runStructuralChecks loads every Promise in promiseDir and every example in
+// exampleDir and runs all structural checks. Either directory may be absent,
+// in which case its checks are skipped (returns no errors for it).
+func runStructuralChecks(promiseDir, exampleDir string, out io.Writer) []string {
 	var allErrs []string
 
 	promises := map[string]*v1alpha1.Promise{}
@@ -358,11 +357,12 @@ func runLevelOneGates(promiseDir, exampleDir string, out io.Writer) []string {
 }
 
 // readYAMLDir returns every .yaml/.yml file under dir. A missing directory
-// is not an error - it means the Level-1 gate is intentionally skipped - but
-// any other error reading the directory or a file within it (permission
-// denied, an unreadable file, ...) is returned as a gate failure rather than
-// silently treated as "no files here", which would otherwise let the gate
-// report success without having validated everything it was asked to.
+// is not an error - it means the check for that directory is intentionally
+// skipped - but any other error reading the directory or a file within it
+// (permission denied, an unreadable file, ...) is returned as a failure
+// rather than silently treated as "no files here", which would otherwise
+// let the check report success without having validated everything it was
+// asked to.
 func readYAMLDir(dir string) (map[string][]byte, []string) {
 	files := map[string][]byte{}
 	var errs []string

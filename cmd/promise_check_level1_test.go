@@ -671,14 +671,14 @@ func TestBuildGVKIndexFlagsDuplicateGVKAcrossPromises(t *testing.T) {
 	}
 }
 
-func TestRunLevelOneGatesSkippedWhenDirsAbsent(t *testing.T) {
-	errs := runLevelOneGates("/nonexistent/promises", "/nonexistent/examples", os.Stderr)
+func TestRunStructuralChecksSkippedWhenDirsAbsent(t *testing.T) {
+	errs := runStructuralChecks("/nonexistent/promises", "/nonexistent/examples", os.Stderr)
 	if len(errs) != 0 {
-		t.Fatalf("expected gate to be skipped with no errors when dirs are absent, got %v", errs)
+		t.Fatalf("expected checks to be skipped with no errors when dirs are absent, got %v", errs)
 	}
 }
 
-func TestRunLevelOneGatesEndToEnd(t *testing.T) {
+func TestRunStructuralChecksEndToEnd(t *testing.T) {
 	dir := t.TempDir()
 	promiseDir := filepath.Join(dir, "promises")
 	exampleDir := filepath.Join(dir, "resource-requests")
@@ -697,7 +697,7 @@ spec:
   environment: prod
 `)
 
-	errs := runLevelOneGates(promiseDir, exampleDir, os.Stderr)
+	errs := runStructuralChecks(promiseDir, exampleDir, os.Stderr)
 	if len(errs) != 0 {
 		t.Fatalf("expected a clean end-to-end run, got %v", errs)
 	}

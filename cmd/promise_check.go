@@ -20,10 +20,12 @@ var promiseCmd = &cobra.Command{
 var promiseCheckCmd = &cobra.Command{
 	Use:   "check",
 	Args:  cobra.NoArgs,
-	Short: "Check promise Level-1 structural gates",
-	Long: "If --promise-dir and/or --example-dir exist, runs Level-1 deterministic gates against the " +
-		"generated Promise/example files: valid CRD, namespaced scope, example validates against the CRD " +
-		"schema, pipeline images set, delete workflow well-formed.",
+	Short: "Validate a Promise's CRD, workflows, and examples",
+	Long: "Validate the generated Promise/example files in --promise-dir and --example-dir: the CRD is a " +
+		"valid, Namespaced-scope CustomResourceDefinition, every workflow pipeline container has an image " +
+		"set, the delete workflow is well-formed, and every example/Resource Request validates against its " +
+		"Promise's CRD schema (including CEL rules and schema defaults). Either directory may be absent, in " +
+		"which case its checks are skipped.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runPromiseCheck(promiseDir, exampleDir, cmd.ErrOrStderr())
 	},
@@ -32,19 +34,19 @@ var promiseCheckCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(promiseCmd)
 	promiseCmd.AddCommand(promiseCheckCmd)
-	promiseCheckCmd.Flags().StringVar(&promiseDir, "promise-dir", "promises", "directory of generated Promise YAML files (Level-1 gate, skipped if absent)")
-	promiseCheckCmd.Flags().StringVar(&exampleDir, "example-dir", "resource-requests", "directory of example/Resource Request YAML files to validate against the Promise CRDs (Level-1 gate, skipped if absent)")
+	promiseCheckCmd.Flags().StringVar(&promiseDir, "promise-dir", "promises", "directory of generated Promise YAML files, skipped if absent")
+	promiseCheckCmd.Flags().StringVar(&exampleDir, "example-dir", "resource-requests", "directory of example/Resource Request YAML files to validate against the Promise CRDs, skipped if absent")
 }
 
 func runPromiseCheck(promiseDir, exampleDir string, out io.Writer) error {
-	level1Errs := runLevelOneGates(promiseDir, exampleDir, out)
-	if len(level1Errs) == 0 {
+	errs := runStructuralChecks(promiseDir, exampleDir, out)
+	if len(errs) == 0 {
 		return nil
 	}
 
-	fmt.Fprintln(out, "Level-1 gate failures:")
-	for _, e := range level1Errs {
+	fmt.Fprintln(out, "check failures:")
+	for _, e := range errs {
 		fmt.Fprintf(out, "- %s\n", e)
 	}
-	return fmt.Errorf("%d Level-1 gate failure(s)", len(level1Errs))
+	return fmt.Errorf("%d check failure(s)", len(errs))
 }
