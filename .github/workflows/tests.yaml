@@ -31,8 +31,19 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts
       - name: Run make test
         run: make test
+
+  security-scan:
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.26
+          check-latest: true
       - name: Run govulncheck
-        if: github.actor != 'dependabot[bot]'
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           # Run with JSON output; filter known Fixed-in:N/A vulns before failing.
@@ -53,7 +64,7 @@ jobs:
 
   update-release-pr:
     runs-on: ubuntu-latest
-    needs: [unit-test]
+    needs: [unit-test, security-scan]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
