@@ -253,7 +253,8 @@ func runLevelOneGates(promiseDir, exampleDir string, out io.Writer) []string {
 	var allErrs []string
 
 	promises := map[string]*v1alpha1.Promise{}
-	promiseFiles := readYAMLDir(promiseDir)
+	promiseFiles, dirErrs := readYAMLDir(promiseDir)
+	allErrs = append(allErrs, dirErrs...)
 	names := make([]string, 0, len(promiseFiles))
 	for name := range promiseFiles {
 		names = append(names, name)
@@ -272,7 +273,8 @@ func runLevelOneGates(promiseDir, exampleDir string, out io.Writer) []string {
 	gvkIndex, gvkErrs := buildGVKIndex(names, promises)
 	allErrs = append(allErrs, gvkErrs...)
 
-	exampleFiles := readYAMLDir(exampleDir)
+	exampleFiles, exDirErrs := readYAMLDir(exampleDir)
+	allErrs = append(allErrs, exDirErrs...)
 	exNames := make([]string, 0, len(exampleFiles))
 	for name := range exampleFiles {
 		exNames = append(exNames, name)
@@ -285,11 +287,22 @@ func runLevelOneGates(promiseDir, exampleDir string, out io.Writer) []string {
 	return allErrs
 }
 
-func readYAMLDir(dir string) map[string][]byte {
+// readYAMLDir returns every .yaml/.yml file under dir. A missing directory
+// is not an error - it means the Level-1 gate is intentionally skipped - but
+// any other error reading the directory or a file within it (permission
+// denied, an unreadable file, ...) is returned as a gate failure rather than
+// silently treated as "no files here", which would otherwise let the gate
+// report success without having validated everything it was asked to.
+func readYAMLDir(dir string) (map[string][]byte, []string) {
 	files := map[string][]byte{}
+	var errs []string
+
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return files
+		if os.IsNotExist(err) {
+			return files, nil
+		}
+		return files, []string{fmt.Sprintf("%s: %v", dir, err)}
 	}
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -302,9 +315,10 @@ func readYAMLDir(dir string) map[string][]byte {
 		path := filepath.Join(dir, entry.Name())
 		data, err := os.ReadFile(path)
 		if err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", path, err))
 			continue
 		}
 		files[path] = data
 	}
-	return files
+	return files, errs
 }

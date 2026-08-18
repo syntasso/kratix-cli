@@ -524,6 +524,40 @@ spec:
 	}
 }
 
+// Regression test for review feedback: readYAMLDir used to silently drop
+// any file it couldn't read (permission denied, corrupt, ...), so the gate
+// could report success without having actually validated everything it was
+// asked to check. A missing directory must still be a no-op (the gate is
+// intentionally skipped), but an unreadable *file* inside an existing
+// directory must surface as a gate failure.
+func TestReadYAMLDirSkipsOnlyMissingDirectory(t *testing.T) {
+	files, errs := readYAMLDir(filepath.Join(t.TempDir(), "does-not-exist"))
+	if len(errs) != 0 {
+		t.Fatalf("expected a missing directory to be skipped with no errors, got %v", errs)
+	}
+	if len(files) != 0 {
+		t.Fatalf("expected no files from a missing directory, got %v", files)
+	}
+}
+
+func TestReadYAMLDirReportsUnreadableFile(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("file permissions are not enforced when running as root")
+	}
+
+	dir := t.TempDir()
+	path := writeTemp(t, dir, "unreadable.yaml", validPromiseYAML)
+	if err := os.Chmod(path, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o644) })
+
+	_, errs := readYAMLDir(dir)
+	if !containsSubstring(errs, "unreadable.yaml") {
+		t.Fatalf("expected an unreadable file to be reported as a gate failure, got %v", errs)
+	}
+}
+
 func containsSubstring(errs []string, substr string) bool {
 	for _, e := range errs {
 		if strings.Contains(e, substr) {
