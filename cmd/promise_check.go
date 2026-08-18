@@ -55,7 +55,7 @@ func init() {
 func runPromiseCheck(reviewFile, promiseDir, exampleDir string, out io.Writer) error {
 	reviewErr := checkReviewFindings(reviewFile, out)
 
-	level1Errs := runLevel1Gates(promiseDir, exampleDir, out)
+	level1Errs := runLevelOneGates(promiseDir, exampleDir, out)
 	if len(level1Errs) > 0 {
 		fmt.Fprintln(out, "Level-1 gate failures:")
 		for _, e := range level1Errs {

@@ -245,11 +245,11 @@ func buildGVKIndex(promiseNames []string, promises map[string]*v1alpha1.Promise)
 	return index, errs
 }
 
-// runLevel1Gates loads every Promise in promiseDir and every example in
+// runLevelOneGates loads every Promise in promiseDir and every example in
 // exampleDir and runs all Level-1 checks. Either directory may be absent
 // (returns no errors, gate is skipped) so this stays backward compatible
 // with a review-file-only check.
-func runLevel1Gates(promiseDir, exampleDir string, out io.Writer) []string {
+func runLevelOneGates(promiseDir, exampleDir string, out io.Writer) []string {
 	var allErrs []string
 
 	promises := map[string]*v1alpha1.Promise{}
