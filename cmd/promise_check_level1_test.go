@@ -232,6 +232,10 @@ func TestCheckExampleFileValidatesRequiredAndPattern(t *testing.T) {
 		t.Fatalf("unexpected parse error: %v", err)
 	}
 	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
+	gvkIndex, gvkErrs := buildGVKIndex([]string{"inventory-sync-service.yaml"}, promises)
+	if len(gvkErrs) != 0 {
+		t.Fatalf("unexpected GVK index errors: %v", gvkErrs)
+	}
 
 	goodExample := `
 apiVersion: shopco.platform.syntasso.io/v1alpha1
@@ -239,7 +243,7 @@ kind: InventorySyncService
 spec:
   environment: prod
 `
-	errs := checkExampleFile("good.yaml", []byte(goodExample), promises)
+	errs := checkExampleFile("good.yaml", []byte(goodExample), gvkIndex)
 	if len(errs) != 0 {
 		t.Fatalf("expected no errors for a valid example, got %v", errs)
 	}
@@ -249,7 +253,7 @@ apiVersion: shopco.platform.syntasso.io/v1alpha1
 kind: InventorySyncService
 spec: {}
 `
-	errs = checkExampleFile("missing-required.yaml", []byte(missingRequired), promises)
+	errs = checkExampleFile("missing-required.yaml", []byte(missingRequired), gvkIndex)
 	if !containsSubstring(errs, "environment") {
 		t.Fatalf("expected a missing-required-field error, got %v", errs)
 	}
@@ -267,7 +271,7 @@ spec:
   environment: prod
   bogusField: true
 `
-	errs = checkExampleFile("unknown-field.yaml", []byte(unknownField), promises)
+	errs = checkExampleFile("unknown-field.yaml", []byte(unknownField), gvkIndex)
 	if len(errs) != 0 {
 		t.Fatalf("expected an unrecognised field to be allowed (pruned), got %v", errs)
 	}
@@ -278,7 +282,7 @@ kind: InventorySyncService
 spec:
   environment: production
 `
-	errs = checkExampleFile("bad-pattern.yaml", []byte(badPattern), promises)
+	errs = checkExampleFile("bad-pattern.yaml", []byte(badPattern), gvkIndex)
 	if !containsSubstring(errs, "environment") {
 		t.Fatalf("expected a pattern-mismatch error, got %v", errs)
 	}
@@ -296,6 +300,7 @@ func TestCheckExampleFileFlagsNonStringValueForIntegerType(t *testing.T) {
 		t.Fatalf("unexpected parse error: %v", err)
 	}
 	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
+	gvkIndex, _ := buildGVKIndex([]string{"inventory-sync-service.yaml"}, promises)
 
 	stringForInteger := `
 apiVersion: shopco.platform.syntasso.io/v1alpha1
@@ -304,7 +309,7 @@ spec:
   environment: prod
   replicas: "3"
 `
-	errs := checkExampleFile("bad-type.yaml", []byte(stringForInteger), promises)
+	errs := checkExampleFile("bad-type.yaml", []byte(stringForInteger), gvkIndex)
 	if !containsSubstring(errs, "replicas") {
 		t.Fatalf("expected a type-mismatch error for replicas, got %v", errs)
 	}
@@ -322,6 +327,7 @@ func TestCheckExampleFileFlagsMissingNestedRequiredField(t *testing.T) {
 		t.Fatalf("unexpected parse error: %v", err)
 	}
 	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
+	gvkIndex, _ := buildGVKIndex([]string{"inventory-sync-service.yaml"}, promises)
 
 	missingNestedRequired := `
 apiVersion: shopco.platform.syntasso.io/v1alpha1
@@ -330,7 +336,7 @@ spec:
   environment: prod
   config: {}
 `
-	errs := checkExampleFile("missing-nested-required.yaml", []byte(missingNestedRequired), promises)
+	errs := checkExampleFile("missing-nested-required.yaml", []byte(missingNestedRequired), gvkIndex)
 	if !containsSubstring(errs, "region") {
 		t.Fatalf("expected a missing-nested-required-field error for config.region, got %v", errs)
 	}
@@ -357,6 +363,10 @@ func TestCheckExampleFileFlagsUnservedVersion(t *testing.T) {
 		t.Fatalf("unexpected parse error: %v", err)
 	}
 	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
+	gvkIndex, gvkErrs := buildGVKIndex([]string{"inventory-sync-service.yaml"}, promises)
+	if len(gvkErrs) != 0 {
+		t.Fatalf("unexpected GVK index errors: %v", gvkErrs)
+	}
 
 	unservedExample := `
 apiVersion: shopco.platform.syntasso.io/v1beta1
@@ -364,7 +374,7 @@ kind: InventorySyncService
 spec:
   environment: prod
 `
-	errs := checkExampleFile("unserved-version.yaml", []byte(unservedExample), promises)
+	errs := checkExampleFile("unserved-version.yaml", []byte(unservedExample), gvkIndex)
 	if !containsSubstring(errs, "not served") {
 		t.Fatalf("expected a not-served error, got %v", errs)
 	}
@@ -421,12 +431,16 @@ spec:
 		t.Fatalf("unexpected parse error: %v", err)
 	}
 	promises := map[string]*v1alpha1.Promise{"widget-service.yaml": promise}
+	gvkIndex, gvkErrs := buildGVKIndex([]string{"widget-service.yaml"}, promises)
+	if len(gvkErrs) != 0 {
+		t.Fatalf("unexpected GVK index errors: %v", gvkErrs)
+	}
 
 	missingSpec := `
 apiVersion: shopco.platform.syntasso.io/v1alpha1
 kind: Widget
 `
-	errs := checkExampleFile("missing-spec.yaml", []byte(missingSpec), promises)
+	errs := checkExampleFile("missing-spec.yaml", []byte(missingSpec), gvkIndex)
 	if !containsSubstring(errs, "spec") {
 		t.Fatalf("expected a missing-root-required-spec error, got %v", errs)
 	}
@@ -437,9 +451,44 @@ func TestCheckExampleFileFlagsNoMatchingPromise(t *testing.T) {
 apiVersion: some.other.group/v1
 kind: SomethingElse
 spec: {}
-`), map[string]*v1alpha1.Promise{})
+`), map[string]gvkPromise{})
 	if !containsSubstring(errs, "matches no loaded Promise") {
 		t.Fatalf("expected a no-matching-Promise error, got %v", errs)
+	}
+}
+
+// Regression test for review feedback: when two loaded Promises share the
+// same group/version/kind but different schemas, map iteration used to
+// pick an arbitrary one to validate an example against - nondeterministic
+// pass/fail depending on Go map order. buildGVKIndex must instead flag the
+// duplicate as a gate failure, and must do so the same way every time.
+func TestBuildGVKIndexFlagsDuplicateGVKAcrossPromises(t *testing.T) {
+	secondPromise := strings.NewReplacer(
+		"name: inventory-sync-service", "name: inventory-sync-service-v2",
+		"name: inventorysyncservices.shopco.platform.syntasso.io", "name: inventorysyncservices2.shopco.platform.syntasso.io",
+		"plural: inventorysyncservices", "plural: inventorysyncservices2",
+		"singular: inventorysyncservice", "singular: inventorysyncservice2",
+	).Replace(validPromiseYAML)
+
+	_, promiseOne, err := checkPromiseFile("a.yaml", []byte(validPromiseYAML))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	_, promiseTwo, err := checkPromiseFile("b.yaml", []byte(secondPromise))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+
+	promises := map[string]*v1alpha1.Promise{"a.yaml": promiseOne, "b.yaml": promiseTwo}
+
+	for i := 0; i < 10; i++ {
+		gvkIndex, errs := buildGVKIndex([]string{"a.yaml", "b.yaml"}, promises)
+		if !containsSubstring(errs, "declared by both a.yaml and b.yaml") {
+			t.Fatalf("expected a deterministic duplicate-GVK error naming both files, got %v", errs)
+		}
+		if entry, ok := gvkIndex["shopco.platform.syntasso.io/v1alpha1/InventorySyncService"]; !ok || entry.promiseName != "a.yaml" {
+			t.Fatalf("expected the index to deterministically keep the first-seen Promise (a.yaml), got %+v", gvkIndex)
+		}
 	}
 }
 

@@ -32,6 +32,14 @@ import (
 // validator the Kubernetes API server itself uses, rather than hand-rolled
 // structs that only understand a handful of fields.
 
+// gvkPromise pairs a group/version/kind with the name of the Promise file
+// that declared it and its CRD, so checkExampleFile can validate against a
+// single, deterministically-chosen Promise (see buildGVKIndex).
+type gvkPromise struct {
+	promiseName string
+	crd         apiextensionsv1.CustomResourceDefinition
+}
+
 // checkPromiseFile parses one Promise file and returns every Level-1
 // structural gate failure found in it. An empty slice means it passed.
 func checkPromiseFile(name string, data []byte) ([]string, *v1alpha1.Promise, error) {
@@ -136,12 +144,14 @@ func checkWorkflowPipelines(promiseName string, promise *v1alpha1.Promise) []str
 }
 
 // checkExampleFile validates one example/Resource Request file against
-// whichever loaded Promise's CRD its apiVersion+kind matches. A file that
-// matches no Promise, or matches only a version that isn't served, is
-// reported as such, not silently skipped. The whole decoded document is
-// validated against the whole CRD schema (not just spec.spec extracted in
-// isolation) so root-level schema rules aren't missed either.
-func checkExampleFile(name string, data []byte, promises map[string]*v1alpha1.Promise) []string {
+// whichever Promise's CRD its apiVersion+kind matches, looked up in
+// gvkIndex - a deterministic, pre-built, unique group/version/kind index
+// (see buildGVKIndex). A file that matches no Promise, or matches only a
+// version that isn't served, is reported as such, not silently skipped.
+// The whole decoded document is validated against the whole CRD schema
+// (not just spec.spec extracted in isolation) so root-level schema rules
+// aren't missed either.
+func checkExampleFile(name string, data []byte, gvkIndex map[string]gvkPromise) []string {
 	var example map[string]interface{}
 	if err := sigsyaml.Unmarshal(data, &example); err != nil {
 		return []string{fmt.Sprintf("%s: does not parse as YAML: %v", name, err)}
@@ -150,32 +160,33 @@ func checkExampleFile(name string, data []byte, promises map[string]*v1alpha1.Pr
 	apiVersion, _ := example["apiVersion"].(string)
 	kind, _ := example["kind"].(string)
 
-	for promiseName, promise := range promises {
-		if promise == nil || promise.Spec.API == nil {
-			continue
-		}
-		var crd apiextensionsv1.CustomResourceDefinition
-		if err := json.Unmarshal(promise.Spec.API.Raw, &crd); err != nil {
-			continue
-		}
-		group := crd.Spec.Group
-		for _, v := range crd.Spec.Versions {
-			expectedAPIVersion := group + "/" + v.Name
-			if apiVersion != expectedAPIVersion || kind != crd.Spec.Names.Kind {
-				continue
-			}
-			if !v.Served {
-				return []string{fmt.Sprintf("%s: apiVersion=%q kind=%q matches version %q which is not served", name, apiVersion, kind, v.Name)}
-			}
-			if v.Schema == nil || v.Schema.OpenAPIV3Schema == nil {
-				return nil
-			}
-			return validateAgainstSchema(name, example, v.Schema.OpenAPIV3Schema)
-		}
-		_ = promiseName
+	noMatch := []string{fmt.Sprintf("%s: apiVersion=%q kind=%q matches no loaded Promise's CRD", name, apiVersion, kind)}
+
+	parts := strings.SplitN(apiVersion, "/", 2)
+	if len(parts) != 2 {
+		return noMatch
+	}
+	version := parts[1]
+
+	entry, ok := gvkIndex[apiVersion+"/"+kind]
+	if !ok {
+		return noMatch
 	}
 
-	return []string{fmt.Sprintf("%s: apiVersion=%q kind=%q matches no loaded Promise's CRD", name, apiVersion, kind)}
+	for _, v := range entry.crd.Spec.Versions {
+		if v.Name != version {
+			continue
+		}
+		if !v.Served {
+			return []string{fmt.Sprintf("%s: apiVersion=%q kind=%q matches version %q which is not served", name, apiVersion, kind, version)}
+		}
+		if v.Schema == nil || v.Schema.OpenAPIV3Schema == nil {
+			return nil
+		}
+		return validateAgainstSchema(name, example, v.Schema.OpenAPIV3Schema)
+	}
+
+	return noMatch
 }
 
 // validateAgainstSchema validates the whole example document against a
@@ -199,6 +210,39 @@ func validateAgainstSchema(name string, example map[string]interface{}, schema *
 		errs = append(errs, fmt.Sprintf("%s: %s", name, fe.Error()))
 	}
 	return errs
+}
+
+// buildGVKIndex builds a deterministic, unique group/version/kind index
+// across every loaded Promise, walking promiseNames (expected to already be
+// sorted) in order. A group/version/kind declared by more than one Promise
+// is reported as a gate failure rather than resolved by map iteration order,
+// which could otherwise make an example's pass/fail nondeterministic.
+func buildGVKIndex(promiseNames []string, promises map[string]*v1alpha1.Promise) (map[string]gvkPromise, []string) {
+	index := map[string]gvkPromise{}
+	var errs []string
+
+	for _, name := range promiseNames {
+		promise := promises[name]
+		if promise == nil || promise.Spec.API == nil {
+			continue
+		}
+
+		var crd apiextensionsv1.CustomResourceDefinition
+		if err := json.Unmarshal(promise.Spec.API.Raw, &crd); err != nil {
+			continue // already reported by checkPromiseFile
+		}
+
+		for _, v := range crd.Spec.Versions {
+			gvk := crd.Spec.Group + "/" + v.Name + "/" + crd.Spec.Names.Kind
+			if existing, ok := index[gvk]; ok {
+				errs = append(errs, fmt.Sprintf("group/version/kind %q is declared by both %s and %s", gvk, existing.promiseName, name))
+				continue
+			}
+			index[gvk] = gvkPromise{promiseName: name, crd: crd}
+		}
+	}
+
+	return index, errs
 }
 
 // runLevel1Gates loads every Promise in promiseDir and every example in
@@ -225,6 +269,9 @@ func runLevel1Gates(promiseDir, exampleDir string, out io.Writer) []string {
 		promises[name] = promise
 	}
 
+	gvkIndex, gvkErrs := buildGVKIndex(names, promises)
+	allErrs = append(allErrs, gvkErrs...)
+
 	exampleFiles := readYAMLDir(exampleDir)
 	exNames := make([]string, 0, len(exampleFiles))
 	for name := range exampleFiles {
@@ -232,7 +279,7 @@ func runLevel1Gates(promiseDir, exampleDir string, out io.Writer) []string {
 	}
 	sort.Strings(exNames)
 	for _, name := range exNames {
-		allErrs = append(allErrs, checkExampleFile(name, exampleFiles[name], promises)...)
+		allErrs = append(allErrs, checkExampleFile(name, exampleFiles[name], gvkIndex)...)
 	}
 
 	return allErrs
