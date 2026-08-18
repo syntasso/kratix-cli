@@ -132,6 +132,10 @@ func readReviewFindings(path string) ([]reviewFinding, error) {
 		}
 	}
 
+	if findings == nil {
+		return nil, fmt.Errorf("review file %q is empty or null; expected a findings array (use [] for a clean pass)", path)
+	}
+
 	for i, finding := range findings {
 		if err := validateReviewFinding(finding); err != nil {
 			return nil, fmt.Errorf("invalid finding %d: %w", i, err)

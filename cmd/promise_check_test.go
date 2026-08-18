@@ -155,6 +155,20 @@ unexpected: second document
 	}
 }
 
+// Regression test for review feedback: a review file containing a bare
+// `null` document decodes into a nil slice with no error, which used to be
+// treated the same as a clean, empty findings list - letting a malformed or
+// incompletely generated artifact pass the gate silently.
+func TestCheckReviewFindingsRejectsNullDocument(t *testing.T) {
+	path := writeReviewFile(t, `null`)
+
+	var out bytes.Buffer
+	err := checkReviewFindings(path, &out)
+	if err == nil {
+		t.Fatal("expected a null review file to fail, not be treated as an empty findings list")
+	}
+}
+
 func TestCheckReviewFindingsRequiresResolvedField(t *testing.T) {
 	path := writeReviewFile(t, `[
   {
