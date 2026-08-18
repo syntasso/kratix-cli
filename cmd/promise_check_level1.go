@@ -17,8 +17,12 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
+	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
+	celvalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
+	structuraldefaulting "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
 	crdvalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	apiservercel "k8s.io/apiserver/pkg/apis/cel"
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
@@ -233,12 +237,26 @@ func checkExampleDocument(name string, example map[string]interface{}, gvkIndex 
 // real, complete Kubernetes OpenAPI v3 schema - recursive and type-aware,
 // honouring every declared type/pattern/required at every depth, including
 // root-level rules - using the same validator the Kubernetes API server
-// uses, instead of a hand-rolled top-level presence-and-regex check.
+// uses, instead of a hand-rolled top-level presence-and-regex check. Schema
+// defaults are applied to the example first, and any `x-kubernetes-validations`
+// CEL rules are evaluated too, matching what the real API server does before
+// admitting a custom resource.
 func validateAgainstSchema(name string, example map[string]interface{}, schema *apiextensionsv1.JSONSchemaProps) []string {
 	var internalSchema apiextensions.JSONSchemaProps
 	if err := apiextensionsv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(schema, &internalSchema, nil); err != nil {
 		return []string{fmt.Sprintf("%s: failed to convert schema for validation: %v", name, err)}
 	}
+
+	structural, err := structuralschema.NewStructural(&internalSchema)
+	if err != nil {
+		return []string{fmt.Sprintf("%s: failed to build structural schema: %v", name, err)}
+	}
+
+	// The real API server applies the schema's declared defaults to a
+	// custom resource before validating it, so a manifest that omits a
+	// field with a default must be accepted here too, not wrongly flagged
+	// as missing a required value.
+	structuraldefaulting.Default(example, structural)
 
 	validator, _, err := crdvalidation.NewSchemaValidator(&internalSchema)
 	if err != nil {
@@ -249,6 +267,18 @@ func validateAgainstSchema(name string, example map[string]interface{}, schema *
 	for _, fe := range crdvalidation.ValidateCustomResource(field.NewPath("example"), example, validator) {
 		errs = append(errs, fmt.Sprintf("%s: %s", name, fe.Error()))
 	}
+
+	// OpenAPI schema validation alone does not execute a CRD's CEL rules
+	// (x-kubernetes-validations); the real API server does, so an example
+	// that violates a CEL rule must be rejected here too, not just pass
+	// this gate and fail for real once applied.
+	if celValidator := celvalidation.NewValidator(structural, true, apiservercel.PerCallLimit); celValidator != nil {
+		celErrs, _ := celValidator.Validate(context.Background(), field.NewPath("example"), structural, example, nil, apiservercel.RuntimeCELCostBudget)
+		for _, fe := range celErrs {
+			errs = append(errs, fmt.Sprintf("%s: %s", name, fe.Error()))
+		}
+	}
+
 	return errs
 }
 

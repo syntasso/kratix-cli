@@ -477,6 +477,154 @@ spec: {}
 	}
 }
 
+// Regression test for review feedback: OpenAPI schema validation alone does
+// not execute a CRD's `x-kubernetes-validations` CEL rules, so an example
+// violating one used to pass this gate even though the real Kubernetes API
+// server would reject it.
+func TestCheckExampleFileFlagsCELRuleViolation(t *testing.T) {
+	promiseYAML := `
+apiVersion: platform.kratix.io/v1alpha1
+kind: Promise
+metadata:
+  name: widget-service
+spec:
+  api:
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: widgets.shopco.platform.syntasso.io
+    spec:
+      group: shopco.platform.syntasso.io
+      scope: Namespaced
+      names:
+        kind: Widget
+        plural: widgets
+        singular: widget
+      versions:
+        - name: v1alpha1
+          served: true
+          storage: true
+          schema:
+            openAPIV3Schema:
+              type: object
+              properties:
+                spec:
+                  type: object
+                  properties:
+                    minReplicas:
+                      type: integer
+                    maxReplicas:
+                      type: integer
+                  x-kubernetes-validations:
+                    - rule: "self.minReplicas <= self.maxReplicas"
+                      message: "minReplicas must not exceed maxReplicas"
+  workflows:
+    resource:
+      configure:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: configure-pipeline
+          spec:
+            containers:
+              - name: configure
+                image: busybox
+`
+	_, promise, err := checkPromiseFile("widget-service.yaml", []byte(promiseYAML))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	promises := map[string]*v1alpha1.Promise{"widget-service.yaml": promise}
+	gvkIndex, gvkErrs := buildGVKIndex([]string{"widget-service.yaml"}, promises)
+	if len(gvkErrs) != 0 {
+		t.Fatalf("unexpected GVK index errors: %v", gvkErrs)
+	}
+
+	violatesRule := `
+apiVersion: shopco.platform.syntasso.io/v1alpha1
+kind: Widget
+spec:
+  minReplicas: 5
+  maxReplicas: 1
+`
+	errs := checkExampleFile("bad-replicas.yaml", []byte(violatesRule), gvkIndex)
+	if !containsSubstring(errs, "minReplicas must not exceed maxReplicas") {
+		t.Fatalf("expected the CEL rule violation to be reported, got %v", errs)
+	}
+}
+
+// Regression test for review feedback: the real API server applies a
+// schema's declared defaults to a custom resource before validating it, so
+// omitting a field that has a default must be accepted here too, not
+// wrongly flagged as a missing required field.
+func TestCheckExampleFileAcceptsFieldSuppliedByCRDDefault(t *testing.T) {
+	promiseYAML := `
+apiVersion: platform.kratix.io/v1alpha1
+kind: Promise
+metadata:
+  name: widget-service
+spec:
+  api:
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      name: widgets.shopco.platform.syntasso.io
+    spec:
+      group: shopco.platform.syntasso.io
+      scope: Namespaced
+      names:
+        kind: Widget
+        plural: widgets
+        singular: widget
+      versions:
+        - name: v1alpha1
+          served: true
+          storage: true
+          schema:
+            openAPIV3Schema:
+              type: object
+              required: ["spec"]
+              properties:
+                spec:
+                  type: object
+                  required: ["environment"]
+                  properties:
+                    environment:
+                      type: string
+                      default: "prod"
+  workflows:
+    resource:
+      configure:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: configure-pipeline
+          spec:
+            containers:
+              - name: configure
+                image: busybox
+`
+	_, promise, err := checkPromiseFile("widget-service.yaml", []byte(promiseYAML))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	promises := map[string]*v1alpha1.Promise{"widget-service.yaml": promise}
+	gvkIndex, gvkErrs := buildGVKIndex([]string{"widget-service.yaml"}, promises)
+	if len(gvkErrs) != 0 {
+		t.Fatalf("unexpected GVK index errors: %v", gvkErrs)
+	}
+
+	missingDefaultedField := `
+apiVersion: shopco.platform.syntasso.io/v1alpha1
+kind: Widget
+spec: {}
+`
+	errs := checkExampleFile("relies-on-default.yaml", []byte(missingDefaultedField), gvkIndex)
+	if len(errs) != 0 {
+		t.Fatalf("expected a field with a CRD default to be accepted when omitted, got %v", errs)
+	}
+}
+
 func TestCheckExampleFileFlagsNoMatchingPromise(t *testing.T) {
 	errs := checkExampleFile("orphan.yaml", []byte(`
 apiVersion: some.other.group/v1
