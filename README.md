@@ -92,6 +92,18 @@ the `kratix build promise` command to combine the Promise api, workflow, and dep
 kratix build promise PROMISE-NAME
 ```
 
+### Checking a Promise
+
+To validate a Promise's CRD, workflows, and examples, you can use the `kratix promise check` command:
+```
+kratix promise check --promise-dir promises --example-dir resource-requests
+```
+Both flags are optional and default to `promises`/`resource-requests`; either directory can be omitted and its
+checks are skipped. When both are provided, this checks that the Promise's CRD is a valid, Namespaced-scope
+CustomResourceDefinition, every workflow pipeline container has an image set, the delete workflow is well-formed,
+and every example/Resource Request in `--example-dir` validates against its Promise's CRD schema (including CEL
+rules and schema defaults).
+
 To see helpful messages about using the cli, you can run:
 ```
 kratix help
