@@ -117,11 +117,18 @@ func readReviewFindings(path string) ([]reviewFinding, error) {
 		if err := dec.Decode(&findings); err != nil {
 			return nil, fmt.Errorf("failed to parse review file %q: %w", path, err)
 		}
+		if err := dec.Decode(new(json.RawMessage)); err != io.EOF {
+			return nil, fmt.Errorf("review file %q contains trailing content after the findings array", path)
+		}
 	default:
 		dec := yaml.NewDecoder(bytes.NewReader(data))
 		dec.KnownFields(true)
 		if err := dec.Decode(&findings); err != nil {
 			return nil, fmt.Errorf("failed to parse review file %q: %w", path, err)
+		}
+		var extra interface{}
+		if err := dec.Decode(&extra); err != io.EOF {
+			return nil, fmt.Errorf("review file %q contains trailing content after the findings array", path)
 		}
 	}
 

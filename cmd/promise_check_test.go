@@ -119,6 +119,42 @@ func TestCheckReviewFindingsRejectsInvalidSeverity(t *testing.T) {
 	}
 }
 
+// Regression test for review feedback: readReviewFindings only decoded the
+// first JSON value in the file, so a findings array followed by trailing
+// content (a second JSON value, or garbage) was silently ignored - a
+// concatenated file could hide unresolved critical/high findings after the
+// first document and still pass the gate.
+func TestCheckReviewFindingsRejectsTrailingJSONContent(t *testing.T) {
+	path := writeReviewFile(t, `[] {"unexpected": "trailing value"}`)
+
+	var out bytes.Buffer
+	err := checkReviewFindings(path, &out)
+	if err == nil {
+		t.Fatal("expected trailing JSON content after the findings array to fail")
+	}
+}
+
+// Same regression, YAML form: a second YAML document after the findings
+// array must not be silently dropped.
+func TestCheckReviewFindingsRejectsTrailingYAMLDocument(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "review-findings.yaml")
+	if err := os.WriteFile(path, []byte(`- severity: low
+  dimension: AI-native governance
+  description: skill version recorded
+  resolved: false
+---
+unexpected: second document
+`), 0600); err != nil {
+		t.Fatalf("failed to write review file: %v", err)
+	}
+
+	var out bytes.Buffer
+	err := checkReviewFindings(path, &out)
+	if err == nil {
+		t.Fatal("expected a trailing YAML document after the findings array to fail")
+	}
+}
+
 func TestCheckReviewFindingsRequiresResolvedField(t *testing.T) {
 	path := writeReviewFile(t, `[
   {
