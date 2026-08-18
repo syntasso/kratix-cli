@@ -11,11 +11,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
@@ -30,17 +30,6 @@ import (
 // type (k8s.io/apiextensions-apiserver), and validate the CRD with the same
 // validator the Kubernetes API server itself uses, rather than hand-rolled
 // structs that only understand a handful of fields.
-
-type pipelineContainer struct {
-	Name  string `yaml:"name"`
-	Image string `yaml:"image"`
-}
-
-type pipelineDoc struct {
-	Spec struct {
-		Containers []pipelineContainer `yaml:"containers"`
-	} `yaml:"spec"`
-}
 
 // exampleDoc is the one type here with no existing Kubernetes/Kratix
 // equivalent: an example/Resource Request's shape is whatever the matching
@@ -73,32 +62,9 @@ func checkPromiseFile(name string, data []byte) ([]string, *v1alpha1.Promise, er
 	_, crdErrs := decodeAndValidateCRD(name, promise.Spec.API.Raw)
 	errs = append(errs, crdErrs...)
 
-	errs = append(errs, checkPipelines(name, "configure", toPipelineDocs(promise.Spec.Workflows.Resource.Configure))...)
-	errs = append(errs, checkPipelines(name, "delete", toPipelineDocs(promise.Spec.Workflows.Resource.Delete))...)
-	if len(promise.Spec.Workflows.Resource.Delete) > 1 {
-		errs = append(errs, fmt.Sprintf("%s: delete workflow has %d pipelines, Kratix only supports one", name, len(promise.Spec.Workflows.Resource.Delete)))
-	}
+	errs = append(errs, checkWorkflowPipelines(name, &promise)...)
 
 	return errs, &promise, nil
-}
-
-// toPipelineDocs decodes the raw workflow pipeline objects (Kratix stores
-// them as unstructured.Unstructured on the Promise) into pipelineDoc for
-// the container/image checks below.
-func toPipelineDocs(pipelines []unstructured.Unstructured) []pipelineDoc {
-	var docs []pipelineDoc
-	for _, u := range pipelines {
-		raw, err := json.Marshal(u.Object)
-		if err != nil {
-			continue
-		}
-		var doc pipelineDoc
-		if err := json.Unmarshal(raw, &doc); err != nil {
-			continue
-		}
-		docs = append(docs, doc)
-	}
-	return docs
 }
 
 // decodeAndValidateCRD decodes spec.api into the real Kubernetes
@@ -143,12 +109,34 @@ func decodeAndValidateCRD(promiseName string, raw []byte) (apiextensionsv1.Custo
 	return crd, errs
 }
 
-func checkPipelines(promiseName, workflow string, pipelines []pipelineDoc) []string {
+// checkWorkflowPipelines checks every pipeline container in every workflow
+// slot - promise.configure, promise.delete, resource.configure and
+// resource.delete - using Kratix's own unstructured-to-Pipeline conversion
+// (v1alpha1.NewPipelinesMap) instead of a hand-rolled container struct that
+// only looked at the resource workflows.
+func checkWorkflowPipelines(promiseName string, promise *v1alpha1.Promise) []string {
+	pipelinesMap, err := v1alpha1.NewPipelinesMap(promise, logr.Discard())
+	if err != nil {
+		return []string{fmt.Sprintf("%s: failed to parse workflow pipelines: %v", promiseName, err)}
+	}
+
 	var errs []string
-	for _, p := range pipelines {
-		for _, c := range p.Spec.Containers {
-			if strings.TrimSpace(c.Image) == "" {
-				errs = append(errs, fmt.Sprintf("%s: %s pipeline container %q has no image set", promiseName, workflow, c.Name))
+	for _, workflowType := range []v1alpha1.Type{v1alpha1.WorkflowTypePromise, v1alpha1.WorkflowTypeResource} {
+		for _, action := range []v1alpha1.Action{v1alpha1.WorkflowActionConfigure, v1alpha1.WorkflowActionDelete} {
+			pipelines := pipelinesMap[workflowType][action]
+			for _, p := range pipelines {
+				if len(p.Spec.Containers) == 0 {
+					errs = append(errs, fmt.Sprintf("%s: %s.%s pipeline %q has no containers", promiseName, workflowType, action, p.Name))
+					continue
+				}
+				for _, c := range p.Spec.Containers {
+					if strings.TrimSpace(c.Image) == "" {
+						errs = append(errs, fmt.Sprintf("%s: %s.%s pipeline container %q has no image set", promiseName, workflowType, action, c.Name))
+					}
+				}
+			}
+			if action == v1alpha1.WorkflowActionDelete && len(pipelines) > 1 {
+				errs = append(errs, fmt.Sprintf("%s: %s delete workflow has %d pipelines, Kratix only supports one", promiseName, workflowType, len(pipelines)))
 			}
 		}
 	}

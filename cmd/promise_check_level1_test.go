@@ -62,6 +62,16 @@ spec:
             containers:
               - name: delete
                 image: busybox
+    promise:
+      configure:
+        - apiVersion: platform.kratix.io/v1alpha1
+          kind: Pipeline
+          metadata:
+            name: promise-configure-pipeline
+          spec:
+            containers:
+              - name: configure
+                image: busybox
 `
 
 func writeTemp(t *testing.T, dir, name, content string) string {
@@ -105,6 +115,39 @@ func TestCheckPromiseFileFlagsMissingConfigureImage(t *testing.T) {
 	}
 	if !containsSubstring(errs, "no image set") {
 		t.Fatalf("expected a missing-image error, got %v", errs)
+	}
+}
+
+// Regression test for review feedback: the pipeline-image gate only
+// inspected spec.workflows.resource.configure/.delete, so a missing image
+// under spec.workflows.promise.configure (as seen in generated Terraform
+// fixture output) silently passed.
+func TestCheckPromiseFileFlagsMissingPromiseWorkflowImage(t *testing.T) {
+	bad := strings.Replace(validPromiseYAML,
+		"name: promise-configure-pipeline\n          spec:\n            containers:\n              - name: configure\n                image: busybox",
+		"name: promise-configure-pipeline\n          spec:\n            containers:\n              - name: configure\n                image: \"\"", 1)
+	errs, _, err := checkPromiseFile("bad-promise-image.yaml", []byte(bad))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	if !containsSubstring(errs, "promise.configure pipeline container \"configure\" has no image set") {
+		t.Fatalf("expected a missing-image error for promise.configure, got %v", errs)
+	}
+}
+
+// Regression test: a pipeline declared with an empty containers list isn't
+// runnable, so it should be flagged the same way a container missing an
+// image is.
+func TestCheckPromiseFileFlagsPipelineWithNoContainers(t *testing.T) {
+	bad := strings.Replace(validPromiseYAML,
+		"name: promise-configure-pipeline\n          spec:\n            containers:\n              - name: configure\n                image: busybox",
+		"name: promise-configure-pipeline\n          spec:\n            containers: []", 1)
+	errs, _, err := checkPromiseFile("bad-empty-containers.yaml", []byte(bad))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	if !containsSubstring(errs, "promise.configure pipeline \"promise-configure-pipeline\" has no containers") {
+		t.Fatalf("expected a no-containers error for promise.configure, got %v", errs)
 	}
 }
 
