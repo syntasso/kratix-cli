@@ -20,6 +20,7 @@ import (
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	celvalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
 	structuraldefaulting "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
+	structuralpruning "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/pruning"
 	crdvalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	apiservercel "k8s.io/apiserver/pkg/apis/cel"
@@ -237,10 +238,11 @@ func checkExampleDocument(name string, example map[string]interface{}, gvkIndex 
 // real, complete Kubernetes OpenAPI v3 schema - recursive and type-aware,
 // honouring every declared type/pattern/required at every depth, including
 // root-level rules - using the same validator the Kubernetes API server
-// uses, instead of a hand-rolled top-level presence-and-regex check. Schema
-// defaults are applied to the example first, and any `x-kubernetes-validations`
-// CEL rules are evaluated too, matching what the real API server does before
-// admitting a custom resource.
+// uses, instead of a hand-rolled top-level presence-and-regex check. Fields
+// not described by the schema are pruned and schema defaults are applied to
+// the example first, and any `x-kubernetes-validations` CEL rules are
+// evaluated too, in the same order the real API server admits a custom
+// resource: prune, then default, then validate.
 func validateAgainstSchema(name string, example map[string]interface{}, schema *apiextensionsv1.JSONSchemaProps) []string {
 	var internalSchema apiextensions.JSONSchemaProps
 	if err := apiextensionsv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(schema, &internalSchema, nil); err != nil {
@@ -251,6 +253,12 @@ func validateAgainstSchema(name string, example map[string]interface{}, schema *
 	if err != nil {
 		return []string{fmt.Sprintf("%s: failed to build structural schema: %v", name, err)}
 	}
+
+	// The real API server prunes fields not described by the schema before
+	// defaulting and CEL validation run, so this must too - otherwise a CEL
+	// rule could reject an example Kubernetes would accept after pruning,
+	// or evaluate against data Kubernetes would have already removed.
+	structuralpruning.Prune(example, structural, true)
 
 	// The real API server applies the schema's declared defaults to a
 	// custom resource before validating it, so a manifest that omits a
