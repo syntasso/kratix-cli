@@ -446,6 +446,37 @@ kind: Widget
 	}
 }
 
+// Regression test for review feedback: a multi-document example file
+// (several `---`-separated Resource Requests, a common and valid pattern)
+// used to have only its first document checked - a broken second document
+// silently passed the gate. Every document must be checked.
+func TestCheckExampleFileValidatesEveryDocumentInAMultiDocFile(t *testing.T) {
+	_, promise, err := checkPromiseFile("inventory-sync-service.yaml", []byte(validPromiseYAML))
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	promises := map[string]*v1alpha1.Promise{"inventory-sync-service.yaml": promise}
+	gvkIndex, gvkErrs := buildGVKIndex([]string{"inventory-sync-service.yaml"}, promises)
+	if len(gvkErrs) != 0 {
+		t.Fatalf("unexpected GVK index errors: %v", gvkErrs)
+	}
+
+	multiDoc := `
+apiVersion: shopco.platform.syntasso.io/v1alpha1
+kind: InventorySyncService
+spec:
+  environment: prod
+---
+apiVersion: shopco.platform.syntasso.io/v1alpha1
+kind: InventorySyncService
+spec: {}
+`
+	errs := checkExampleFile("multi.yaml", []byte(multiDoc), gvkIndex)
+	if !containsSubstring(errs, "environment") {
+		t.Fatalf("expected the second document's missing-required-field error to be reported, got %v", errs)
+	}
+}
+
 func TestCheckExampleFileFlagsNoMatchingPromise(t *testing.T) {
 	errs := checkExampleFile("orphan.yaml", []byte(`
 apiVersion: some.other.group/v1

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/syntasso/kratix/api/v1alpha1"
+	"gopkg.in/yaml.v3"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
@@ -143,20 +145,58 @@ func checkWorkflowPipelines(promiseName string, promise *v1alpha1.Promise) []str
 	return errs
 }
 
-// checkExampleFile validates one example/Resource Request file against
-// whichever Promise's CRD its apiVersion+kind matches, looked up in
-// gvkIndex - a deterministic, pre-built, unique group/version/kind index
-// (see buildGVKIndex). A file that matches no Promise, or matches only a
-// version that isn't served, is reported as such, not silently skipped.
-// The whole decoded document is validated against the whole CRD schema
-// (not just spec.spec extracted in isolation) so root-level schema rules
-// aren't missed either.
+// checkExampleFile validates every document in one example/Resource Request
+// file - a file may legitimately contain several `---`-separated resources,
+// and every one of them must be checked, not just the first (a
+// single-document decode silently drops the rest).
 func checkExampleFile(name string, data []byte, gvkIndex map[string]gvkPromise) []string {
-	var example map[string]interface{}
-	if err := sigsyaml.Unmarshal(data, &example); err != nil {
+	docs, err := splitYAMLDocuments(data)
+	if err != nil {
 		return []string{fmt.Sprintf("%s: does not parse as YAML: %v", name, err)}
 	}
 
+	var errs []string
+	for i, doc := range docs {
+		docName := name
+		if len(docs) > 1 {
+			docName = fmt.Sprintf("%s (document %d)", name, i+1)
+		}
+		errs = append(errs, checkExampleDocument(docName, doc, gvkIndex)...)
+	}
+	return errs
+}
+
+// splitYAMLDocuments parses every `---`-separated document in data, skipping
+// empty documents (a trailing separator, a comment-only document, ...).
+func splitYAMLDocuments(data []byte) ([]map[string]interface{}, error) {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	var docs []map[string]interface{}
+	for {
+		var doc map[string]interface{}
+		err := dec.Decode(&doc)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if doc == nil {
+			continue
+		}
+		docs = append(docs, doc)
+	}
+	return docs, nil
+}
+
+// checkExampleDocument validates one decoded example/Resource Request
+// document against whichever Promise's CRD its apiVersion+kind matches,
+// looked up in gvkIndex - a deterministic, pre-built, unique group/version/
+// kind index (see buildGVKIndex). A document that matches no Promise, or
+// matches only a version that isn't served, is reported as such, not
+// silently skipped. The whole decoded document is validated against the
+// whole CRD schema (not just spec.spec extracted in isolation) so
+// root-level schema rules aren't missed either.
+func checkExampleDocument(name string, example map[string]interface{}, gvkIndex map[string]gvkPromise) []string {
 	apiVersion, _ := example["apiVersion"].(string)
 	kind, _ := example["kind"].(string)
 
