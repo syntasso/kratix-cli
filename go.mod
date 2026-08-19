@@ -2,6 +2,8 @@ module github.com/syntasso/kratix-cli
 
 go 1.25.0
 
+toolchain go1.26.6
+
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/crossplane/crossplane v1.19.0
