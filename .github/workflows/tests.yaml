@@ -22,7 +22,7 @@ jobs:
       - name: Install Terraform CLI
         uses: hashicorp/setup-terraform@v3
       - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.SYNTASSO_KRATIX_CLI_PRIVATE_TF_MODULE_TEST_FIXTURE_REPO_DEPLOY_KEY }}
       - name: Setup SSH
