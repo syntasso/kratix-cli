@@ -335,9 +335,6 @@ func (o *PluginAddOptions) installSkills(token string, releases []githubRelease)
 	return nil
 }
 
-// Claude Code discovers skills under its own directory, so the canonical copy
-// in SkillsDir is duplicated rather than linked: these are small markdown
-// trees, and symlinks behave inconsistently across agents and platforms.
 func (o *PluginAddOptions) copyForClaudeCode(name, source string) error {
 	if err := os.MkdirAll(o.ClaudeSkillsDir, pluginPerm); err != nil {
 		return fmt.Errorf("failed to create %s: %w", o.ClaudeSkillsDir, err)

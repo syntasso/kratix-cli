@@ -17,8 +17,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// fakeReleases serves the subset of the GitHub releases API that plugin add
-// uses: listing releases, and downloading an asset by id.
 func fakeReleases(token string, releases map[string]map[string]string) *httptest.Server {
 	var server *httptest.Server
 	mux := http.NewServeMux()
@@ -69,8 +67,6 @@ func fakeReleases(token string, releases map[string]map[string]string) *httptest
 	return server
 }
 
-// tarball gzips a tar of the given paths, mirroring the skills artifact
-// published to enterprise-releases.
 func tarball(files map[string]string) string {
 	buf := &bytes.Buffer{}
 	gz := gzip.NewWriter(buf)
@@ -81,13 +77,13 @@ func tarball(files map[string]string) string {
 		if body == "" && strings.HasSuffix(name, "/") {
 			hdr = &tar.Header{Name: name, Mode: 0o755, Typeflag: tar.TypeDir}
 		}
-		Expect(tw.WriteHeader(hdr)).To(Succeed())
+		ExpectWithOffset(1, tw.WriteHeader(hdr)).To(Succeed())
 		_, err := tw.Write([]byte(body))
-		Expect(err).NotTo(HaveOccurred())
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	}
 
-	Expect(tw.Close()).To(Succeed())
-	Expect(gz.Close()).To(Succeed())
+	ExpectWithOffset(1, tw.Close()).To(Succeed())
+	ExpectWithOffset(1, gz.Close()).To(Succeed())
 	return buf.String()
 }
 
@@ -113,6 +109,8 @@ var _ = Describe("plugin add", func() {
 		"kratix-skelift-review-v0.1.0": {"kratix-skelift-review_linux_amd64": "review binary"},
 		"kratix-skelift-check-v0.1.0":  {"kratix-skelift-check_linux_amd64": "check binary"},
 		"skelift-skills-v0.0.2":        {"skelift-skills.tar.gz": tarball(skillFiles)},
+		"another-release-a":            {"abc": "def"},
+		"another-release-b":            {"abc": "def"},
 	}
 
 	BeforeEach(func() {
@@ -133,7 +131,7 @@ var _ = Describe("plugin add", func() {
 		}
 	})
 
-	It("installs the skelift binaries, executable", func() {
+	It("installs the skelift binaries", func() {
 		Expect(opts.Run(skeliftPlugin)).To(Succeed())
 
 		for name, contents := range map[string]string{
@@ -182,7 +180,7 @@ var _ = Describe("plugin add", func() {
 
 	When("the token is rejected", func() {
 		BeforeEach(func() {
-			opts.Token = "a-wrong-token"
+			opts.Token = "an-invalid-token"
 		})
 
 		It("errors saying the token was rejected", func() {
@@ -206,7 +204,7 @@ var _ = Describe("plugin add", func() {
 			GinkgoT().Setenv("PATH", "/usr/bin:"+installDir+":/bin")
 		})
 
-		It("says nothing about PATH", func() {
+		It("says nothing about exporting PATH", func() {
 			Expect(opts.Run(skeliftPlugin)).To(Succeed())
 			Expect(out.String()).NotTo(ContainSubstring("export PATH"))
 		})
@@ -222,7 +220,7 @@ var _ = Describe("plugin add", func() {
 			Expect(os.ReadFile(filepath.Join(skill, "agent-constraints", "x.md"))).To(BeEquivalentTo("constraint"))
 		})
 
-		It("also copies each skill into the Claude Code skills directory", func() {
+		It("copies each skill into the Claude Code skills directory", func() {
 			Expect(opts.Run(skeliftPlugin)).To(Succeed())
 
 			skill := filepath.Join(claudeSkillsDir, "cloud-to-kratix-promise")
@@ -262,7 +260,7 @@ var _ = Describe("plugin add", func() {
 				Expect(os.IsNotExist(err)).To(BeTrue(), "stale.md survived the overwrite")
 			})
 
-			It("replaces the Claude Code copy too", func() {
+			It("replaces the Claude Code copy", func() {
 				claudeSkill := filepath.Join(claudeSkillsDir, "cloud-to-kratix-promise")
 				Expect(os.MkdirAll(claudeSkill, 0o755)).To(Succeed())
 				Expect(os.WriteFile(filepath.Join(claudeSkill, "stale.md"), []byte("old"), 0o644)).To(Succeed())
@@ -300,7 +298,7 @@ var _ = Describe("plugin add", func() {
 				}).URL
 			})
 
-			It("errors naming the missing asset", func() {
+			It("errors with the missing asset", func() {
 				Expect(opts.Run(skeliftPlugin)).To(MatchError(ContainSubstring("skelift-skills.tar.gz")))
 			})
 		})
