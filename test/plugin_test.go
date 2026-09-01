@@ -136,3 +136,40 @@ func writePluginFile(path, script string) {
 	// rwxr-xr-x
 	ExpectWithOffset(1, os.Chmod(f.Name(), 0o755)).To(Succeed())
 }
+
+var _ = Describe("plugin add", func() {
+	var r *runner
+
+	BeforeEach(func() {
+		r = &runner{exitCode: 1}
+	})
+
+	When("no plugin name is given", func() {
+		It("errors naming the accepted plugin", func() {
+			session := r.run("plugin", "add")
+			Expect(session.Err).To(gbytes.Say("accepts 1 arg"))
+		})
+	})
+
+	When("the plugin name is not skelift", func() {
+		It("errors saying it is unknown", func() {
+			session := r.run("plugin", "add", "nope")
+			Expect(session.Err).To(gbytes.Say(`unknown plugin "nope": the only supported plugin is "skelift"`))
+		})
+	})
+
+	When("no token is supplied", func() {
+		It("errors telling the user how to supply one", func() {
+			session := r.run("plugin", "add", "skelift")
+			Expect(session.Err).To(gbytes.Say("no token supplied: use --token or --token-stdin to provide a token"))
+		})
+	})
+
+	When("both token flags are supplied", func() {
+		It("errors", func() {
+			r.flags = map[string]string{"--token": "abc", "--token-stdin": ""}
+			session := r.run("plugin", "add", "skelift")
+			Expect(session.Err).To(gbytes.Say("provide the token with either --token or --token-stdin, not both"))
+		})
+	})
+})
