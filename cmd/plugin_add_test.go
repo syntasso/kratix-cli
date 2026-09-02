@@ -105,10 +105,20 @@ var _ = Describe("plugin add", func() {
 		"cloud-to-kratix-promise/agent-constraints/x.md": "constraint",
 	}
 
+	kratixSkillFiles := map[string]string{
+		"kratix-build-promise/":                   "",
+		"kratix-build-promise/SKILL.md":           "name: kratix-build-promise\n  version: \"0.4.0\" # x-release-please-version\n",
+		"kratix-build-promise/rules/init/helm.md": "helm",
+		"kratix-consume-promise/":                 "",
+		"kratix-consume-promise/SKILL.md":         "name: kratix-consume-promise\n  version: \"0.4.0\" # x-release-please-version\n",
+		"kratix-consume-promise/rules/kubectl.md": "kubectl",
+	}
+
 	releases := map[string]map[string]string{
 		"kratix-skelift-review-v0.1.0": {"kratix-skelift-review_linux_amd64": "review binary"},
 		"kratix-skelift-check-v0.1.0":  {"kratix-skelift-check_linux_amd64": "check binary"},
 		"skelift-skills-v0.0.2":        {"skelift-skills.tar.gz": tarball(skillFiles)},
+		"kratix-skills-v0.4.0":         {"kratix-skills.tar.gz": tarball(kratixSkillFiles)},
 		"another-release-a":            {"abc": "def"},
 		"another-release-b":            {"abc": "def"},
 	}
@@ -218,6 +228,41 @@ var _ = Describe("plugin add", func() {
 			Expect(os.ReadFile(filepath.Join(skill, "SKILL.md"))).To(ContainSubstring("cloud-to-kratix-promise"))
 			Expect(os.ReadFile(filepath.Join(skill, "examples", "shopco.md"))).To(BeEquivalentTo("example"))
 			Expect(os.ReadFile(filepath.Join(skill, "agent-constraints", "x.md"))).To(BeEquivalentTo("constraint"))
+		})
+
+		It("installs the skills from every artifact", func() {
+			Expect(opts.Run(skeliftPlugin)).To(Succeed())
+
+			for skill, version := range map[string]string{
+				"cloud-to-kratix-promise": "0.0.2",
+				"kratix-build-promise":    "0.4.0",
+				"kratix-consume-promise":  "0.4.0",
+			} {
+				Expect(os.ReadFile(filepath.Join(skillsDir, skill, "SKILL.md"))).To(ContainSubstring(skill))
+				Expect(os.ReadFile(filepath.Join(claudeSkillsDir, skill, "SKILL.md"))).To(ContainSubstring(skill))
+				Expect(out.String()).To(ContainSubstring("Installed skill " + skill + " " + version))
+			}
+
+			Expect(os.ReadFile(filepath.Join(skillsDir, "kratix-build-promise", "rules", "init", "helm.md"))).To(BeEquivalentTo("helm"))
+		})
+
+		It("points other agents at the kratix skills directory once, not per artifact", func() {
+			Expect(opts.Run(skeliftPlugin)).To(Succeed())
+			Expect(strings.Count(out.String(), "For other agents")).To(Equal(1))
+		})
+
+		When("one of the skills artifacts has no release", func() {
+			BeforeEach(func() {
+				opts.APIBaseURL = fakeReleases(token, map[string]map[string]string{
+					"kratix-skelift-review-v0.1.0": {"kratix-skelift-review_linux_amd64": "review binary"},
+					"kratix-skelift-check-v0.1.0":  {"kratix-skelift-check_linux_amd64": "check binary"},
+					"skelift-skills-v0.0.2":        {"skelift-skills.tar.gz": tarball(skillFiles)},
+				}).URL
+			})
+
+			It("fails rather than installing only some of the skills", func() {
+				Expect(opts.Run(skeliftPlugin)).To(MatchError(ContainSubstring("kratix-skills-")))
+			})
 		})
 
 		It("copies each skill into the Claude Code skills directory", func() {

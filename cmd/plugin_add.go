@@ -27,13 +27,20 @@ const (
 	pluginPerm             = 0o755
 	skillPerm              = 0o644
 
-	skillsTagPrefix = "skelift-skills-"
-	skillsAsset     = "skelift-skills.tar.gz"
-
 	// The skills artifact is a few hundred kilobytes of markdown; the cap is
 	// only here so a malformed archive cannot fill the disk.
 	maxSkillsArchiveBytes = 64 << 20
 )
+
+type skillsArtifact struct {
+	tagPrefix string
+	asset     string
+}
+
+var skillsArtifacts = []skillsArtifact{
+	{tagPrefix: "skelift-skills-", asset: "skelift-skills.tar.gz"},
+	{tagPrefix: "kratix-skills-", asset: "kratix-skills.tar.gz"},
+}
 
 var skillVersionPattern = regexp.MustCompile(`(?m)^\s*version:\s*"([^"]+)"`)
 
@@ -66,28 +73,63 @@ type PluginAddOptions struct {
 }
 
 func newPluginAddCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "add PLUGIN_NAME",
+		Short: "Install a Kratix CLI plugin and the skills that go with it",
+		Long: `Install a Kratix CLI plugin and the skills that go with it.
+
+Run kratix plugin add PLUGIN_NAME --help to see what a plugin installs and where.
+
+Requires a token with access to the Syntasso enterprise releases.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
+			return fmt.Errorf("unknown plugin %q: the only supported plugin is %q", args[0], skeliftPlugin)
+		},
+	}
+
+	cmd.AddCommand(newPluginAddSkeliftCommand())
+
+	return cmd
+}
+
+func newPluginAddSkeliftCommand() *cobra.Command {
 	o := &PluginAddOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "add PLUGIN_NAME",
-		Short: "Install a Kratix CLI plugin",
-		Long:  "Install a Kratix CLI plugin. Requires a token with access to the Syntasso enterprise releases.",
-		Example: `  # Install the skelift plugin
-  # Read the token from stdin
+		Use:   skeliftPlugin,
+		Short: "Install the skelift CLI plugins and skills",
+		Long: `Install the skelift CLI plugins and skills.
+
+This adds:
+
+  - CLI plugins to ~/.kratix/plugins/bin, so the kratix CLI can run them. Add
+    that directory to your PATH if it is not already there.
+  - skills to ~/.kratix/skills, for any agent to use. Point Codex, Kiro or
+    Claude Desktop at this directory.
+  - a copy of those skills to ~/.claude/skills, where Claude Code picks them up
+    automatically. Restart Claude Code to see them.
+
+Anything already installed at those paths is overwritten.
+
+Requires a token with access to the Syntasso enterprise releases.`,
+		Example: `  # Read the token from stdin
   cat token.txt | kratix plugin add skelift --token-stdin
-  
+
   # Token from CLI flag
   kratix plugin add skelift --token <token>`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o.In = cmd.InOrStdin()
 			o.Out = cmd.OutOrStdout()
-			return o.Run(args[0])
+			return o.Run(skeliftPlugin)
 		},
 	}
 
 	cmd.Flags().StringVar(&o.Token, "token", "", "Token with access to the Syntasso enterprise releases")
-	cmd.Flags().BoolVar(&o.TokenStdin, "token-stdin", false, "Token with access to the Syntasso enterprise releases from stdin")
+	cmd.Flags().BoolVar(&o.TokenStdin, "token-stdin", false, "Read the token from stdin")
 
 	return cmd
 }
@@ -185,8 +227,17 @@ func (o *PluginAddOptions) install(token string) error {
 		fmt.Fprintf(o.Out, "Installed %s %s to %s\n", binary, strings.TrimPrefix(tag, binary+"-"), o.InstallDir)
 	}
 
-	if err := o.installSkills(token, releases); err != nil {
-		return err
+	var skills []string
+	for _, artifact := range skillsArtifacts {
+		installed, err := o.installSkills(token, releases, artifact)
+		if err != nil {
+			return err
+		}
+		skills = append(skills, installed...)
+	}
+
+	if len(skills) > 0 {
+		fmt.Fprintf(o.Out, "\nFor other agents (Codex, Kiro, Claude Desktop), point them at %s\n", o.SkillsDir)
 	}
 
 	if !o.onPath() {
@@ -251,48 +302,48 @@ func (o *PluginAddOptions) latestAsset(releases []githubRelease, binary string) 
 	return githubAsset{}, "", fmt.Errorf("no %s build for %s/%s in %s", binary, o.OS, o.Arch, found.TagName)
 }
 
-func (o *PluginAddOptions) installSkills(token string, releases []githubRelease) error {
-	release, version, err := latestRelease(releases, skillsTagPrefix)
+func (o *PluginAddOptions) installSkills(token string, releases []githubRelease, artifact skillsArtifact) ([]string, error) {
+	release, version, err := latestRelease(releases, artifact.tagPrefix)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var asset githubAsset
 	for _, candidate := range release.Assets {
-		if candidate.Name == skillsAsset {
+		if candidate.Name == artifact.asset {
 			asset = candidate
 			break
 		}
 	}
 	if asset.URL == "" {
-		return fmt.Errorf("%s has no %s asset", release.TagName, skillsAsset)
+		return nil, fmt.Errorf("%s has no %s asset", release.TagName, artifact.asset)
 	}
 
 	body, err := o.get(token, asset.URL, "application/octet-stream")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer body.Close()
 
 	if err := os.MkdirAll(o.SkillsDir, pluginPerm); err != nil {
-		return fmt.Errorf("failed to create %s: %w", o.SkillsDir, err)
+		return nil, fmt.Errorf("failed to create %s: %w", o.SkillsDir, err)
 	}
 
 	// Staged alongside the skills directory rather than in the system temp dir,
 	// so moving each skill into place is a rename within one filesystem.
 	staging, err := os.MkdirTemp(filepath.Dir(o.SkillsDir), ".kratix-skills-")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer os.RemoveAll(staging)
 
 	if err := extractTarGz(body, staging); err != nil {
-		return fmt.Errorf("failed to extract %s: %w", skillsAsset, err)
+		return nil, fmt.Errorf("failed to extract %s: %w", artifact.asset, err)
 	}
 
 	entries, err := os.ReadDir(staging)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var installed []string
@@ -311,28 +362,24 @@ func (o *PluginAddOptions) installSkills(token string, releases []githubRelease)
 				fmt.Fprintf(o.Out, "Warning: %s already installed at %s, overwriting\n", name, o.SkillsDir)
 			}
 			if err := os.RemoveAll(dest); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
 		if err := os.Rename(filepath.Join(staging, name), dest); err != nil {
-			return err
+			return nil, err
 		}
 
 		fmt.Fprintf(o.Out, "Installed skill %s %s to %s\n", name, version, o.SkillsDir)
 
 		if err := o.copyForClaudeCode(name, dest); err != nil {
-			return err
+			return nil, err
 		}
 
 		installed = append(installed, name)
 	}
 
-	if len(installed) > 0 {
-		fmt.Fprintf(o.Out, "\nFor other agents (Codex, Kiro, Claude Desktop), point them at %s\n", o.SkillsDir)
-	}
-
-	return nil
+	return installed, nil
 }
 
 func (o *PluginAddOptions) copyForClaudeCode(name, source string) error {
