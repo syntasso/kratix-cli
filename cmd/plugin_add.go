@@ -75,13 +75,8 @@ type PluginAddOptions struct {
 func newPluginAddCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add PLUGIN_NAME",
-		Short: "Install a Kratix CLI plugin and the skills that go with it",
-		Long: `Install a Kratix CLI plugin and the skills that go with it.
-
-Run kratix plugin add PLUGIN_NAME --help to see what a plugin installs and where.
-
-Requires a token with access to the Syntasso enterprise releases.`,
-		Args: cobra.MaximumNArgs(1),
+		Short: "Install a Kratix plugin",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
