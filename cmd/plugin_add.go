@@ -27,9 +27,8 @@ const (
 	pluginPerm             = 0o755
 	skillPerm              = 0o644
 
-	// The skills artifact is a few hundred kilobytes of markdown; the cap is
-	// only here so a malformed archive cannot fill the disk.
-	maxSkillsArchiveBytes = 64 << 20
+	// 64 MiB cap
+	maxSkillsBytes = 64 * 1024 * 1024
 )
 
 type skillsArtifact struct {
@@ -183,8 +182,8 @@ func (o *PluginAddOptions) applyDefaults() error {
 	return nil
 }
 
-// The CLI resolves plugins with exec.LookPath, so $PATH is the only place an
-// installed plugin will be found.
+// Plugins are resolved with exec.LookPath, so $PATH is the only place the CLI
+// will look for one. Installing somewhere else is not enough on its own.
 func (o *PluginAddOptions) onPath() bool {
 	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
 		if dir == o.InstallDir {
@@ -323,9 +322,6 @@ func (o *PluginAddOptions) installSkills(token string, releases []githubRelease,
 	if err := os.MkdirAll(o.SkillsDir, pluginPerm); err != nil {
 		return nil, fmt.Errorf("failed to create %s: %w", o.SkillsDir, err)
 	}
-
-	// Staged alongside the skills directory rather than in the system temp dir,
-	// so moving each skill into place is a rename within one filesystem.
 	staging, err := os.MkdirTemp(filepath.Dir(o.SkillsDir), ".kratix-skills-")
 	if err != nil {
 		return nil, err
@@ -420,7 +416,7 @@ func extractTarGz(r io.Reader, dest string) error {
 	}
 	defer gz.Close()
 
-	reader := tar.NewReader(io.LimitReader(gz, maxSkillsArchiveBytes))
+	reader := tar.NewReader(io.LimitReader(gz, maxSkillsBytes))
 	for {
 		header, err := reader.Next()
 		if err == io.EOF {
@@ -456,8 +452,8 @@ func extractTarGz(r io.Reader, dest string) error {
 				return err
 			}
 		}
-		// Anything else is skipped: the artifact holds only files and
-		// directories, and a symlink could point outside the skills directory.
+		// Skip everything else. The artifact holds only files and directories,
+		// and a symlink could point anywhere outside the skills directory.
 	}
 }
 
@@ -476,8 +472,6 @@ func (o *PluginAddOptions) download(token, url, dest string) error {
 	}
 	defer body.Close()
 
-	// Download to a temporary file and rename, so an interrupted download never
-	// leaves a half-written binary on the PATH.
 	tmp, err := os.CreateTemp(filepath.Dir(dest), filepath.Base(dest)+".tmp")
 	if err != nil {
 		return err
