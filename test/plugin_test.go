@@ -144,10 +144,40 @@ var _ = Describe("plugin add", func() {
 		r = &runner{exitCode: 1}
 	})
 
+	When("asked for help", func() {
+		It("lists the plugins that can be installed", func() {
+			r.exitCode = 0
+			session := r.run("plugin", "add", "--help")
+			Expect(session.Out).To(gbytes.Say("skelift"))
+		})
+
+		It("leaves the detail of what gets installed to the plugin itself", func() {
+			r.exitCode = 0
+			session := r.run("plugin", "add", "--help")
+			Expect(string(session.Out.Contents())).NotTo(ContainSubstring(".kratix/skills"))
+		})
+	})
+
+	When("asked for help on skelift", func() {
+		It("says what gets installed and where", func() {
+			r.exitCode = 0
+			session := r.run("plugin", "add", "skelift", "--help")
+			Expect(session.Out).To(SatisfyAll(
+				gbytes.Say("CLI plugins"),
+				gbytes.Say(`~/.kratix/plugins/bin`),
+				gbytes.Say("skills"),
+				gbytes.Say(`~/.kratix/skills`),
+				gbytes.Say(`~/.claude/skills`),
+				gbytes.Say("overwritten"),
+			))
+		})
+	})
+
 	When("no plugin name is given", func() {
-		It("errors naming the accepted plugin", func() {
+		It("prints the help", func() {
+			r.exitCode = 0
 			session := r.run("plugin", "add")
-			Expect(session.Err).To(gbytes.Say("accepts 1 arg"))
+			Expect(session.Out).To(gbytes.Say("skelift"))
 		})
 	})
 
