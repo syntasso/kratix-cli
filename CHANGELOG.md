@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.19.0](https://github.com/syntasso/kratix-cli/compare/v0.18.0...v0.19.0) (2026-09-03)
+
+
+### Features
+
+* add kratix plugin add skelift command ([#270](https://github.com/syntasso/kratix-cli/issues/270)) ([d506025](https://github.com/syntasso/kratix-cli/commit/d50602577db6f1891b1f252ea57f99ed3eb56480))
+* install skills with kratix plugin add skelift ([#271](https://github.com/syntasso/kratix-cli/issues/271)) ([f9651d6](https://github.com/syntasso/kratix-cli/commit/f9651d6e431d9698b2fbceb9445c8f6b1c329c25))
+
+
+### Bug Fixes
+
+* bump hardcoded version ([8c699b5](https://github.com/syntasso/kratix-cli/commit/8c699b540ff3c6373e42e402eecc5b25c2a6dfd5))
+* **deps:** bump golang.org/x/crypto to v0.56.0 ([#272](https://github.com/syntasso/kratix-cli/issues/272)) ([3e4ae93](https://github.com/syntasso/kratix-cli/commit/3e4ae938400ec5e18453287664e8d8840519c679))
+* replace inline dependabot auto-merge with reusable syntasso/ci workflow ([#262](https://github.com/syntasso/kratix-cli/issues/262)) ([12cf73f](https://github.com/syntasso/kratix-cli/commit/12cf73fa0cec31597fa6b36d491fa2d400ffaf99))
+
 ## [0.18.0](https://github.com/syntasso/kratix-cli/compare/v0.17.0...v0.18.0) (2026-08-10)
 
 
