@@ -103,11 +103,11 @@ func UpdateAPI(cmd *cobra.Command, args []string) error {
 	apiContents := &runtime.RawExtension{Raw: jsonBytes}
 
 	var bytes []byte
-	if splitFile {
-		bytes, err = yaml.Marshal(apiContents)
-	} else {
+	if !splitFile {
 		promise.Spec.API = apiContents
 		bytes, err = promiseutils.MarshalPromiseWithoutStatus(promise)
+	} else {
+		bytes, err = yaml.Marshal(apiContents)
 	}
 	if err != nil {
 		return err
