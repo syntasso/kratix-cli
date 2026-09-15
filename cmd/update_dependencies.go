@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
+	promiseutils "github.com/syntasso/kratix-cli/cmd/promise_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -175,7 +176,7 @@ func updatePromiseDependencies(dependencies []v1alpha1.Dependency) error {
 		return err
 	}
 	promise.Spec.Dependencies = dependencies
-	bytes, err := yamlsig.Marshal(promise)
+	bytes, err := promiseutils.MarshalPromiseWithoutStatus(promise)
 	if err != nil {
 		return err
 	}

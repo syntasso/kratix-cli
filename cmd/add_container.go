@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 	pipelineutils "github.com/syntasso/kratix-cli/cmd/pipeline_utils"
+	promiseutils "github.com/syntasso/kratix-cli/cmd/promise_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -211,7 +212,7 @@ func generateWorkflow(c *pipelineutils.PipelineCmdArgs, containerName, image, pr
 	} else {
 		updatePipeline(c.Lifecycle, c.Action, pipelinesUnstructured, &promise)
 
-		fileBytes, err = yaml.Marshal(promise)
+		fileBytes, err = promiseutils.MarshalPromiseWithoutStatus(promise)
 		if err != nil {
 			return err
 		}

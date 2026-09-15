@@ -16,6 +16,27 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// MarshalPromiseWithoutStatus marshals a Promise to YAML, omitting the
+// server-managed status block. PromiseStatus's fields don't have
+// `omitempty`, so a direct yaml.Marshal always emits a `status:` block, even
+// for a freshly scaffolded Promise that has never been applied to a cluster.
+// That block can also drift from whatever the currently installed Kratix CRD
+// expects, causing strict-decoding errors on apply.
+func MarshalPromiseWithoutStatus(promise v1alpha1.Promise) ([]byte, error) {
+	jsonBytes, err := json.Marshal(promise)
+	if err != nil {
+		return nil, err
+	}
+
+	var obj map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &obj); err != nil {
+		return nil, err
+	}
+	delete(obj, "status")
+
+	return yaml.Marshal(obj)
+}
+
 func LoadPromiseWithWorkflows(dir string) (*v1alpha1.Promise, error) {
 	var promise v1alpha1.Promise
 

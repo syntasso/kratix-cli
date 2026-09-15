@@ -86,7 +86,3 @@ spec:
                   - /pulumi-stack-generator
                 image: ghcr.io/syntasso/kratix-cli/pulumi-generator:v0.1.3
                 name: pulumi-stack-generator
-status:
-  workflows: 0
-  workflowsFailed: 0
-  workflowsSucceeded: 0

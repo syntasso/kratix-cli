@@ -82,7 +82,7 @@ func BuildPromise(cmd *cobra.Command, args []string) error {
 		promise.Spec.Dependencies = dependencies
 	}
 
-	promiseBytes, err := yaml.Marshal(promise)
+	promiseBytes, err := promiseutils.MarshalPromiseWithoutStatus(*promise)
 	if err != nil {
 		return err
 	}
