@@ -152,6 +152,11 @@ func matchPromise(dir, name, group, version, kind, singular, plural string) {
 	_, promiseCRD, err := promise.GetAPI()
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	matchCRD(promiseCRD, group, version, kind, singular, plural)
+
+	// status is server-managed and must never be written to a scaffolded/updated promise.yaml
+	var obj map[string]interface{}
+	ExpectWithOffset(1, yaml.Unmarshal(promiseYAML, &obj)).To(Succeed())
+	ExpectWithOffset(1, obj).NotTo(HaveKey("status"))
 }
 
 func matchCRD(promiseCRD *apiextensionsv1.CustomResourceDefinition, group, version, kind, singular, plural string) {

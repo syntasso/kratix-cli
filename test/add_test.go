@@ -149,6 +149,8 @@ var _ = Describe("add", func() {
 				Expect(pipelineWorkflowPathExists(dir, "promise", "configure", "pipeline1", "a-good-container", "resources/")).To(BeTrue())
 				Expect(pipelineWorkflowPathExists(dir, "promise", "delete", "pipeline0", "project-cleanup", "Dockerfile")).To(BeTrue())
 				Expect(pipelineWorkflowPathExists(dir, "promise", "delete", "pipeline0", "project-cleanup", "resources/")).To(BeTrue())
+
+				expectNoStatusBlock(dir)
 			})
 
 			When("multiple containers are added to the same pipeline", func() {
