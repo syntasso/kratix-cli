@@ -89,7 +89,3 @@ spec:
               value: git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric.git//modules/api-gateway?ref=v49.1.0
             image: ghcr.io/syntasso/kratix-cli/terraform-generate:v0.6.0
             name: terraform-generate
-status:
-  workflows: 0
-  workflowsFailed: 0
-  workflowsSucceeded: 0

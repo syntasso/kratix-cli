@@ -101,7 +101,3 @@ spec:
               value: ObjectStorage
             image: ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.2.2
             name: from-api-to-crossplane-claim
-status:
-  workflows: 0
-  workflowsFailed: 0
-  workflowsSucceeded: 0

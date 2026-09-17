@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/spf13/cobra"
+	promiseutils "github.com/syntasso/kratix-cli/cmd/promise_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -211,6 +212,14 @@ func writePromiseFiles(outputDir string, filesToWrite map[string]any) error {
 				return err
 			}
 			if err := writePromiseFiles(subdir, v); err != nil {
+				return err
+			}
+		case v1alpha1.Promise:
+			fileContentBytes, err := promiseutils.MarshalPromiseWithoutStatus(v)
+			if err != nil {
+				return err
+			}
+			if err = os.WriteFile(filepath.Join(outputDir, key), fileContentBytes, filePerm); err != nil {
 				return err
 			}
 		default:

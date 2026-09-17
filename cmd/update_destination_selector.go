@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	promiseutils "github.com/syntasso/kratix-cli/cmd/promise_utils"
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/yaml"
 	"strings"
 )
 
@@ -51,7 +51,7 @@ func UpdateSelector(cmd *cobra.Command, args []string) error {
 	}
 
 	var promiseBytes []byte
-	if promiseBytes, err = yaml.Marshal(promise); err != nil {
+	if promiseBytes, err = promiseutils.MarshalPromiseWithoutStatus(promise); err != nil {
 		return err
 	}
 	if err = os.WriteFile(filepath.Join(dir, "promise.yaml"), promiseBytes, filePerm); err != nil {

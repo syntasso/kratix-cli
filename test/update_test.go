@@ -492,6 +492,8 @@ var _ = Describe("update", func() {
 					kinds = append(kinds, d.Object["kind"].(string))
 				}
 				Expect(kinds).To(ConsistOf("Namespace", "Namespace", "Deployment"))
+
+				expectNoStatusBlock(workingDir)
 			})
 
 			When("promise.yaml does not exist", func() {
@@ -678,6 +680,16 @@ func getDependencies(dir string, split bool) v1alpha1.Dependencies {
 		deps = promise.Spec.Dependencies
 	}
 	return deps
+}
+
+// status is server-managed and must never be written to a scaffolded/updated promise.yaml
+func expectNoStatusBlock(dir string) {
+	promiseYAML, err := os.ReadFile(filepath.Join(dir, "promise.yaml"))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	var obj map[string]interface{}
+	ExpectWithOffset(1, yamlsig.Unmarshal(promiseYAML, &obj)).To(Succeed())
+	ExpectWithOffset(1, obj).NotTo(HaveKey("status"))
 }
 
 func matchGvkInAPIFile(dir, group, version, kind, singular, plural string) {
