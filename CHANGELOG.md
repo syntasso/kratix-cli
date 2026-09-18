@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/syntasso/kratix-cli/compare/v0.19.0...v0.19.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* remove promise status block from generated promises ([#275](https://github.com/syntasso/kratix-cli/issues/275)) ([7995fad](https://github.com/syntasso/kratix-cli/commit/7995faddbdff95161151a715df27a04d332ae0f2))
+
 ## [0.19.0](https://github.com/syntasso/kratix-cli/compare/v0.18.0...v0.19.0) (2026-09-03)
 
 
