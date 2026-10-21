@@ -43,6 +43,12 @@
     "stages/terraform-module-promise": {
       "component": "terraform-module-promise",
       "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "cmd/init_tf_module_promise.go"
+        }
+      ],
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
       "include-component-in-tag": true,
