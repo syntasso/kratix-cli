@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.19.1](https://github.com/syntasso/kratix-cli/compare/v0.19.0...v0.19.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ci:** address newly disclosed dependency vulnerabilities ([a505185](https://github.com/syntasso/kratix-cli/commit/a50518524885a2a73b435ee2490ad480472f89b8))
+* remove promise status block from generated promises ([#275](https://github.com/syntasso/kratix-cli/issues/275)) ([7995fad](https://github.com/syntasso/kratix-cli/commit/7995faddbdff95161151a715df27a04d332ae0f2))
+* **terraform:** update generated stage image ([b947020](https://github.com/syntasso/kratix-cli/commit/b947020f921eb3812e1a6cddc71978270adeece6))
+* **terraform:** update generated stage image ([a59a27d](https://github.com/syntasso/kratix-cli/commit/a59a27d45a63fe5d7e82259d2ad0c0fc8424715e))
+
 ## [0.19.0](https://github.com/syntasso/kratix-cli/compare/v0.18.0...v0.19.0) (2026-09-03)
 
 
