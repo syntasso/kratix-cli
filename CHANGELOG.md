@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.2](https://github.com/syntasso/kratix-cli/compare/v0.19.1...v0.19.2) (2026-11-02)
+
+
+### Bug Fixes
+
+* **deps:** fix govulncheck failures (x/net bump, drop containerd via Helm upgrade) ([#278](https://github.com/syntasso/kratix-cli/issues/278)) ([f6a7ad9](https://github.com/syntasso/kratix-cli/commit/f6a7ad9fc6dcb0607aa8819297330795f94c930a))
+
 ## [0.19.1](https://github.com/syntasso/kratix-cli/compare/v0.19.0...v0.19.1) (2026-10-21)
 
 
