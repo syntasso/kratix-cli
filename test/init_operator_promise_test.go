@@ -237,7 +237,7 @@ var _ = Describe("InitOperatorPromise", func() {
 			expectedPromiseContent, err := os.ReadFile("assets/e2e-cnpg/expected-promise.yaml")
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(promiseContent).To(MatchYAML(expectedPromiseContent))
+			Expect(promiseContent).To(MatchYAML(expandStageImageTags(string(expectedPromiseContent))))
 		})
 
 		It("generates the expected example-resource.yaml", func() {
@@ -311,7 +311,7 @@ func expectPipelinesToMatchOperatorPipelines(pipelines []v1alpha1.Pipeline) {
 	pipeline := pipelines[0]
 	ExpectWithOffset(1, pipeline.Spec.Containers).To(HaveLen(1))
 	ExpectWithOffset(1, pipeline.Spec.Containers[0].Name).To(Equal("from-api-to-operator"))
-	ExpectWithOffset(1, pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:v0.3.1"))
+	ExpectWithOffset(1, pipeline.Spec.Containers[0].Image).To(Equal("ghcr.io/syntasso/kratix-cli/from-api-to-operator:" + stageImageTag("from-api-to-operator")))
 
 	ExpectWithOffset(1, pipeline.Spec.Containers[0].Env).To(HaveLen(3))
 	ExpectWithOffset(1, pipeline.Spec.Containers[0].Env).To(ConsistOf([]corev1.EnvVar{
