@@ -20,8 +20,10 @@ import (
 	"github.com/syntasso/kratix-cli/cmd"
 )
 
-// needs to be updated before cutting a new release to desired version and should match the next version in .release-please-manifest.json
-var version = "0.19.2"
+// release-please updates this version when it prepares a release (see extra-files
+// in release-please-config.json), so it should not be edited by hand. `make
+// check-version-alignment` fails the release PR if it does not match the manifest.
+var version = "0.19.2" // x-release-please-version
 
 func main() {
 	cmd.Execute(version)
