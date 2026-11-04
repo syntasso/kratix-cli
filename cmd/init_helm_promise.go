@@ -109,7 +109,7 @@ func generateHelmResourceConfigurePipeline() (string, error) {
 					"containers": []interface{}{
 						v1alpha1.Container{
 							Name:  "instance-configure",
-							Image: "ghcr.io/syntasso/kratix-cli/helm-resource-configure:v0.2.0",
+							Image: "ghcr.io/syntasso/kratix-cli/helm-resource-configure:v0.3.1", // x-release-please-version
 							Env:   envVars,
 						},
 					},
