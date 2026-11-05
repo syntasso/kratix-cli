@@ -1,0 +1,19 @@
+name: Check stage images exist
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+  # Also run daily, because an image can go missing (or never be pushed) without any change to this repo.
+  schedule:
+    - cron: "0 7 * * *"
+
+jobs:
+  check-stage-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Run make check-stage-images
+        run: make check-stage-images

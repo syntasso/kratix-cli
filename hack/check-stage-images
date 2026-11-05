@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Checks that every stage image the CLI puts into generated promises can be
+# pulled from GHCR.
+#
+# Why: a release can bump an image tag in cmd/ while the image push for that
+# stage fails (for example a permissions error), leaving the CLI generating
+# promises that fail with ImagePullBackOff. Nothing else notices.
+#
+# Usage:
+#   hack/check-stage-images          check every reference against the registry
+#   hack/check-stage-images --list   only print the references found (no network)
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+registry_host=ghcr.io
+image_prefix="${registry_host}/syntasso/kratix-cli/"
+
+# References written out in full, such as "ghcr.io/syntasso/kratix-cli/x:v1.2.3".
+full_references() {
+  grep -hoE "${image_prefix}[a-z0-9-]+:v[0-9]+\.[0-9]+\.[0-9]+" \
+    "${repo_root}"/cmd/*.go --exclude='*_test.go' 2>/dev/null || true
+}
+
+# The pulumi image is assembled from a repository constant and a version constant.
+pulumi_reference() {
+  local defaults="${repo_root}/cmd/pulumi_stage_defaults.go"
+  local repository version
+  repository=$(sed -nE 's/.*pulumiGeneratorImageRepository *= *"([^"]+)".*/\1/p' "${defaults}")
+  version=$(sed -nE 's/.*pulumiGeneratorImageVersion *= *"([^"]+)".*/\1/p' "${defaults}")
+  if [[ -z "${repository}" || -z "${version}" ]]; then
+    echo "could not read the pulumi image constants from ${defaults}" >&2
+    exit 1
+  fi
+  echo "${repository}:${version}"
+}
+
+references() {
+  { full_references; pulumi_reference; } | sort -u
+}
+
+# Asks the registry anonymously, as a cluster without credentials would.
+image_exists() {
+  local reference=$1
+  local without_host=${reference#"${registry_host}/"}
+  local repository=${without_host%%:*}
+  local tag=${without_host##*:}
+  local token status
+
+  token=$(curl -fsS "https://${registry_host}/token?scope=repository:${repository}:pull" | sed -nE 's/.*"token" *: *"([^"]+)".*/\1/p')
+  status=$(curl -s -o /dev/null -w '%{http_code}' -I \
+    -H "Authorization: Bearer ${token}" \
+    -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json" \
+    "https://${registry_host}/v2/${repository}/manifests/${tag}")
+  [[ "${status}" == "200" ]]
+}
+
+if [[ "${1:-}" == "--list" ]]; then
+  references
+  exit 0
+fi
+
+missing=0
+while read -r reference; do
+  if image_exists "${reference}"; then
+    echo "✅ ${reference}"
+  else
+    echo "❌ ${reference} cannot be pulled from ${registry_host}"
+    missing=1
+  fi
+done < <(references)
+
+if [[ "${missing}" -ne 0 ]]; then
+  echo ""
+  echo "💡 A referenced stage image is not published. Check the 'Release Image' workflow"
+  echo "   run for that stage, or point the CLI at a tag that exists."
+  exit 1
+fi

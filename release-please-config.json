@@ -2,6 +2,12 @@
   "packages": {
     ".": {
       "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "cmd/kratix/main.go"
+        }
+      ],
       "release-type": "go",
       "prerelease": false,
       "draft": false,
@@ -77,6 +83,12 @@
     "stages/crossplane-promise": {
       "component": "crossplane-promise",
       "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "cmd/init_crossplane_promise.go"
+        }
+      ],
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
       "include-component-in-tag": true,
@@ -127,6 +139,12 @@
     "stages/pulumi-promise": {
       "component": "pulumi-promise",
       "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "cmd/pulumi_stage_defaults.go"
+        }
+      ],
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
       "include-component-in-tag": true,

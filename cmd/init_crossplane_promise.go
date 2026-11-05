@@ -21,7 +21,7 @@ import (
 
 const (
 	crossplaneContainerName  = "from-api-to-crossplane-claim"
-	crossplaneContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.2.2"
+	crossplaneContainerImage = "ghcr.io/syntasso/kratix-cli/from-api-to-crossplane-claim:v0.2.2" // x-release-please-version
 
 	workflowDirectory = "workflows/resource/configure"
 

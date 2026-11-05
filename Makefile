@@ -20,6 +20,10 @@ check-version-alignment:
 		echo "✅ Versions are aligned: $$manifest_version"; \
 	fi
 
+.PHONY: check-stage-images
+check-stage-images: # Check that every stage image referenced by the CLI can be pulled from GHCR (needs network)
+	./hack/check-stage-images
+
 build: # Build the binary
 	CGO_ENABLED=0 go build -o bin/kratix ./cmd/kratix/main.go
 
