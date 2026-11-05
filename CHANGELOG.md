@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.3](https://github.com/syntasso/kratix-cli/compare/v0.19.2...v0.19.3) (2026-11-04)
+
+
+### Bug Fixes
+
+* reference helm-resource-configure v0.3.1 ([#281](https://github.com/syntasso/kratix-cli/issues/281)) ([9ddd32f](https://github.com/syntasso/kratix-cli/commit/9ddd32f98ef3fa1fab0f35ac0960c9c3ee64f789))
+* reference the published operator stage image ([#280](https://github.com/syntasso/kratix-cli/issues/280)) ([0c02af9](https://github.com/syntasso/kratix-cli/commit/0c02af9a394851be24d6acb71f231560813aec53))
+
 ## [0.19.2](https://github.com/syntasso/kratix-cli/compare/v0.19.1...v0.19.2) (2026-11-02)
 
 
